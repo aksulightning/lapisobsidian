@@ -6,6 +6,8 @@ flags=(-std=c11 -O2 -Wall -Wextra -Wconversion -Wshadow -Werror -ffp-contract=of
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   flags+=(-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie)
 fi
+"${CC:-gcc}" "${flags[@]}" -c src/signs.c -o .tests/signs.o
+"${CC:-gcc}" "${flags[@]}" -c src/sign_packets.c -o .tests/sign-packets.o
 "${CC:-gcc}" "${flags[@]}" -c src/command_packets.c -o .tests/command-packets.o
 "${CC:-gcc}" "${flags[@]}" tests/commands.c tests/sanitizer.c src/commands.c src/globals.c -o .tests/commands
 .tests/commands
@@ -22,7 +24,7 @@ integration_flags=(-O2 -Wall -Wextra -ffp-contract=off -ffunction-sections -fdat
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   integration_flags+=(-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie)
 fi
-"${CC:-gcc}" "${integration_flags[@]}" tests/chunk_packet.c tests/sanitizer.c src/packets.c src/varnum.c src/worldgen.c src/globals.c src/registries.c src/registry.c src/beta173_*.c -Wl,--gc-sections -lm -o .tests/chunk_packet
+"${CC:-gcc}" "${integration_flags[@]}" tests/chunk_packet.c tests/sanitizer.c src/signs.c src/sign_packets.c src/packets.c src/varnum.c src/worldgen.c src/globals.c src/registries.c src/registry.c src/beta173_*.c -Wl,--gc-sections -lm -o .tests/chunk_packet
 .tests/chunk_packet
 sources=()
 for source in src/*.c; do
@@ -32,4 +34,6 @@ done
 if ! .tests/packet_input 2>.tests/packet-rejections.log; then cat .tests/packet-rejections.log; exit 1; fi
 "${CC:-gcc}" "${integration_flags[@]}" tests/command_packets.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/command_packets
 .tests/command_packets
+"${CC:-gcc}" "${integration_flags[@]}" tests/signs.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/signs
+.tests/signs
 ./tests/no-jar.sh

@@ -26,7 +26,7 @@ void getCraftingOutput (PlayerData *player, uint8_t *count, uint16_t *item) {
     }
   }
 
-  uint16_t first_item = player->craft_items[first];
+  uint16_t first_item = first < 9 ? player->craft_items[first] : 0;
   uint8_t first_col = first % 3, first_row = first / 3;
 
   switch (filled) {
@@ -273,6 +273,11 @@ void getCraftingOutput (PlayerData *player, uint8_t *count, uint16_t *item) {
       break;
 
     case 7:
+      if (player->craft_items[6] == 0 && player->craft_items[7] == I_stick && player->craft_items[8] == 0) {
+        uint8_t planks = true;
+        for (int slot = 0; slot < 6; slot++) if (player->craft_items[slot] != I_oak_planks) planks = false;
+        if (planks) { *item = I_oak_sign; *count = 1; return; }
+      }
       // Legging recipes
       if (identical && player->craft_items[4] == 0 && player->craft_items[7] == 0) {
         switch (first_item) {

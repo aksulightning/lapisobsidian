@@ -1,3 +1,4 @@
+#include "signs.h"
 #include "commands.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -477,16 +478,20 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
       if (state == STATE_PLAY) cs_setHeldItem(client_fd);
       break;
 	
+    case 0x3B:
+      if (state == STATE_PLAY && cs_updateSign(client_fd,length)) { recv_count = 0; return; }
+      break;
+
     case 0x3C:
       if (state == STATE_PLAY) cs_swingArm(client_fd);
       break;
 
     case 0x28:
-      if (state == STATE_PLAY) cs_playerAction(client_fd);
+      if (state == STATE_PLAY && cs_playerAction(client_fd,length)) { recv_count = 0; return; }
       break;
 
     case 0x3F:
-      if (state == STATE_PLAY) cs_useItemOn(client_fd);
+      if (state == STATE_PLAY && cs_useItemOn(client_fd,length)) { recv_count = 0; return; }
       break;
 
     case 0x40:
@@ -584,7 +589,6 @@ int main (int argc, char **argv) {
 
   // Start the disk/flash serializer (if applicable)
   if (initSerializer()) exit(EXIT_FAILURE);
-
   // Initialize all file descriptor references to -1 (unallocated)
   int clients[MAX_PLAYERS], client_index = 0;
   for (int i = 0; i < MAX_PLAYERS; i ++) {
@@ -592,6 +596,16 @@ int main (int argc, char **argv) {
     client_states[i * 2] = -1;
     player_data[i].client_fd = -1;
   }
+
+  #ifdef SYNC_WORLD_TO_DISK
+    #ifdef ESP_PLATFORM
+    if (!signs_load("/littlefs/signs.bin")) exit(EXIT_FAILURE);
+    #else
+    if (!signs_load("signs.bin")) exit(EXIT_FAILURE);
+    #endif
+  #else
+    signs_load(NULL);
+  #endif
 
   // Create server TCP socket
   int server_fd, opt = 1;

@@ -43,7 +43,7 @@ int main (void) {
   uint64_t invalid_position = (((uint64_t)(int64_t)-32769 & 0x3ffffffu) << 38) | 64u;
   uint8_t action[11] = {0};
   for (unsigned i = 0; i < 8; i ++) action[1+i] = (uint8_t)(invalid_position >> (56-8*i));
-  fd = input(action, sizeof(action)); assert(cs_playerAction(fd) != 0 && recv_count == 0); close(fd);
+  fd = input(action, sizeof(action)); assert(cs_playerAction(fd, sizeof(action)) != 0); close(fd);
   puts("packet input: exact known-pack negotiation, malformed/truncated VarInts and strings passed");
   return 0;
 }

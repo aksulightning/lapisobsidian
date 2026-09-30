@@ -1,3 +1,4 @@
+#include "signs.h"
 #include "commands.h"
 #include <stdio.h>
 #include <string.h>
@@ -446,6 +447,7 @@ int sc_chunkDataAndUpdateLight (int client_fd, int _x, int _z) {
     sc_blockUpdate(client_fd, block_changes[i].x, block_changes[i].y, block_changes[i].z, block_changes[i].block);
   }
 
+  signs_send_chunk(client_fd, _x, _z);
   return 0;
 
 }
@@ -507,44 +509,6 @@ int sc_acknowledgeBlockChange (int client_fd, int sequence) {
   return 0;
 }
 
-static int readBlockPosition (int client_fd, int *x, int *y, int *z) {
-  uint64_t value = readUint64(client_fd);
-  uint32_t rx = (uint32_t)(value >> 38);
-  uint32_t rz = (uint32_t)((value >> 12) & 0x3ffffffu);
-  uint32_t ry = (uint32_t)(value & 0xfffu);
-  *x = rx < 0x2000000u ? (int)rx : (int)rx - 0x4000000;
-  *z = rz < 0x2000000u ? (int)rz : (int)rz - 0x4000000;
-  *y = ry < 0x800u ? (int)ry : (int)ry - 0x1000;
-  if (recv_count != 8 || *x < -32768 || *x > 32767 || *z < -32768 || *z > 32767 ||
-      *y < 0 || *y > 255) {
-    recv_count = 0;
-    return 1;
-  }
-  return 0;
-}
-
-// C->S Player Action
-int cs_playerAction (int client_fd) {
-
-  uint8_t action = readByte(client_fd);
-
-  int x, y, z;
-  if (readBlockPosition(client_fd, &x, &y, &z)) return 1;
-
-  readByte(client_fd); // ignore face
-
-  int sequence = readVarInt(client_fd);
-  sc_acknowledgeBlockChange(client_fd, sequence);
-
-  PlayerData *player;
-  if (getPlayerData(client_fd, &player)) return 1;
-
-  handlePlayerAction(player, action, x, y, z);
-
-  return 0;
-
-}
-
 // S->C Open Screen
 int sc_openScreen (int client_fd, uint8_t window, const char *title, uint16_t length) {
 
@@ -574,37 +538,6 @@ int cs_useItem (int client_fd) {
   if (getPlayerData(client_fd, &player)) return 1;
 
   handlePlayerUseItem(player, 0, 0, 0, 255);
-
-  return 0;
-}
-
-// C->S Use Item On
-int cs_useItemOn (int client_fd) {
-
-  readByte(client_fd); // hand (ignored)
-
-  int x, y, z;
-  if (readBlockPosition(client_fd, &x, &y, &z)) return 1;
-
-  uint8_t face = readByte(client_fd);
-  if (face > 5) { recv_count = 0; return 1; }
-
-  // ignore cursor position
-  readUint32(client_fd);
-  readUint32(client_fd);
-  readUint32(client_fd);
-
-  // ignore "inside block" and "world border hit"
-  readByte(client_fd);
-  readByte(client_fd);
-
-  int sequence = readVarInt(client_fd);
-  sc_acknowledgeBlockChange(client_fd, sequence);
-
-  PlayerData *player;
-  if (getPlayerData(client_fd, &player)) return 1;
-
-  handlePlayerUseItem(player, x, y, z, face);
 
   return 0;
 }
