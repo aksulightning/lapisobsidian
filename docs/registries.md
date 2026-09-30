@@ -12,12 +12,14 @@ Only item names used by the palette/gameplay and compatibility tests are emitted
 The valid network item range is 0..1415; acceptance of an ID does not implement
 that item's gameplay. Lookups distinguish compact block IDs from network IDs.
 
-The five server-local biome IDs are plains=0, mangrove_swamp=1, desert=2,
-snowy_plains=3, beach=4. Dimension type overworld=0 uses the client's built-in
+The ten server-local biome IDs are plains=0, mangrove_swamp=1, desert=2,
+snowy_plains=3, beach=4, forest=5, taiga=6, jungle=7, swamp=8, savanna=9.
+The first five IDs retain upstream order; the appended entries support Beta
+climate-biome mapping. These are local registry IDs, not vanilla numeric biome IDs. Dimension type overworld=0 uses the client's built-in
 384-block dimension, with minimum Y=-64. Chunk packets contain 24 sections.
 
 Configuration sends one entry for each required variant registry, the damage
-type identifiers, five biomes, and overworld. These are names without NBT payloads,
+type identifiers, ten biomes, and overworld. These are names without NBT payloads,
 as in upstream. The client must first acknowledge exactly the 1.21.8 core pack;
 otherwise configuration is rejected. No textures, models, recipes, Java code,
 or game binaries are distributed. Variant entries provide protocol compatibility

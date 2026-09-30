@@ -48,18 +48,21 @@ The low-level network core, inventory, ticks, and edit storage come from bareiro
 This is an experimental server, not a plugin platform or a complete survival
 implementation. A full audit of inherited packet handling is still required.
 
-Milestones 0 and 1 are implemented: self-contained protocol data and the terrain
-foundation. Terrain currently contains stone, water, ice and air from Y=0..127;
-the compatibility floor below Y=0 remains bedrock. Biome surfaces, caves, ores,
-trees, decorations, commands and persistent signs are not implemented yet.
-Inherited gameplay, including sprinting and hunger, is retained during these
-milestones; the Beta gameplay pass is still pending.
+Milestones 0–2 are implemented: self-contained protocol data, deterministic
+Beta-style terrain, biome surfaces, caves, ores, ordinary oaks and basic ground
+cover. Trees and decoration are an initial subset; see [world generation](docs/worldgen.md)
+for deliberate differences and deferred variants. Commands and persistent signs
+are next. No scripting runtime, plugin system or database is included.
+Inherited gameplay, including sprinting and hunger, remains; the Beta gameplay
+pass is still pending.
 
 Create a new world with `./lapis-obsidian --seed -12345`, using a signed 64-bit
 decimal seed. Later runs load the seed from `world.meta`. Supplying a different
 seed for the same world fails. Keep `world.meta` and `world.bin` together. Run the
 binary from a fresh directory to start another world. Legacy saves without
 metadata are rejected rather than overlaid onto a different terrain generator.
+Generator version 2 also rejects Milestone 1/version 1 saves. Start a fresh world
+in another directory; no migration is provided.
 The inherited compact coordinate range is X/Z=-32768..32767, with player/edit
 Y=0..255. Network view-distance requests beyond that boundary are not generated.
 

@@ -1,8 +1,10 @@
 # Lapis Obsidian milestone report — 2026-09-30
 
-Implemented scope: Milestone 0 and the explicitly limited Milestone 1 foundation.
-Milestones 2–4 remain pending. No commands, signs, feature generators, scripting
-runtime, plugin system, database or third-party runtime dependency was added.
+Implemented scope: Milestones 0–2, with ordinary oaks and basic ground cover as
+the initial vegetation subset. Milestones 3–4 (commands and signs) remain pending.
+No scripting runtime, plugin system, database or third-party runtime dependency
+was added. The Milestone 0/1 sections below describe their original scope;
+Milestone 2 supersedes the earlier terrain/biome limitations.
 
 ## Milestone 0: standalone registry snapshot
 
@@ -92,6 +94,80 @@ changed generation order, reinitialization and different-seed tests passed.
 Invalid coordinates, invalid RNG bounds and invalid seed text are rejected.
 Metadata tests cover restart, conflict, corrupt/trailing metadata and legacy saves.
 
+## Milestone 2: world-generation features
+
+### Files
+
+- Added `include/beta173_biomes.h`, `src/beta173_biomes.c`,
+  `include/beta173_features.h`, `src/beta173_features.c`,
+  `include/beta173_math.h`, `src/beta173_math.c`, `src/beta173_surface.c`,
+  `src/beta173_caves.c`, `src/beta173_ores.c`, `src/beta173_trees.c`,
+  `src/beta173_decoration.c`.
+- Added `tests/features.c` and four `tests/betanium-*-vectors.txt` fixtures for
+  surfaces, caves, ores and trees.
+- Updated RNG/noise/worldgen modules and headers, `src/worldgen.c`, generated
+  registry snapshot/C/header, registry generator/lookup, registry/chunk/metadata
+  tests, test runner, README, notices and worldgen/registry documentation.
+
+### Decisions and behavior
+
+Added per-column Beta climate biome selection and surface materials, caves,
+ore veins, ordinary oaks, grass, ferns, flowers, dead bushes and snow. Appended
+five modern protocol biome names without changing the existing 256-block compact
+palette or enabling modern biome terrain. Existing packet structure, edit storage,
+sprinting and gameplay handling remain in place.
+
+Feature generation is phase-based and allocation-free. Caves replay nearby source
+chunks; ores replay four possible sources; trees replay nine possible sources.
+Every write is clipped to the target. Separate population streams and immutable
+pre-vegetation clearance make results independent of exploration order. Ground
+cover uses a bounded per-column stream. The server's block queries and chunk
+serializer use the same final generator plus existing edits.
+
+The adapter has a fixed four-chunk LRU cache; trees use two pre-vegetation scratch
+chunks. Total fixed generation storage is approximately 226 KiB on the tested
+64-bit target. A development benchmark generated 25 distinct seed-0 chunks in
+0.654 CPU seconds before the adapter cache; this is a local measurement, not a
+latency guarantee. On-demand sine entries avoid a separate 256 KiB lookup table.
+No full-world allocation or pregeneration was introduced.
+
+Generator version is now 2. Version 1 saves fail clearly before edit loading;
+users must start a new world in another directory. There is no save migration.
+Modern clients still use the core-pack-backed protocol 772 registry representation.
+The serializer retains one biome per section, chosen from the chunk center;
+per-column biome tinting is deferred.
+
+### Validation
+
+All 384 foundation reference vectors remain unchanged and pass. Added 108 external
+feature fixtures: 20 surface hashes, 50 cave hashes (including water barriers),
+25 ore hashes and 13 oak shape/tree-density records. All match the pinned betanium
+reference, with the documented independent population stream for ore fixtures.
+
+Additional C tests cover actual border-crossing canopies, reversed generation
+order over 25 chunks, seed changes and cache eviction, compact coordinate edges,
+required ore types and depth bounds, decoration substrate/occupancy constraints,
+water and bedrock preservation, appended biome IDs, and rejection of version 1
+metadata. The production packet test decodes final feature-bearing chunk bytes.
+The no-Java/no-JAR source-only build still passes; registry regeneration is current.
+
+Normal build and strict new-module compilation pass without warnings. ASan/UBSan
+pass with no findings in tested paths. Full debug build succeeds with 219 inherited
+core conversion/sign warnings and none attributed to new feature modules. The
+sandbox emits an executable-name symbolization warning; LeakSanitizer remains
+disabled because `/proc` is unavailable. A live TCP smoke check passes branded
+status, protocol-772 login, known-pack negotiation, eleven registry packets, tags,
+configuration finish, saved seed reload and conflicting-seed rejection.
+
+### Deliberate limits
+
+Only ordinary oak trees are included, including in taiga. Birch/spruce variants,
+large branching trees, lakes, structures, clay deposits, fluid springs, reeds,
+cacti, pumpkins and mushrooms remain deferred. Ground-cover placement is a compact
+approximation rather than historical scatter. Climate/interpolation differences
+from Milestone 1 remain. See `docs/worldgen.md` for the precise algorithms, fixture
+provenance and adaptations. A real graphical client play session remains untested.
+
 ## Commands and results
 
 Run from the repository root:
@@ -119,9 +195,9 @@ the execution sandbox cannot inspect `/proc`; leak testing is not claimed.
 - This is Beta-style terrain, not historical bit-for-bit emulation. Shared
   world-space climate samples and direct interpolation are documented adaptations;
   reference-based density/height fixtures include those adaptations.
-- Biome surface blocks, caves, ores, trees, decorations, slash commands and
-  persistent signs are still absent. Hunger and other inherited gameplay remain
-  unchanged; sprinting remains supported.
+- Slash commands and persistent signs remain pending. Vegetation is the initial
+  subset described above. Hunger and other inherited gameplay remain unchanged;
+  sprinting remains supported.
 - The inherited compact coordinate limits and raw world-edit/player layout
   remain. No migration of earlier saves is provided. Fixed spawn may be underwater.
 - Core networking, inventory/chest handling and storage have not received a full

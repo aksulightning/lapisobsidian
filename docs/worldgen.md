@@ -1,78 +1,133 @@
-# Beta terrain foundation (generator version 1)
+# Beta world generation (generator version 2)
 
 The behavior reference is betanium by Aksu Lightning, revision
 03d77b9dae27a086a2398c21abe52fd07f27195c. Inspected modules: java_math, int64,
-java_random, beta_noise, beta_world_gen, biome_defs and terrain_generator.
+java_random, beta_noise, beta_world_gen, biome_defs, terrain_generator,
+cave_generator, math_helper, ore_generator, population, structures and big_tree.
 No reference runtime is a build, test, installation or server dependency.
 
-`beta173_rng.c` implements the Java 48-bit LCG, bounded rejection sampling,
-double generation and signed-low-word nextLong behavior. Seeds retain all 64
-bits, represented as uint64_t bit patterns. Unsigned multiplication provides
-defined wraparound for climate seed multipliers; parsing accepts Java's signed
-64-bit decimal seed range. Terrain needs floor, float rounding, and interpolation;
-it does not yet need the reference java_math sine/cosine helpers used by caves.
+## Terrain and arithmetic
+
+`beta173_rng.c` implements Java's 48-bit LCG, bounded rejection sampling,
+float/double generation and signed-low-word nextLong behavior. Seeds retain all
+64 bits as uint64_t bit patterns. Unsigned arithmetic implements Java overflow;
+`beta173_math.c` handles signed-truncating odd multipliers and coordinate seeds.
+Cave and ore sine/cosine use the reference's float-quantized sine-table indices,
+but compute entries on demand to avoid a 256 KiB table. Compilation disables FMA
+contraction. Fast-math must not be enabled. IEEE-754 float/double are required.
 
 `beta173_noise.c` ports Perlin and simplex, octave order, climate scaling, the
-2D path, and the historical Y-gradient cache in Perlin columns. Each permutation
-is stored once as 256 bytes and addressed modulo 256. Compilation disables FMA
-contraction. Fast-math must not be enabled. The port assumes IEEE-754 float/double.
+2D path, and historical Y-gradient caching in Perlin columns. Each permutation
+is stored once as 256 bytes and addressed modulo 256. The terrain constructor
+initializes all 82 terrain/surface/tree and ten climate permutations in reference
+order. Density uses a 5x17x5 lattice, 4-block horizontal and 8-block vertical
+interpolation, sea level 64, and top fade to air. Terrain spans Y=0..127.
 
-`beta173_worldgen.c` initializes 66 terrain noise permutations and 10 climate
-permutations. It consumes the RNG calls for the two unused surface generators
-to maintain the reference noise sequence. Density uses a 5x17x5 lattice, with
-4-block horizontal and 8-block vertical interpolation, sea level 64, and top
-fade to air. A single density lattice is cached, keyed by chunk coordinate and
-invalidated on seed initialization. Fixed noise/cache storage totals 24,680 bytes
-on the tested 64-bit target, excluding small scalar bookkeeping. There is no
-world-sized allocation, heap allocation or pregeneration.
+## Feature phases
 
-`worldgen.c` preserves the existing getBlockAt/getTerrainAt/buildChunkSection
-entry points, chunk_section byte ordering and edit overlay. Height queries and
-chunk transmission share the same density source. It skips chest payload records
-when applying edits. The old hash terrain and its features are removed from the
-active path. Protocol biome IDs are deliberately still plains in Milestone 1;
-climate influences density and sea-surface ice but does not yet add surfaces.
+`beta173_features.c` fills a compact 16x16x128 chunk with 256 climate biome IDs.
+The independently testable phases run in this order:
+
+1. Base density, stone, water and ice.
+2. `beta173_surface.c`: reference grass/dirt, desert sand, shoreline sand/gravel,
+   sandstone transitions and randomized bedrock. Retains the original surface
+   RNG's coordinate-only seed, draw order and column-noise cache behavior.
+3. `beta173_caves.c`: reference tunnels, rooms and bounded branching. Replays
+   sources within eight chunks, clips writes to the target, avoids water, adds
+   lava at depth and repairs exposed grass. Preserves the historical one-block
+   offset between normalized carving Y and the block-array index.
+4. `beta173_ores.c`: reference ellipsoid veins with Beta dirt/gravel/coal/iron/
+   gold/redstone/diamond/lapis counts, sizes and altitude distributions. Replays
+   four possible source chunks in fixed order; veins replace only stone.
+5. `beta173_trees.c`: ordinary oak shapes, reference tree-density noise and
+   biome-dependent attempt counts. Replays the surrounding nine sources.
+   Candidate clearance reads immutable terrain after caves, before vegetation.
+   Canopies are clipped into each target in a consistent order. Logs take
+   precedence over overlapping leaves. At most 16 attempts occur per source.
+6. `beta173_decoration.c`: grass, ferns, dandelions, poppies, desert dead bushes,
+   and climate/altitude-dependent snow. Uses bounded per-column placement;
+   water, ice and occupied cells are preserved. Snow updates grass's snowy state.
+
+Ores, trees and decoration have separate salted Java RNG streams. Tree candidates
+also own their RNG stream, so a rejected candidate does not perturb other trees.
+No feature reads player edits or mutable neighboring population state.
+
+## Integration and memory
+
+`worldgen.c` preserves getBlockAt/getTerrainAt/buildChunkSection, network byte
+ordering and the edit overlay. Block queries, height queries and transmission
+use the same final generated chunk. The adapter keeps four complete chunks in a fixed LRU cache to avoid repeated
+generation during neighboring block/tick queries;
+tree clearance caches two immutable pre-vegetation chunks. Changing the seed
+invalidates the appropriate caches. There is no heap allocation in generation,
+world-sized state, database, background work or pregeneration.
+
+Fixed generator data on the tested 64-bit target is approximately 226 KiB:
+29,160 bytes of noise/density storage, 4,096 bytes of reusable surface scratch,
+and six 33,032-byte chunk structs, plus small scalar bookkeeping. This excludes
+upstream registry, packet, edit and player storage. Generation is single-threaded;
+these shared caches are not thread-safe.
+
+The ten Beta climate biomes map to modern protocol identifiers without enabling
+modern world generation. Rainforest maps to jungle, swampland to swamp, seasonal
+forest/forest to forest, savanna to savanna, shrubland/plains to plains, taiga to
+taiga, desert to desert, and tundra to snowy_plains. The inherited serializer
+still sends one biome per section, selected from the chunk's center; surface
+blocks use per-column climate biomes. Fine-grained client biome tinting is deferred.
 
 ## Intentional differences and limits
 
-- Climate is evaluated at shared world-space lattice nodes. The reference's
-  chunk-local sampling offsets do not always agree at chunk edges; this port
-  guarantees identical boundary nodes. It is Beta-style, not a claim of exact
-  original Beta or reference chunk hashes.
-- The port interpolates directly between density corners rather than accumulating
-  stepwise floating-point increments. Near-zero density decisions can therefore
-  differ from historical iterative interpolation.
-- No caves, ores, trees, structures, surface materials or decorations are enabled.
-  Modern biomes are not generated. Spawn selection remains the upstream fixed
-  X/Z height query and can be underwater for some seeds.
-- The core is single-threaded; the one-entry cache is not thread-safe. The compact
-  upstream X/Z range is retained. Requests outside it fail or return air without
-  overflowing. The client's overworld dimension remains -64..319 for compatibility.
-- Raw edit/player storage remains upstream's layout. `world.meta` is a separate
-  fixed 24-byte, big-endian header: magic, generator version, protocol, seed.
-  Metadata prevents accidental legacy terrain/seed mixing. This is not a general
-  world-file migration or portability system.
+- This is Beta-style, not exact historical world hashes. Shared world-space
+  climate lattice nodes and direct density interpolation differ from the reference
+  chunk-local offsets and historical accumulated interpolation.
+- Lakes, dungeons, clay deposits and fluid springs are omitted. Ores therefore
+  use an independent sequence rather than the complete historical population RNG.
+- Tree anchors cover their source chunk without the historical +8 offset.
+  Clearance ignores other trees to make generation independent of exploration
+  order. Only ordinary oaks are present; birch, spruce and large branching tree
+  variants are deferred. Taiga currently receives the same oak material/shape.
+- Ground cover uses per-column probabilities, not historical scatter attempts.
+  Reeds, cacti, pumpkins, mushrooms and other decorations are deferred. Snow
+  follows the reference climate/altitude rule on the implemented solid surfaces.
+- At the compact X/Z boundary (-32768..32767), trees needing out-of-world
+  clearance are rejected. Caves and ores can still have deterministic sources
+  just beyond it, with writes clipped to valid target chunks.
+- The modern overworld remains -64..319; the compatibility floor below Y=0 is
+  bedrock and above Y=127 is air unless edited. Fixed spawn can be underwater.
+  Height queries include trees and ground cover, so spawn can also be on a canopy.
+- `world.meta` binds generator version 2, protocol and seed. Version 1 saves
+  are rejected before edits load. Start a fresh world in another directory and
+  retain old saves separately; no migration is provided. Raw edit/player storage
+  remains upstream's layout. Do not remove metadata to bypass this check.
 
 ## Frozen reference vectors
 
-`tests/betanium-vectors.txt` contains 384 external reference results for seeds
-0, 1, -1, INT64_MAX, INT64_MIN and 2701385324. Rows encode:
+Fixtures were generated externally from the pinned reference. Checked-in tests
+read numbers and execute only C; Lua is neither shipped nor required.
 
-| Kind | Fields after seed |
-| --- | --- |
-| R | sequence number, signed nextInt |
-| B | bound, nextInt(bound) |
-| N | x, y, z, Perlin result |
-| D | chunk x, chunk z, lattice index, density |
-| H | world x, world z, highest stone y |
+| File | Rows | Method |
+| --- | ---: | --- |
+| `betanium-vectors.txt` | 384 | RNG, Perlin, density and height; density/height incorporate the documented shared climate lattice and direct interpolation |
+| `betanium-surface-vectors.txt` | 20 | Original surface replacement on a synthetic stepped stone/water chunk with all ten biomes |
+| `betanium-cave-vectors.txt` | 50 | Original cave generator on stone/dirt/grass, with and without a water plane at Y=32 |
+| `betanium-ore-vectors.txt` | 25 | Original minable routine with this project's documented population counts, salt and four-source replay |
+| `betanium-tree-vectors.txt` | 13 | Original ordinary oak on flat grass, plus original tree-density samples |
 
-R/B/N are direct outputs of the reference RNG/noise modules. D/H use the
-reference terrain fields and density formulas with the documented shared climate
-lattice and direct interpolation. The generation harness was run externally;
-the checked-in tests read only numbers and execute only C. All 384 values matched
-exactly on the development target. C tests use a small floating-point tolerance
-for other platforms, plus exact shared-border and generation-order comparisons.
-To refresh, use the pinned reference with the same seeds, sample locations,
-climate lattice and formulas; inspect differences before changing generator
-version or fixtures. Never derive expected fixtures from the implementation
-under test.
+Base rows encode seed, kind and sample coordinates/results. Surface/ore rows
+encode signed seed, chunk X/Z and FNV-1a hash. Cave rows add the water-plane mode.
+Hashes cover compact block IDs in X-major, Z-major, Y-fast order (32,768 bytes),
+using offset 2166136261 and multiplier 16777619 with uint32 wraparound. Surface
+inputs have height `48+(x*5+z*3)%48`, water below 64 and biome `(x*16+z)%10`.
+Cave inputs use bedrock at 0, grass at 127, dirt at 124..126 and stone elsewhere;
+mode 1 adds water at 32. Ore inputs use bedrock at 0 and stone elsewhere. Tree
+rows contain seed, trunk height, four 25-bit leaf masks (X-major/Z-fast, centered
+in 5x5), and tree-density noise at world (-16,112). See `tests/features.c`.
+
+All reference fixtures match on the development target. Additional tests check
+reverse generation order over 25 chunks, actual canopies crossing an east edge,
+seed/cache changes, coordinate limits, decoration placement constraints, required
+ore types, water/bedrock preservation, and the production chunk packet palette
+and block bytes. Full-suite ASan/UBSan tests cover these paths. To refresh fixtures,
+run the pinned reference with these exact inputs; never obtain expected reference
+values from the implementation under test. Generator changes require an explicit
+version change and review of saved-world compatibility.
