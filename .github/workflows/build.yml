@@ -10,4 +10,4 @@ jobs:
       - run: ./build.sh
       - run: ./tests/run.sh
       - run: SANITIZE=1 ./tests/run.sh
-      - run: node build_registries.js && git diff --exit-code -- src/registries.c include/registries.h
+      - run: node build_registries.js --check

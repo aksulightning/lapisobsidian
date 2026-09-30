@@ -40,9 +40,9 @@
 // Calculated from TIME_BETWEEN_TICKS
 #define TICKS_PER_SECOND ((float)1000000 / TIME_BETWEEN_TICKS)
 
-// Initial world generation seed, will be hashed on startup
+// Default world seed (persisted unchanged; signed 64-bit CLI seeds supported)
 // Used in generating terrain and biomes
-#define INITIAL_WORLD_SEED 0xA103DE6C
+#define INITIAL_WORLD_SEED UINT64_C(0xA103DE6C)
 
 // Initial general RNG seed, will be hashed on startup
 // Used in random game events like item drops and mob behavior
@@ -172,7 +172,7 @@
 extern ssize_t recv_count;
 extern uint8_t recv_buffer[MAX_RECV_BUF_LEN];
 
-extern uint32_t world_seed;
+extern uint64_t world_seed;
 extern uint32_t rng_seed;
 
 extern uint16_t world_time;

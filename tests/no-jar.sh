@@ -2,6 +2,7 @@
 # Build a source-only copy with a PATH containing only the C toolchain and shell tools.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+mkdir -p .tests
 tmp=$(mktemp -d "$PWD/.tests/clean.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/source" "$tmp/bin"

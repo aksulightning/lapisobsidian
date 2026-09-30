@@ -13,6 +13,7 @@
 #include "tools.h"
 #include "registries.h"
 #include "serialize.h"
+#include "world_metadata.h"
 
 int64_t last_disk_sync_time = 0;
 
@@ -35,6 +36,10 @@ int initSerializer () {
       perror("Failed to mount LittleFS. Aborting.");
       return 1;
     }
+  #endif
+
+  #ifdef ESP_PLATFORM
+  if (!world_metadata_open("/littlefs/world.meta", FILE_PATH, &world_seed, false)) return 1;
   #endif
 
   // Attempt to open existing world file

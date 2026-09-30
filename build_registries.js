@@ -3,6 +3,14 @@ const fs = require("fs/promises");
 // Optional maintainer tool. Normal builds compile the checked-in C snapshot.
 const snapshot = require("./generated/registry_snapshot.json");
 if (snapshot.protocol !== 772 || snapshot.version !== "1.21.8") throw Error("Protocol snapshot mismatch");
+if (Object.keys(snapshot.palette).length !== 256 || snapshot.mapping.length !== 256 ||
+    snapshot.mappingToBlock.length !== 256 || snapshot.maxItemId !== 1415) throw Error("Invalid palette or item limits");
+for (const value of Object.values(snapshot.palette)) {
+  if (!Number.isInteger(value) || value < 0 || value > 65535) throw Error("Invalid state ID");
+}
+for (const value of [...Object.values(snapshot.items), ...snapshot.mapping, ...snapshot.mappingToBlock]) {
+  if (!Number.isInteger(value) || value < 0 || value > snapshot.maxItemId) throw Error("Invalid item ID");
+}
 const biomes = ["plains", "mangrove_swamp", "desert", "snowy_plains", "beach"];
 async function extractItemsAndBlocks () {
   return {palette: snapshot.palette, items: snapshot.items,
@@ -264,7 +272,7 @@ uint8_t I_to_B (uint32_t item) {
 #define H_REGISTRIES
 
 #define REGISTRY_PROTOCOL_VERSION ${snapshot.protocol}
-#define REGISTRY_ITEM_MAX_ID 1415
+#define REGISTRY_ITEM_MAX_ID ${snapshot.maxItemId}
 
 #include <stdint.h>
 
@@ -292,6 +300,12 @@ ${registries["damage_type"].map((c, i) => `#define D_${c} ${i}`).join("\n")}
 #endif
 `;
 
+  if (process.argv.includes("--check")) {
+    if (await fs.readFile(outputPath, "utf8") !== sourceCode ||
+        await fs.readFile(headerPath, "utf8") !== headerCode) throw Error("Checked-in registry data differs from deterministic generation");
+    console.log("Registry snapshot is deterministic and current");
+    return;
+  }
   await fs.writeFile(outputPath, sourceCode);
   await fs.writeFile(headerPath, headerCode);
   console.log("Done. Wrote to `registries.c` and `registries.h`");

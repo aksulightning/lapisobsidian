@@ -3,6 +3,11 @@
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <inttypes.h>
+#include <math.h>
+#include "beta173_rng.h"
+#include "beta173_worldgen.h"
+#include "world_metadata.h"
 
 #ifndef CLOCK_REALTIME
 #define CLOCK_REALTIME 0
@@ -208,8 +213,8 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
     case 0x20:
       if (state == STATE_PLAY) {
 
-        double x, y, z;
-        float yaw, pitch;
+        double x = 0, y = 0, z = 0;
+        float yaw = 0, pitch = 0;
         uint8_t on_ground;
 
         // Read player position (and rotation)
@@ -218,6 +223,17 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
         else if (packet_id == 0x20) cs_setPlayerMovementFlags (client_fd, &on_ground);
         else cs_setPlayerPositionAndRotation(client_fd, &x, &y, &z, &yaw, &pitch, &on_ground);
 
+        if (recv_count <= 0) { recv_count = 0; return; }
+        if ((packet_id == 0x1D || packet_id == 0x1E) &&
+            (!isfinite(x) || !isfinite(y) || !isfinite(z) ||
+             x < -32768 || x >= 32768 || z < -32768 || z >= 32768 || y < 0 || y >= 256)) {
+          recv_count = 0;
+          return;
+        }
+        if ((packet_id == 0x1E || packet_id == 0x1F) && (!isfinite(yaw) || !isfinite(pitch))) {
+          recv_count = 0;
+          return;
+        }
         PlayerData *player;
         if (getPlayerData(client_fd, &player)) break;
 
@@ -240,8 +256,12 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
 
         // Update rotation in player data (if applicable)
         if (packet_id != 0x1D) {
-          player->yaw = ((short)(yaw + 540) % 360 - 180) * 127 / 180;
-          player->pitch = pitch / 90.0f * 127.0f;
+          double angle = fmod((double)yaw + 180.0, 360.0);
+          if (angle < 0) angle += 360.0;
+          player->yaw = (int8_t)((angle - 180.0) * 127.0 / 180.0);
+          if (pitch < -90) pitch = -90;
+          if (pitch > 90) pitch = 90;
+          player->pitch = (int8_t)(pitch / 90.0f * 127.0f);
         }
 
         // Whether to broadcast player position to other players
@@ -307,14 +327,12 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
         }
 
         // Cast the values to short to get integer position
-        short cx = x, cy = y, cz = z;
-        if (x < 0) cx -= 1;
-        if (z < 0) cz -= 1;
+        short cx = (short)floor(x), cy = (short)y, cz = (short)floor(z);
         // Determine the player's chunk coordinates
-        short _x = (cx < 0 ? cx - 16 : cx) / 16, _z = (cz < 0 ? cz - 16 : cz) / 16;
+        short _x = (short)div_floor(cx, 16), _z = (short)div_floor(cz, 16);
         // Calculate distance between previous and current chunk coordinates
-        short dx = _x - (player->x < 0 ? player->x - 16 : player->x) / 16;
-        short dz = _z - (player->z < 0 ? player->z - 16 : player->z) / 16;
+        short dx = (short)(_x - div_floor(player->x, 16));
+        short dz = (short)(_z - div_floor(player->z, 16));
 
         // Prevent players from leaving the world
         if (cy < 0) {
@@ -498,7 +516,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
 
 }
 
-int main () {
+int main (int argc, char **argv) {
   if (!registry_validate()) {
     fputs("Lapis Obsidian: invalid protocol registry snapshot\n", stderr);
     return EXIT_FAILURE;
@@ -511,10 +529,23 @@ int main () {
       }
   #endif
 
-  // Hash the seeds to ensure they're random enough
-  world_seed = splitmix64(world_seed);
-  printf("World seed (hashed): ");
-  for (int i = 3; i >= 0; i --) printf("%X", (unsigned int)((world_seed >> (8 * i)) & 255));
+  bool explicit_seed = false;
+  if (argc == 3 && strcmp(argv[1], "--seed") == 0) {
+    if (!beta173_seed_parse(argv[2], &world_seed)) {
+      fputs("Invalid seed: expected a signed 64-bit decimal integer\n", stderr);
+      return EXIT_FAILURE;
+    }
+    explicit_seed = true;
+  } else if (argc > 1) {
+    fputs("Usage: lapis-obsidian [--seed <signed-64-bit-integer>]\n", stderr);
+    return EXIT_FAILURE;
+  }
+  #if defined(SYNC_WORLD_TO_DISK) && !defined(ESP_PLATFORM)
+  if (!world_metadata_open("world.meta", "world.bin", &world_seed, explicit_seed)) return EXIT_FAILURE;
+  #else
+  (void)explicit_seed;
+  #endif
+  printf("Lapis Obsidian world seed (64-bit hex): %016" PRIx64 "\n", world_seed);
 
   rng_seed = splitmix64(rng_seed);
   printf("\nRNG seed (hashed): ");
@@ -737,8 +768,8 @@ int main () {
 
 #ifdef ESP_PLATFORM
 
-void bareiron_main (void *pvParameters) {
-  main();
+void lapis_obsidian_main (void *pvParameters) {
+  main(0, NULL);
   vTaskDelete(NULL);
 }
 
@@ -749,7 +780,7 @@ static void wifi_event_handler (void *arg, esp_event_base_t event_base, int32_t 
     esp_wifi_connect();
   } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
     printf("Got IP, starting server...\n\n");
-    xTaskCreate(bareiron_main, "bareiron", 4096, NULL, 5, NULL);
+    xTaskCreate(lapis_obsidian_main, "Lapis Obsidian", 8192, NULL, 5, NULL);
   }
 }
 

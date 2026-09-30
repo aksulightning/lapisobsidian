@@ -1701,7 +1701,7 @@ void handleServerTick (int64_t time_since_last_tick) {
    * this periodically. If it does become zero, we reset it to
    * the world seed as a good-enough fallback.
    */
-  if (rng_seed == 0) rng_seed = world_seed;
+  if (rng_seed == 0) rng_seed = (uint32_t)world_seed | 1u;
 
   // Tick mob behavior
   for (int i = 0; i < MAX_MOBS; i ++) {

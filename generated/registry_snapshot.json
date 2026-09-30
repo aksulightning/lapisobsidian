@@ -1421,5 +1421,6 @@
     "copper_ore": 971,
     "moss_carpet": 1049,
     "mud": 1059
-  }
+  },
+  "maxItemId": 1415
 }

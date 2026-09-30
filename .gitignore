@@ -2,3 +2,6 @@ lapis-obsidian
 lapis-obsidian.exe
 .tests/
 *.bin
+world.meta
+*.o
+cc*.s

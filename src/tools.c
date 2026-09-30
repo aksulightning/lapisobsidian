@@ -205,15 +205,8 @@ uint64_t readUint64 (int client_fd) {
          ((uint64_t)recv_buffer[7]);
 }
 int64_t readInt64 (int client_fd) {
-  recv_count = recv_all(client_fd, recv_buffer, 8, false);
-  return ((int64_t)recv_buffer[0] << 56) |
-         ((int64_t)recv_buffer[1] << 48) |
-         ((int64_t)recv_buffer[2] << 40) |
-         ((int64_t)recv_buffer[3] << 32) |
-         ((int64_t)recv_buffer[4] << 24) |
-         ((int64_t)recv_buffer[5] << 16) |
-         ((int64_t)recv_buffer[6] << 8) |
-         ((int64_t)recv_buffer[7]);
+  uint64_t value = readUint64(client_fd);
+  return value <= INT64_MAX ? (int64_t)value : -1 - (int64_t)(UINT64_MAX - value);
 }
 float readFloat (int client_fd) {
   uint32_t bytes = readUint32(client_fd);
@@ -230,14 +223,18 @@ double readDouble (int client_fd) {
 
 // Receive length prefixed data with bounds checking
 ssize_t readLengthPrefixedData (int client_fd) {
-  uint32_t length = readVarInt(client_fd);
-  if (length >= MAX_RECV_BUF_LEN) {
-    printf("ERROR: Received length (%u) exceeds maximum (%u)\n", length, MAX_RECV_BUF_LEN);
-    disconnectClient(&client_fd, -1);
-    recv_count = 0;
-    return 0;
+  int32_t length = readVarInt(client_fd);
+  if (length < 0 || length >= MAX_RECV_BUF_LEN) {
+    errno = EINVAL;
+    recv_count = -1;
+    return -1;
   }
-  return recv_all(client_fd, recv_buffer, length, false);
+  ssize_t received = recv_all(client_fd, recv_buffer, (size_t)length, false);
+  if (received != length) {
+    errno = EINVAL;
+    return -1;
+  }
+  return received;
 }
 
 // Reads a networked string into recv_buffer
@@ -252,35 +249,9 @@ void readString (int client_fd) {
 }
 // Reads a networked string of up to N bytes into recv_buffer
 void readStringN (int client_fd, uint32_t max_length) {
-  // Forward to readString if max length is invalid
-  if (max_length >= MAX_RECV_BUF_LEN) {
-    readString(client_fd);
-    return;
-  }
-  // Attempt to read full string within maximum
-  uint32_t length = readVarInt(client_fd);
-  if (max_length > length) {
-    recv_count = recv_all(client_fd, recv_buffer, length, false);
-    if (recv_count < 0 || (size_t)recv_count >= sizeof(recv_buffer)) {
-    recv_buffer[0] = '\0';
-    recv_count = -1;
-    return;
-  }
-  recv_buffer[recv_count] = '\0';
-    return;
-  }
-  // Read string up to maximum, dump the rest
-  recv_count = recv_all(client_fd, recv_buffer, max_length, false);
-  if (recv_count < 0 || (size_t)recv_count >= sizeof(recv_buffer)) {
-    recv_buffer[0] = '\0';
-    recv_count = -1;
-    return;
-  }
-  recv_buffer[recv_count] = '\0';
-  uint8_t dummy;
-  for (uint32_t i = max_length; i < length; i ++) {
-    recv_all(client_fd, &dummy, 1, false);
-  }
+  readString(client_fd);
+  if (recv_count < 0) return;
+  if (max_length < (uint32_t)recv_count) recv_buffer[max_length] = '\0';
 }
 
 uint32_t fast_rand () {

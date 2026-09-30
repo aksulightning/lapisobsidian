@@ -143,25 +143,29 @@ int cs_clientInformation (int client_fd) {
 // S->C Clientbound Known Packs
 int sc_knownPacks (int client_fd) {
   printf("Sending Server's Known Packs\n\n");
-  char known_packs[] = {
-    0x0e, 0x01, 0x09, 0x6d, 0x69, 0x6e,
-    0x65, 0x63, 0x72, 0x61, 0x66, 0x74, 0x04, 0x63,
-    0x6f, 0x72, 0x65, 0x06, 0x31, 0x2e, 0x32, 0x31,
-    0x2e, 0x38
-  };
-  writeVarInt(client_fd, 24);
-  send_all(client_fd, &known_packs, 24);
+  static const char *const parts[] = {"minecraft", "core", LAPIS_MINECRAFT_VERSION};
+  uint32_t size = 2;
+  for (size_t i = 0; i < 3; i ++) size += (uint32_t)strlen(parts[i]) + 1;
+  writeVarInt(client_fd, size);
+  writeByte(client_fd, 0x0e);
+  writeByte(client_fd, 1);
+  for (size_t i = 0; i < 3; i ++) {
+    size_t length = strlen(parts[i]);
+    writeVarInt(client_fd, (uint32_t)length);
+    send_all(client_fd, parts[i], (ssize_t)length);
+  }
   return 0;
 }
 
-// C->S Serverbound Plugin Message
+// C->S Serverbound Known Packs
 int cs_knownPacks (int client_fd) {
   /* The compact snapshot omits NBT only for this exact built-in pack. */
   if (readVarInt(client_fd) != 1) return 1;
   const char *expected[] = { "minecraft", "core", LAPIS_MINECRAFT_VERSION };
   for (size_t i = 0; i < 3; i ++) {
     readString(client_fd);
-    if (recv_count <= 0 || strcmp((const char *)recv_buffer, expected[i]) != 0) {
+    if (recv_count <= 0 || (size_t)recv_count != strlen(expected[i]) ||
+        strcmp((const char *)recv_buffer, expected[i]) != 0) {
       fputs("Lapis Obsidian requires the matching Minecraft core pack\n", stderr);
       return 1;
     }
@@ -299,7 +303,7 @@ int sc_setDefaultSpawnPosition (int client_fd, int64_t x, int64_t y, int64_t z) 
   writeVarInt(client_fd, sizeVarInt(0x5A) + 12);
   writeVarInt(client_fd, 0x5A);
 
-  writeUint64(client_fd, ((x & 0x3FFFFFF) << 38) | ((z & 0x3FFFFFF) << 12) | (y & 0xFFF));
+  writeUint64(client_fd, (((uint64_t)x & 0x3FFFFFFu) << 38) | (((uint64_t)z & 0x3FFFFFFu) << 12) | ((uint64_t)y & 0xFFFu));
   writeFloat(client_fd, 0);
 
   return 0;
@@ -352,6 +356,7 @@ int sc_setCenterChunk (int client_fd, int x, int y) {
 
 // S->C Chunk Data and Update Light
 int sc_chunkDataAndUpdateLight (int client_fd, int _x, int _z) {
+  if (_x < -2048 || _x > 2047 || _z < -2048 || _z > 2047) return 1;
 
   const int chunk_data_size = (4101 + sizeVarInt(256) + sizeof(network_block_palette)) * 20 + 6 * 4;
   const int light_data_size = 14 + (sizeVarInt(2048) + 2048) * 26;
@@ -382,13 +387,17 @@ int sc_chunkDataAndUpdateLight (int client_fd, int _x, int _z) {
   // send chunk sections
   for (int i = 0; i < 20; i ++) {
     y = i * 16;
-    writeUint16(client_fd, 4096); // block count
+    uint8_t biome = buildChunkSection(x, y, z);
+    uint16_t block_count = 0;
+    for (size_t j = 0; j < sizeof(chunk_section); j ++) {
+      if (chunk_section[j] != B_air) block_count ++;
+    }
+    writeUint16(client_fd, block_count);
     writeByte(client_fd, 8); // bits per entry
     writeVarInt(client_fd, 256); // block palette length
     // block palette as varint buffer
     send_all(client_fd, network_block_palette, sizeof(network_block_palette));
     // chunk section buffer
-    uint8_t biome = buildChunkSection(x, y, z);
     send_all(client_fd, chunk_section, 4096);
     // biome data
     writeByte(client_fd, 0); // bits per entry
@@ -484,7 +493,7 @@ int sc_blockUpdate (int client_fd, int64_t x, int64_t y, int64_t z, uint8_t bloc
   if (!registry_block_state(block, &state)) return 1;
   writeVarInt(client_fd, 9 + sizeVarInt(state));
   writeByte(client_fd, 0x08);
-  writeUint64(client_fd, ((x & 0x3FFFFFF) << 38) | ((z & 0x3FFFFFF) << 12) | (y & 0xFFF));
+  writeUint64(client_fd, (((uint64_t)x & 0x3FFFFFFu) << 38) | (((uint64_t)z & 0x3FFFFFFu) << 12) | ((uint64_t)y & 0xFFFu));
   writeVarInt(client_fd, state);
   return 0;
 }
@@ -497,15 +506,29 @@ int sc_acknowledgeBlockChange (int client_fd, int sequence) {
   return 0;
 }
 
+static int readBlockPosition (int client_fd, int *x, int *y, int *z) {
+  uint64_t value = readUint64(client_fd);
+  uint32_t rx = (uint32_t)(value >> 38);
+  uint32_t rz = (uint32_t)((value >> 12) & 0x3ffffffu);
+  uint32_t ry = (uint32_t)(value & 0xfffu);
+  *x = rx < 0x2000000u ? (int)rx : (int)rx - 0x4000000;
+  *z = rz < 0x2000000u ? (int)rz : (int)rz - 0x4000000;
+  *y = ry < 0x800u ? (int)ry : (int)ry - 0x1000;
+  if (recv_count != 8 || *x < -32768 || *x > 32767 || *z < -32768 || *z > 32767 ||
+      *y < 0 || *y > 255) {
+    recv_count = 0;
+    return 1;
+  }
+  return 0;
+}
+
 // C->S Player Action
 int cs_playerAction (int client_fd) {
 
   uint8_t action = readByte(client_fd);
 
-  int64_t pos = readInt64(client_fd);
-  int x = pos >> 38;
-  int y = pos << 52 >> 52;
-  int z = pos << 26 >> 38;
+  int x, y, z;
+  if (readBlockPosition(client_fd, &x, &y, &z)) return 1;
 
   readByte(client_fd); // ignore face
 
@@ -559,12 +582,11 @@ int cs_useItemOn (int client_fd) {
 
   readByte(client_fd); // hand (ignored)
 
-  int64_t pos = readInt64(client_fd);
-  int x = pos >> 38;
-  int y = pos << 52 >> 52;
-  int z = pos << 26 >> 38;
+  int x, y, z;
+  if (readBlockPosition(client_fd, &x, &y, &z)) return 1;
 
   uint8_t face = readByte(client_fd);
+  if (face > 5) { recv_count = 0; return 1; }
 
   // ignore cursor position
   readUint32(client_fd);
