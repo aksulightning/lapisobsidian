@@ -541,11 +541,13 @@ int main (int argc, char **argv) {
     return EXIT_FAILURE;
   }
   #if defined(SYNC_WORLD_TO_DISK) && !defined(ESP_PLATFORM)
-  if (!world_metadata_open("world.meta", "world.bin", &world_seed, explicit_seed)) return EXIT_FAILURE;
+  if (!world_metadata_open("world.meta", "world.bin", &world_seed, explicit_seed, world_mirror_horizontal != 0)) return EXIT_FAILURE;
   #else
   (void)explicit_seed;
   #endif
   printf("Lapis Obsidian world seed (64-bit hex): %016" PRIx64 "\n", world_seed);
+
+  printf("Horizontal world mirroring: %s\n", world_mirror_horizontal ? "enabled (X axis)" : "disabled");
 
   rng_seed = splitmix64(rng_seed);
   printf("\nRNG seed (hashed): ");

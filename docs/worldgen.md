@@ -75,6 +75,29 @@ taiga, desert to desert, and tundra to snowy_plains. The inherited serializer
 still sends one biome per section, selected from the chunk's center; surface
 blocks use per-column climate biomes. Fine-grained client biome tinting is deferred.
 
+## Optional horizontal mirroring
+
+`WORLD_MIRROR_HORIZONTAL` in `include/globals.h` defaults to 0 and initializes
+the startup variable `world_mirror_horizontal`. Set the constant to 1 and rebuild
+to enable it. The server reflects complete generated chunks across the plane
+X=-0.5: block X maps to `-X-1`, source chunk X maps to `-chunkX-1`, and local X
+maps to `15-localX`. Y/Z are unchanged. This bijection preserves both compact
+coordinate boundaries and reflects features that cross chunk borders. It reverses
+the world, rather than duplicating one half to create bilateral symmetry.
+
+The adapter reverses block and biome columns in place after generation, before
+applying player edits. Height queries and packet sections use the reflected cache;
+its key includes the startup setting. No extra chunk storage is allocated. Saved
+edits and player coordinates are not transformed; this option does not convert an
+existing world. The variable is a startup option, not a live gameplay toggle.
+
+New `world.meta` files have 25 bytes: the existing 24-byte header plus a flags byte
+whose bit 0 stores horizontal mirroring. Other flag bits and trailing bytes are
+rejected. Earlier 24-byte version-2 headers load as mirroring disabled. Changing
+the requested setting for an existing save is rejected. The generator version
+stays 2 because unmirrored generation is unchanged. Metadata and packet tests
+cover both modes, old headers, mismatches, biome reflection, edits and world edges.
+
 ## Intentional differences and limits
 
 - This is Beta-style, not exact historical world hashes. Shared world-space

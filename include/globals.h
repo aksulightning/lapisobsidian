@@ -44,6 +44,15 @@
 // Used in generating terrain and biomes
 #define INITIAL_WORLD_SEED UINT64_C(0xA103DE6C)
 
+// Mirror generated terrain horizontally: X becomes -X-1; Y/Z are unchanged.
+// Select before creating a world. Saved worlds reject a different setting.
+#ifndef WORLD_MIRROR_HORIZONTAL
+  #define WORLD_MIRROR_HORIZONTAL 0
+#endif
+#if WORLD_MIRROR_HORIZONTAL != 0 && WORLD_MIRROR_HORIZONTAL != 1
+  #error "WORLD_MIRROR_HORIZONTAL must be 0 or 1"
+#endif
+
 // Initial general RNG seed, will be hashed on startup
 // Used in random game events like item drops and mob behavior
 #define INITIAL_RNG_SEED 0xE2B9419
@@ -173,6 +182,7 @@ extern ssize_t recv_count;
 extern uint8_t recv_buffer[MAX_RECV_BUF_LEN];
 
 extern uint64_t world_seed;
+extern uint8_t world_mirror_horizontal;
 extern uint32_t rng_seed;
 
 extern uint16_t world_time;

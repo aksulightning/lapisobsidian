@@ -9,16 +9,17 @@
 
 static uint64_t active_seed;
 #define TERRAIN_CACHE_CHUNKS 4
-static uint8_t initialized;
+static uint8_t initialized, active_mirror;
 static Beta173Chunk terrain_chunks[TERRAIN_CACHE_CHUNKS];
 static Beta173Chunk *terrain_chunk;
 static unsigned cache_count, cache_order[TERRAIN_CACHE_CHUNKS];
 uint8_t chunk_section[4096];
 
 static void ensure_generator (void) {
-  if (!initialized || active_seed != world_seed) {
+  if (!initialized || active_seed != world_seed || active_mirror != world_mirror_horizontal) {
     beta173_worldgen_init(world_seed);
     active_seed = world_seed;
+    active_mirror = world_mirror_horizontal;
     initialized = 1;
     cache_count = 0;
     for (unsigned i = 0; i < TERRAIN_CACHE_CHUNKS; i ++) cache_order[i] = i;
@@ -26,6 +27,21 @@ static void ensure_generator (void) {
 }
 
 static int chunk_coord (int value) { return value / 16 - (value % 16 < 0); }
+static void mirror_chunk (Beta173Chunk *chunk, int cx) {
+  /* Reverse complete X columns after features, so border-spanning caves and
+   * canopies are reflected together. No extra chunk buffer is needed. */
+  for (unsigned x = 0; x < 8; x ++) for (unsigned z = 0; z < 16; z ++) {
+    unsigned a = x*16+z, b = (15-x)*16+z;
+    uint8_t biome = chunk->biomes[a];
+    chunk->biomes[a] = chunk->biomes[b]; chunk->biomes[b] = biome;
+    for (unsigned y = 0; y < 128; y ++) {
+      uint8_t block = chunk->blocks[a*128+y];
+      chunk->blocks[a*128+y] = chunk->blocks[b*128+y];
+      chunk->blocks[b*128+y] = block;
+    }
+  }
+  chunk->cx = cx;
+}
 static bool ensure_chunk (int cx, int cz) {
   ensure_generator();
   if (cx < -2048 || cx > 2047 || cz < -2048 || cz > 2047) return false;
@@ -37,7 +53,10 @@ static bool ensure_chunk (int cx, int cz) {
   if (index == cache_count) {
     if (cache_count < TERRAIN_CACHE_CHUNKS) cache_count ++;
     else index = TERRAIN_CACHE_CHUNKS-1;
-    if (!beta173_generate_chunk(world_seed,cx,cz,BETA_DECORATION,&terrain_chunks[cache_order[index]])) return false;
+    Beta173Chunk *entry = &terrain_chunks[cache_order[index]];
+    int source_x = world_mirror_horizontal ? -cx-1 : cx;
+    if (!beta173_generate_chunk(world_seed,source_x,cz,BETA_DECORATION,entry)) return false;
+    if (world_mirror_horizontal) mirror_chunk(entry,cx);
   }
   unsigned slot = cache_order[index];
   for (; index > 0; index --) cache_order[index] = cache_order[index-1];

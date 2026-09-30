@@ -32,6 +32,7 @@ ssize_t recv_count;
 uint8_t recv_buffer[MAX_RECV_BUF_LEN] = {0};
 
 uint64_t world_seed = INITIAL_WORLD_SEED;
+uint8_t world_mirror_horizontal = WORLD_MIRROR_HORIZONTAL;
 uint32_t rng_seed = INITIAL_RNG_SEED;
 
 uint16_t world_time = 0;

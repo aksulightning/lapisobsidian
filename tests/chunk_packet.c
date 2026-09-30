@@ -50,6 +50,7 @@ static void string (const char *expected) {
 }
 int main (void) {
   world_seed = UINT64_C(1);
+  world_mirror_horizontal = 0;
   for (int i = 0; i < MAX_BLOCK_CHANGES; i ++) block_changes[i].block = 0xff;
   block_changes_count = 1;
   block_changes[0] = (BlockChange){.x=2,.y=80,.z=3,.block=B_obsidian};
@@ -122,6 +123,29 @@ int main (void) {
       }
     }
   }
-  puts("production chunk packet: framing, 24 sections, palette, edit overlay, biomes and registries passed");
+  /* Compare complete reflected sections, not just selected height samples.
+   * Edits stay at their physical world coordinates after the base reflection. */
+  const int mirror_coords[5][2] = {{0,0},{-1,-1},{19,-7},{-2048,2047},{2047,-2048}};
+  world_mirror_horizontal = 1;
+  for (unsigned k = 0; k < 5; k ++) {
+    int cx = mirror_coords[k][0], cz = mirror_coords[k][1];
+    assert(beta173_generate_chunk(world_seed,-cx-1,cz,BETA_DECORATION,&expected_chunk));
+    for (int sy = 0; sy < 128; sy += 16) {
+      uint8_t biome = buildChunkSection(cx*16,sy,cz*16);
+      assert(biome == beta173_biome_protocol((Beta173Biome)expected_chunk.biomes[7*16+8]));
+      for (unsigned i = 0; i < 4096; i ++) {
+        int x = (int)(i%16), z = (int)((i/16)%16), y = sy+(int)(i/256);
+        unsigned expected = expected_chunk.blocks[((15-x)*16+z)*128+y];
+        if (cx == 0 && cz == 0 && x == 2 && y == 80 && z == 3) expected = B_obsidian;
+        assert(chunk_section[i^7u] == expected);
+      }
+    }
+    assert(getTerrainAt(cx*16,64,cz*16,(ChunkAnchor){0}) == expected_chunk.blocks[15*16*128+64]);
+  }
+  /* Toggle while the last target is cached: the old orientation must not leak. */
+  world_mirror_horizontal = 0;
+  assert(beta173_generate_chunk(world_seed,2047,-2048,BETA_DECORATION,&expected_chunk));
+  for (int y = 0; y < 128; y ++) assert(getTerrainAt(32752,y,-32768,(ChunkAnchor){0}) == expected_chunk.blocks[y]);
+  puts("production chunk packet: framing, 24 sections, palette, edit overlay, biomes, registries and horizontal mirroring passed");
   return 0;
 }

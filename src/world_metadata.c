@@ -6,19 +6,27 @@
 #include "protocol.h"
 
 bool world_metadata_open (const char *metadata_path, const char *edits_path,
-  uint64_t *seed, bool explicit_seed) {
+  uint64_t *seed, bool explicit_seed, bool mirror_horizontal) {
   if (!metadata_path || !edits_path || !seed) return false;
-  uint8_t header[24] = {'L','A','P','I','S','O','B','S', 0,0,0,BETA173_GENERATOR_VERSION,
+  uint8_t header[25] = {'L','A','P','I','S','O','B','S', 0,0,0,BETA173_GENERATOR_VERSION,
     0,0,(uint8_t)(LAPIS_PROTOCOL_VERSION >> 8),(uint8_t)(LAPIS_PROTOCOL_VERSION & 255)};
+  header[24] = mirror_horizontal ? 1 : 0;
   FILE *file = fopen(metadata_path, "rb");
   if (file) {
-    uint8_t actual[24];
+    uint8_t actual[25];
     size_t read = fread(actual, 1, sizeof(actual), file);
     int extra = fgetc(file);
     bool io_ok = !ferror(file);
     if (fclose(file) != 0) io_ok = false;
-    if (!io_ok || read != sizeof(actual) || extra != EOF || memcmp(actual, header, 16)) {
+    if (!io_ok || (read != 24 && read != sizeof(actual)) || extra != EOF ||
+        memcmp(actual, header, 16) || (read == 25 && actual[24] > 1)) {
       fputs("Lapis Obsidian: invalid or incompatible world metadata\n", stderr);
+      return false;
+    }
+    /* Older version-2 headers have no flags byte and mean unmirrored terrain. */
+    bool saved_mirror = read == 25 && actual[24] != 0;
+    if (saved_mirror != mirror_horizontal) {
+      fputs("Lapis Obsidian: requested horizontal mirroring differs from saved world\n", stderr);
       return false;
     }
     uint64_t saved_seed = 0;

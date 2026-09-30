@@ -39,7 +39,7 @@ int initSerializer () {
   #endif
 
   #ifdef ESP_PLATFORM
-  if (!world_metadata_open("/littlefs/world.meta", FILE_PATH, &world_seed, false)) return 1;
+  if (!world_metadata_open("/littlefs/world.meta", FILE_PATH, &world_seed, false, world_mirror_horizontal != 0)) return 1;
   #endif
 
   // Attempt to open existing world file
