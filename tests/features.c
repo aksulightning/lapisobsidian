@@ -82,7 +82,7 @@ static void tree_vectors (void) {
 static void population_order (void) {
   uint32_t hashes[25]; unsigned logs = 0, border_checks = 0;
   for (int x = -2; x <= 2; x ++) for (int z = -2; z <= 2; z ++) {
-    assert(beta173_generate_chunk(0,x,z,BETA_TREES,&chunk));
+    assert(beta173_generate_chunk(0,x,z,BETA_DECORATION,&chunk));
     hashes[(x+2)*5+z+2] = hash(&chunk);
     for (unsigned i = 0; i < BETA173_CHUNK_BLOCKS; i ++) if (chunk.blocks[i] == B_oak_log) logs ++;
     /* A trunk on an east boundary must have the adjacent non-corner canopy.
@@ -90,16 +90,46 @@ static void population_order (void) {
     for (int lz = 0; lz < 16; lz ++) for (int y = 10; y < 127; y ++) {
       unsigned i = (unsigned)((15*16+lz)*128+y);
       if (chunk.blocks[i] != B_oak_log || chunk.blocks[i+1] == B_oak_log) continue;
-      assert(beta173_generate_chunk(0,x+1,z,BETA_TREES,&repeat));
+      assert(beta173_generate_chunk(0,x+1,z,BETA_DECORATION,&repeat));
       uint8_t neighbor = repeat.blocks[(unsigned)(lz*128+y)];
       assert(neighbor == B_oak_leaves || neighbor == B_oak_log); border_checks ++;
     }
   }
   for (int x = 2; x >= -2; x --) for (int z = 2; z >= -2; z --) {
-    assert(beta173_generate_chunk(0,x,z,BETA_TREES,&chunk));
+    assert(beta173_generate_chunk(0,x,z,BETA_DECORATION,&chunk));
     assert(hash(&chunk) == hashes[(x+2)*5+z+2]);
   }
   assert(logs > 0 && border_checks > 0);
+}
+static void decorations (void) {
+  unsigned counts[256] = {0};
+  for (int cx = -2048; cx <= 2047; cx += 128) {
+    chunk.cx = cx; chunk.cz = cx/2;
+    memset(chunk.blocks,B_air,sizeof(chunk.blocks));
+    for (unsigned col = 0; col < 256; col ++) {
+      chunk.biomes[col] = (uint8_t)(col % BETA_BIOME_COUNT);
+      for (unsigned y = 0; y < 63; y ++) chunk.blocks[col*128+y] = B_stone;
+      chunk.blocks[col*128+63] = col%10 == BETA_DESERT ? B_sand : B_grass_block;
+      if (col%16 == 0) chunk.blocks[col*128+63] = B_water;
+      if (col%16 == 1) chunk.blocks[col*128+127] = B_stone;
+    }
+    repeat = chunk;
+    beta173_decoration(0,&chunk);
+    beta173_decoration(0,&repeat);
+    assert(memcmp(&chunk,&repeat,sizeof(chunk)) == 0);
+    for (unsigned col = 0; col < 256; col ++) {
+      for (unsigned y = 0; y < 63; y ++) assert(chunk.blocks[col*128+y] == B_stone);
+      uint8_t cover = chunk.blocks[col*128+64]; counts[cover] ++;
+      if (col%16 == 0 || col%16 == 1) assert(cover == B_air);
+      if (cover == B_dead_bush) assert(chunk.blocks[col*128+63] == B_sand);
+      if (cover == B_short_grass || cover == B_fern || cover == B_dandelion || cover == B_poppy) assert(chunk.blocks[col*128+63] == B_grass_block);
+    }
+  }
+  assert(counts[B_short_grass] && counts[B_fern] && counts[B_dandelion] && counts[B_poppy] && counts[B_dead_bush] && counts[B_snow]);
+  assert(beta173_generate_chunk(UINT64_MAX,-2048,-2048,BETA_DECORATION,&chunk));
+  assert(beta173_generate_chunk(1,2047,2047,BETA_DECORATION,&repeat));
+  assert(beta173_generate_chunk(UINT64_MAX,-2048,-2048,BETA_DECORATION,&repeat));
+  assert(memcmp(&chunk,&repeat,sizeof(chunk)) == 0);
 }
 int main (void) {
   surface_vectors();
@@ -107,6 +137,7 @@ int main (void) {
   ore_vectors();
   tree_vectors();
   population_order();
+  decorations();
   assert(beta173_biome(0.05, 1) == BETA_TUNDRA);
   assert(beta173_biome(1, 0) == BETA_DESERT);
   assert(beta173_biome(1, 1) == BETA_RAINFOREST);
@@ -126,6 +157,6 @@ int main (void) {
   assert(beta173_generate_chunk(2, 100, 200, BETA_SURFACE, &repeat));
   assert(beta173_generate_chunk(1, -1, 0, BETA_SURFACE, &repeat));
   assert(memcmp(&chunk, &repeat, sizeof(chunk)) == 0);
-  puts("features: 108 feature reference vectors, biomes, bounds and generation order passed");
+  puts("features: 108 feature reference vectors, biomes, decoration, bounds, canopy borders and reverse generation order passed");
   return 0;
 }

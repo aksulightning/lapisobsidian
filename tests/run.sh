@@ -9,9 +9,9 @@ fi
 "${CC:-gcc}" "${flags[@]}" tests/registry.c tests/sanitizer.c src/registry.c src/registries.c -o .tests/registry
 .tests/registry
 "${CC:-gcc}" "${flags[@]}" tests/worldgen.c tests/sanitizer.c src/beta173_*.c -lm -o .tests/worldgen
+.tests/worldgen
 "${CC:-gcc}" "${flags[@]}" tests/features.c tests/sanitizer.c src/beta173_*.c -lm -o .tests/features
 .tests/features
-.tests/worldgen
 "${CC:-gcc}" "${flags[@]}" tests/metadata.c tests/sanitizer.c src/world_metadata.c -o .tests/metadata
 if ! .tests/metadata 2>.tests/metadata-rejections.log; then cat .tests/metadata-rejections.log; exit 1; fi
 # Keep inherited packet code's existing conversion warnings separate from new modules.

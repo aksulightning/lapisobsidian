@@ -8,8 +8,11 @@
 #include "beta173_features.h"
 
 static uint64_t active_seed;
-static uint8_t initialized, cached;
-static Beta173Chunk terrain_chunk;
+#define TERRAIN_CACHE_CHUNKS 4
+static uint8_t initialized;
+static Beta173Chunk terrain_chunks[TERRAIN_CACHE_CHUNKS];
+static Beta173Chunk *terrain_chunk;
+static unsigned cache_count, cache_order[TERRAIN_CACHE_CHUNKS];
 uint8_t chunk_section[4096];
 
 static void ensure_generator (void) {
@@ -17,23 +20,36 @@ static void ensure_generator (void) {
     beta173_worldgen_init(world_seed);
     active_seed = world_seed;
     initialized = 1;
-    cached = 0;
+    cache_count = 0;
+    for (unsigned i = 0; i < TERRAIN_CACHE_CHUNKS; i ++) cache_order[i] = i;
   }
 }
 
 static int chunk_coord (int value) { return value / 16 - (value % 16 < 0); }
 static bool ensure_chunk (int cx, int cz) {
   ensure_generator();
-  if (!cached || terrain_chunk.cx != cx || terrain_chunk.cz != cz) {
-    cached = beta173_generate_chunk(world_seed, cx, cz, BETA_TREES, &terrain_chunk);
+  if (cx < -2048 || cx > 2047 || cz < -2048 || cz > 2047) return false;
+  unsigned index = 0;
+  for (; index < cache_count; index ++) {
+    const Beta173Chunk *entry = &terrain_chunks[cache_order[index]];
+    if (entry->cx == cx && entry->cz == cz) break;
   }
-  return cached != 0;
+  if (index == cache_count) {
+    if (cache_count < TERRAIN_CACHE_CHUNKS) cache_count ++;
+    else index = TERRAIN_CACHE_CHUNKS-1;
+    if (!beta173_generate_chunk(world_seed,cx,cz,BETA_DECORATION,&terrain_chunks[cache_order[index]])) return false;
+  }
+  unsigned slot = cache_order[index];
+  for (; index > 0; index --) cache_order[index] = cache_order[index-1];
+  cache_order[0] = slot;
+  terrain_chunk = &terrain_chunks[slot];
+  return true;
 }
 static uint8_t terrain_at (int x, int y, int z) {
   if (!beta173_coords_valid(x,z)) return B_air;
   if (y < 0) return B_bedrock;
   if (y >= 128 || !ensure_chunk(chunk_coord(x),chunk_coord(z))) return B_air;
-  uint8_t *block = beta173_chunk_block(&terrain_chunk,x,y,z);
+  uint8_t *block = beta173_chunk_block(terrain_chunk,x,y,z);
   return block ? *block : B_air;
 }
 
@@ -44,7 +60,7 @@ uint32_t getChunkHash (short x, short z) {
 
 uint8_t getChunkBiome (short x, short z) {
   if (!ensure_chunk(x,z)) return W_plains;
-  return beta173_biome_protocol((Beta173Biome)terrain_chunk.biomes[8*16+8]);
+  return beta173_biome_protocol((Beta173Biome)terrain_chunk->biomes[8*16+8]);
 }
 
 uint8_t getHeightAt (int x, int z) {

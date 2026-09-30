@@ -24,5 +24,6 @@ bool beta173_generate_chunk (uint64_t seed, int cx, int cz, Beta173Phase phase, 
   if (phase >= BETA_CAVES) beta173_caves(seed, chunk);
   if (phase >= BETA_ORES) beta173_ores(seed, chunk);
   if (phase >= BETA_TREES) beta173_trees(seed, chunk);
+  if (phase >= BETA_DECORATION) beta173_decoration(seed, chunk);
   return true;
 }

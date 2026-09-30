@@ -23,6 +23,13 @@ int main (void) {
   f = fopen(meta, "ab"); assert(f); assert(fputc(0, f) != EOF); assert(fclose(f) == 0);
   assert(!world_metadata_open(meta, world, &seed, false));
   remove(meta);
-  puts("world metadata: persistence, seed mismatch, corruption and legacy rejection passed");
+  assert(world_metadata_open(meta, world, &seed, false));
+  f = fopen(meta, "r+b"); assert(f);
+  assert(fseek(f,8,SEEK_SET) == 0);
+  const unsigned char previous_generator[4] = {0,0,0,1};
+  assert(fwrite(previous_generator,1,4,f) == 4); assert(fclose(f) == 0);
+  assert(!world_metadata_open(meta, world, &seed, false));
+  remove(meta);
+  puts("world metadata: persistence, seed mismatch, corruption, generator version and legacy rejection passed");
   return 0;
 }

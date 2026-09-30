@@ -53,7 +53,7 @@ int main (void) {
   for (int i = 0; i < MAX_BLOCK_CHANGES; i ++) block_changes[i].block = 0xff;
   block_changes_count = 1;
   block_changes[0] = (BlockChange){.x=2,.y=80,.z=3,.block=B_obsidian};
-  assert(beta173_generate_chunk(world_seed,0,0,BETA_TREES,&expected_chunk));
+  assert(beta173_generate_chunk(world_seed,0,0,BETA_DECORATION,&expected_chunk));
   assert(sc_chunkDataAndUpdateLight(0, 0, 0) == 0);
   size_t size = varint(); assert(size == written-cursor);
   assert(varint() == 0x27);
@@ -109,6 +109,19 @@ int main (void) {
     assert(cursor == end);
   }
   size_t tag_length = varint(); assert(cursor + tag_length == written && varint() == 0x0d);
+  /* Exercise the four-corner cache, eviction and seed invalidation through
+   * production terrain queries; compare whole columns with the phased generator. */
+  const int coords[6][2] = {{0,0},{-1,0},{0,-1},{-1,-1},{10,20},{-2048,-2048}};
+  for (unsigned pass = 0; pass < 2; pass ++) {
+    world_seed = pass == 0 ? 1 : UINT64_MAX;
+    for (unsigned k = 0; k < 6; k ++) {
+      int cx = coords[k][0], cz = coords[k][1];
+      assert(beta173_generate_chunk(world_seed,cx,cz,BETA_DECORATION,&expected_chunk));
+      for (int y = 0; y < 128; y ++) {
+        assert(getTerrainAt(cx*16,y,cz*16,(ChunkAnchor){0}) == expected_chunk.blocks[y]);
+      }
+    }
+  }
   puts("production chunk packet: framing, 24 sections, palette, edit overlay, biomes and registries passed");
   return 0;
 }
