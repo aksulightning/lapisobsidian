@@ -17,5 +17,8 @@ uint8_t *beta173_chunk_block (Beta173Chunk *chunk, int x, int y, int z);
 void beta173_surface (Beta173Chunk *chunk);
 void beta173_caves (uint64_t seed, Beta173Chunk *chunk);
 void beta173_ores (uint64_t seed, Beta173Chunk *chunk);
-void beta173_vegetation (uint64_t seed, Beta173Chunk *chunk, bool decorate);
+typedef struct { uint8_t height; uint32_t leaves[4]; } Beta173Oak;
+void beta173_oak_shape (Beta173Rng *rng, Beta173Oak *tree);
+void beta173_trees (uint64_t seed, Beta173Chunk *chunk);
+void beta173_decoration (uint64_t seed, Beta173Chunk *chunk);
 #endif

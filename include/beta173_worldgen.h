@@ -19,4 +19,5 @@ void beta173_climate (int x, int z, double *temperature, double *humidity);
 uint64_t beta173_worldgen_seed (void);
 void beta173_surface_fields (int x, int z, double sand[16], double stone[16]);
 double beta173_gravel_noise (int x, int z);
+double beta173_tree_density (int x, int z);
 #endif

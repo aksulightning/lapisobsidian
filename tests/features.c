@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <inttypes.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include "beta173_features.h"
@@ -65,10 +66,47 @@ static void ore_vectors (void) {
   assert(feof(file) && count == 25); fclose(file);
   assert(totals[B_coal_ore] && totals[B_iron_ore] && totals[B_gold_ore] && totals[B_redstone_ore] && totals[B_lapis_ore] && totals[B_diamond_ore]);
 }
+static void tree_vectors (void) {
+  FILE *file = fopen("tests/betanium-tree-vectors.txt", "r"); assert(file);
+  char seed_text[32]; unsigned height, count = 0; uint32_t masks[4]; double density;
+  while (fscanf(file, "%31s %u %" SCNu32 " %" SCNu32 " %" SCNu32 " %" SCNu32 " %lf", seed_text, &height, &masks[0], &masks[1], &masks[2], &masks[3], &density) == 7) {
+    uint64_t seed; assert(beta173_seed_parse(seed_text, &seed));
+    Beta173Rng rng; beta173_rng_seed(&rng, seed); Beta173Oak tree;
+    beta173_oak_shape(&rng, &tree); assert(tree.height == height);
+    assert(memcmp(tree.leaves,masks,sizeof(masks)) == 0);
+    beta173_worldgen_init(seed);
+    assert(fabs(beta173_tree_density(-16,112)-density) < 1e-12); count ++;
+  }
+  assert(feof(file) && count == 13); fclose(file);
+}
+static void population_order (void) {
+  uint32_t hashes[25]; unsigned logs = 0, border_checks = 0;
+  for (int x = -2; x <= 2; x ++) for (int z = -2; z <= 2; z ++) {
+    assert(beta173_generate_chunk(0,x,z,BETA_TREES,&chunk));
+    hashes[(x+2)*5+z+2] = hash(&chunk);
+    for (unsigned i = 0; i < BETA173_CHUNK_BLOCKS; i ++) if (chunk.blocks[i] == B_oak_log) logs ++;
+    /* A trunk on an east boundary must have the adjacent non-corner canopy.
+     * Check the other chunk through independently generated production phases. */
+    for (int lz = 0; lz < 16; lz ++) for (int y = 10; y < 127; y ++) {
+      unsigned i = (unsigned)((15*16+lz)*128+y);
+      if (chunk.blocks[i] != B_oak_log || chunk.blocks[i+1] == B_oak_log) continue;
+      assert(beta173_generate_chunk(0,x+1,z,BETA_TREES,&repeat));
+      uint8_t neighbor = repeat.blocks[(unsigned)(lz*128+y)];
+      assert(neighbor == B_oak_leaves || neighbor == B_oak_log); border_checks ++;
+    }
+  }
+  for (int x = 2; x >= -2; x --) for (int z = 2; z >= -2; z --) {
+    assert(beta173_generate_chunk(0,x,z,BETA_TREES,&chunk));
+    assert(hash(&chunk) == hashes[(x+2)*5+z+2]);
+  }
+  assert(logs > 0 && border_checks > 0);
+}
 int main (void) {
   surface_vectors();
   cave_vectors();
   ore_vectors();
+  tree_vectors();
+  population_order();
   assert(beta173_biome(0.05, 1) == BETA_TUNDRA);
   assert(beta173_biome(1, 0) == BETA_DESERT);
   assert(beta173_biome(1, 1) == BETA_RAINFOREST);
@@ -88,6 +126,6 @@ int main (void) {
   assert(beta173_generate_chunk(2, 100, 200, BETA_SURFACE, &repeat));
   assert(beta173_generate_chunk(1, -1, 0, BETA_SURFACE, &repeat));
   assert(memcmp(&chunk, &repeat, sizeof(chunk)) == 0);
-  puts("features: 20 surface, 50 cave and 25 ore reference vectors, biomes, bounds and generation order passed");
+  puts("features: 108 feature reference vectors, biomes, bounds and generation order passed");
   return 0;
 }

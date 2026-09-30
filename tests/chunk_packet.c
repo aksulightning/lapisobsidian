@@ -53,7 +53,7 @@ int main (void) {
   for (int i = 0; i < MAX_BLOCK_CHANGES; i ++) block_changes[i].block = 0xff;
   block_changes_count = 1;
   block_changes[0] = (BlockChange){.x=2,.y=80,.z=3,.block=B_obsidian};
-  assert(beta173_generate_chunk(world_seed,0,0,BETA_ORES,&expected_chunk));
+  assert(beta173_generate_chunk(world_seed,0,0,BETA_TREES,&expected_chunk));
   assert(sc_chunkDataAndUpdateLight(0, 0, 0) == 0);
   size_t size = varint(); assert(size == written-cursor);
   assert(varint() == 0x27);

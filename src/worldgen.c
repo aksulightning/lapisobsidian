@@ -25,7 +25,7 @@ static int chunk_coord (int value) { return value / 16 - (value % 16 < 0); }
 static bool ensure_chunk (int cx, int cz) {
   ensure_generator();
   if (!cached || terrain_chunk.cx != cx || terrain_chunk.cz != cz) {
-    cached = beta173_generate_chunk(world_seed, cx, cz, BETA_ORES, &terrain_chunk);
+    cached = beta173_generate_chunk(world_seed, cx, cz, BETA_TREES, &terrain_chunk);
   }
   return cached != 0;
 }

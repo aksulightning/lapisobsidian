@@ -8,7 +8,7 @@
 #include "registries.h"
 
 static uint64_t generator_seed;
-static Beta173Noise sand_gravel[4], stone_patch[4];
+static Beta173Noise sand_gravel[4], stone_patch[4], tree_density[8];
 static Beta173Noise lower[16], upper[16], selector[8], depth[10], scale[16];
 static Beta173Noise temperature_noise[4], humidity_noise[4], rain_noise[2];
 static double cached_grid[BETA173_GRID_SIZE];
@@ -29,6 +29,7 @@ void beta173_worldgen_init (uint64_t seed) {
   init_octaves(stone_patch, 4, &rng);
   init_octaves(depth, 10, &rng);
   init_octaves(scale, 16, &rng);
+  init_octaves(tree_density, 8, &rng);
   beta173_rng_seed(&rng, seed * UINT64_C(9871));
   init_octaves(temperature_noise, 4, &rng);
   beta173_rng_seed(&rng, seed * UINT64_C(39811));
@@ -171,4 +172,14 @@ void beta173_surface_fields (int x, int z, double sand[16], double stone[16]) {
 double beta173_gravel_noise (int x, int z) {
   if (!initialized) beta173_worldgen_init(0);
   return beta173_noise_2d(sand_gravel, 4, x, z, 1.0/32);
+}
+
+double beta173_tree_density (int x, int z) {
+  if (!initialized) beta173_worldgen_init(0);
+  double result = 0, frequency = 1;
+  for (unsigned i = 0; i < 8; i ++) {
+    result += beta173_perlin(&tree_density[i], x*0.5*frequency, z*0.5*frequency, 0)/frequency;
+    frequency /= 2;
+  }
+  return result;
 }
