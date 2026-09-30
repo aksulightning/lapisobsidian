@@ -12,23 +12,21 @@
 #include "tools.h"
 
 int32_t readVarInt (int client_fd) {
-  int32_t value = 0;
-  int position = 0;
-  uint8_t byte;
-
-  while (true) {
-    byte = readByte(client_fd);
-    if (recv_count != 1) return VARNUM_ERROR;
-
-    value |= (byte & SEGMENT_BITS) << position;
-
-    if ((byte & CONTINUE_BIT) == 0) break;
-
-    position += 7;
-    if (position >= 32) return VARNUM_ERROR;
+  uint32_t value = 0;
+  for (unsigned position = 0; position < 35; position += 7) {
+    uint8_t byte = readByte(client_fd);
+    if (recv_count != 1 || (position == 28 && (byte & 0xf0u))) {
+      recv_count = 0;
+      return VARNUM_ERROR;
+    }
+    value |= (uint32_t)(byte & SEGMENT_BITS) << position;
+    if (!(byte & CONTINUE_BIT)) {
+      /* Convert Java's signed bit pattern without an overflowing C cast. */
+      return value <= INT32_MAX ? (int32_t)value : -1 - (int32_t)(UINT32_MAX - value);
+    }
   }
-
-  return value;
+  recv_count = 0;
+  return VARNUM_ERROR;
 }
 
 int sizeVarInt (uint32_t value) {

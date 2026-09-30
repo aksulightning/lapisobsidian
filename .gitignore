@@ -1,7 +1,4 @@
-.vscode
-notchian
-bareiron
-bareiron.exe
-src/registries.c
-include/registries.h
+lapis-obsidian
+lapis-obsidian.exe
+.tests/
 *.bin

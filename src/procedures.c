@@ -493,6 +493,7 @@ uint8_t getBlockChange (short x, uint8_t y, short z) {
 
 // Handle running out of memory for new block changes
 void failBlockChange (short x, uint8_t y, short z, uint8_t block) {
+  (void)block;
 
   // Get previous block at this location
   uint8_t before = getBlockAt(x, y, z);
@@ -522,8 +523,8 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
   // Since block changes get overlayed on top of terrain, we don't want to
   // store blocks that don't differ from the base terrain.
   ChunkAnchor anchor = {
-    x / CHUNK_SIZE,
-    z / CHUNK_SIZE
+    .x = x / CHUNK_SIZE,
+    .z = z / CHUNK_SIZE
   };
   if (x % CHUNK_SIZE < 0) anchor.x --;
   if (z % CHUNK_SIZE < 0) anchor.z --;
@@ -713,7 +714,7 @@ uint16_t getMiningResult (uint16_t held_item, uint8_t block) {
     default: break;
   }
 
-  return B_to_I[block];
+  return registry_block_item(block);
 
 }
 
@@ -1929,6 +1930,7 @@ void handleServerTick (int64_t time_since_last_tick) {
 // Broadcasts a chest slot update to all clients who have that chest open,
 // except for the client who initiated the update.
 void broadcastChestUpdate (int origin_fd, uint8_t *storage_ptr, uint16_t item, uint8_t count, uint8_t slot) {
+  (void)origin_fd;
 
   for (int i = 0; i < MAX_PLAYERS; i ++) {
     if (player_data[i].client_fd == -1) continue;

@@ -1,173 +1,13 @@
 const fs = require("fs/promises");
-const path = require("path");
 
-// Overrides for block-to-item conversion
-const blockToItemOverrides = {
-  "grass_block": "dirt",
-  "snowy_grass_block": "dirt",
-  "stone": "cobblestone",
-  "diamond_ore": "diamond",
-  "gold_ore": "raw_gold",
-  "redstone_ore": "redstone",
-  "iron_ore": "raw_iron",
-  "coal_ore": "coal",
-  "copper_ore": "raw_copper",
-  "snow": "snowball",
-  "dead_bush": "stick"
-};
-
-// Blacklisted block name strings
-const blockBlacklist = [
-  "spruce_",
-  "birch_",
-  "jungle_",
-  "acacia_",
-  "dark_oak_",
-  "mangrove_",
-  "cherry_",
-  "pale_oak_",
-  "crimson_",
-  "warped_",
-  "bamboo_",
-  "deepslate",
-  "infested_",
-  "stained_",
-  "_terracotta",
-  "_head"
-];
-
-// Whitelisted blocks, i.e. guaranteed to be included
-const blockWhitelist = [
-  "air",
-  "water",
-  "water_1",
-  "water_2",
-  "water_3",
-  "water_4",
-  "water_5",
-  "water_6",
-  "water_7",
-  "lava",
-  "lava_2",
-  "lava_4",
-  "lava_6",
-  "snowy_grass_block",
-  "mud",
-  "moss_carpet",
-  "oak_slab",
-  "stone_slab",
-  "cobblestone_slab",
-  "composter",
-  "coal_block",
-  "copper_ore",
-  "copper_block"
-];
-
-// Currently, only 4 biome types are supported, excluding "beach"
-const biomes = [
-  "plains",
-  "mangrove_swamp",
-  "desert",
-  "snowy_plains",
-  "beach"
-];
-
-// Extract item and block data from registry dump
+// Optional maintainer tool. Normal builds compile the checked-in C snapshot.
+const snapshot = require("./generated/registry_snapshot.json");
+if (snapshot.protocol !== 772 || snapshot.version !== "1.21.8") throw Error("Protocol snapshot mismatch");
+const biomes = ["plains", "mangrove_swamp", "desert", "snowy_plains", "beach"];
 async function extractItemsAndBlocks () {
-
-  // Block network IDs are defined in their own JSON file
-  // The item JSON file doesn't define IDs, we get those from the registries
-  const blockSource = JSON.parse(await fs.readFile(`${__dirname}/notchian/generated/reports/blocks.json`, "utf8"));
-
-  // Get registry data for extracting item IDs
-  const registriesJSON = JSON.parse(await fs.readFile(`${__dirname}/notchian/generated/reports/registries.json`, "utf8"));
-  const itemSource = registriesJSON["minecraft:item"].entries;
-  // Retrieve the registry list for blocks too, used later in tags
-  const blockRegistrySource = registriesJSON["minecraft:block"].entries;
-
-  // Sort blocks by their network ID
-  // Since we're only storing 256 blocks, this prioritizes the "common" ones first
-  const sortedBlocks = Object.entries(blockSource);
-  sortedBlocks.sort((a, b) => {
-    const aState = a[1].states.find(c => c.default);
-    if (!aState) return 1;
-    const bState = b[1].states.find(c => c.default);
-    if (!bState) return -1;
-    return aState.id - bState.id;
-  });
-
-  // Create name-id pair objects for easier parsing
-  const blocks = {}, items = {};
-
-  for (const entry of sortedBlocks) {
-    const defaultState = entry[1].states.find(c => c.default);
-    if (!defaultState) continue;
-    // Check if a part of this block's name is in the blacklist
-    let found = false;
-    for (const str of blockBlacklist) {
-      if (entry[0].includes(str)) {
-        found = true;
-        break;
-      }
-    }
-    if (found) continue;
-    // Register the block ID
-    blocks[entry[0].replace("minecraft:", "")] = defaultState.id;
-    // Include "snowy" variants of blocks as well
-    if ("properties" in defaultState && "snowy" in defaultState.properties) {
-      const snowyState = entry[1].states.find(c => c.properties.snowy);
-      blocks["snowy_" + entry[0].replace("minecraft:", "")] = snowyState.id;
-    }
-    // Include levels for fluids
-    if ("fluid" in entry[1].definition) {
-      for (let i = 1; i <= 7; i ++) {
-        blocks[entry[0].replace("minecraft:", "") + "_" + i] = defaultState.id + i;
-      }
-    }
-  }
-
-  for (const item in itemSource) {
-    items[item.replace("minecraft:", "")] = itemSource[item].protocol_id;
-  }
-
-  /**
-   * Create a block network ID palette.
-   * The goal is to pack as many meaningful blocks into 256 IDs as
-   * possible. For this, we only include blocks that have corresponding
-   * items, outside of some exceptions.
-   */
-  const palette = {};
-
-  // While we're at it, map block IDs to item IDs
-  const mapping = [], mappingWithOverrides = [];
-
-  // Handle explicitly whitelisted blocks first
-  for (const block of blockWhitelist) {
-    palette[block] = blocks[block];
-    mapping.push(items[block] || 0);
-    mappingWithOverrides.push(items[blockToItemOverrides[block]] || items[block] || 0);
-    if (mapping.length === 256) break;
-  }
-
-  // Continue adding blocks with matching items
-  for (const block in blocks) {
-    if (!(block in items)) continue;
-    if (blockWhitelist.includes(block)) continue;
-    palette[block] = blocks[block];
-    mapping.push(items[block] || 0);
-    mappingWithOverrides.push(items[blockToItemOverrides[block]] || items[block] || 0);
-    if (mapping.length === 256) break;
-  }
-
-  // Build list of block IDs, but from the registries
-  // Tags refer to these IDs, not the actual blocks
-  const blockRegistry = {};
-  for (const block in blockRegistrySource) {
-    blockRegistry[block.replace("minecraft:", "")] = blockRegistrySource[block].protocol_id;
-  }
-
-  return { blocks, items, palette, mapping, mappingWithOverrides, blockRegistry };
-
+  return {palette: snapshot.palette, items: snapshot.items,
+    mapping: snapshot.mappingToBlock, mappingWithOverrides: snapshot.mapping,
+    blockRegistry: snapshot.blockRegistry};
 }
 
 // Write an integer as a VarInt
@@ -181,31 +21,6 @@ function writeVarInt (value) {
     bytes.push((value & 0x7F) | 0x80);
     value >>>= 7;
   }
-}
-
-// Scan directory recursively to find all JSON files
-async function scanDirectory (basePath, currentPath = "") {
-  const entries = {};
-  const items = await fs.readdir(path.join(basePath, currentPath), { withFileTypes: true });
-
-  for (const item of items) {
-    const relativePath = path.join(currentPath, item.name);
-    if (item.isDirectory()) {
-      const subEntries = await scanDirectory(basePath, relativePath);
-      Object.assign(entries, subEntries);
-    } else if (item.name.endsWith(".json")) {
-      const dirPath = path.dirname(relativePath);
-      const registryName = dirPath === "." ? "" : dirPath;
-      const entryName = path.basename(item.name, ".json");
-
-      if (!entries[registryName]) {
-        entries[registryName] = [];
-      }
-      entries[registryName].push(entryName);
-    }
-  }
-
-  return entries;
 }
 
 // Serialize a single registry
@@ -317,11 +132,10 @@ const requiredRegistries = [
 
 async function convert () {
 
-  const inputPath = __dirname + "/notchian/generated/data/minecraft";
   const outputPath = __dirname + "/src/registries.c";
   const headerPath = __dirname + "/include/registries.h";
 
-  const registries = await scanDirectory(inputPath);
+  const registries = snapshot.registries;
   const registryBuffers = [];
 
   for (const registry of requiredRegistries) {
@@ -411,27 +225,32 @@ async function convert () {
   const sourceCode = `\
 #include <stdint.h>
 #include "registries.h"
+#include "protocol.h"
+_Static_assert(LAPIS_PROTOCOL_VERSION == REGISTRY_PROTOCOL_VERSION, "Registry protocol mismatch");
 
 // Binary contents of required "Registry Data" packets
-uint8_t registries_bin[] = {
+const uint8_t registries_bin[] = {
 ${toCArray(fullRegistryBuffer)}
 };
 // Binary contents of "Update Tags" packets
-uint8_t tags_bin[] = {
+const uint8_t tags_bin[] = {
 ${toCArray(tagBuffer)}
 };
 
 // Block palette
-uint16_t block_palette[] = { ${Object.values(itemsAndBlocks.palette).join(", ")} };
+const uint16_t block_palette[] = { ${Object.values(itemsAndBlocks.palette).join(", ")} };
 // Block palette as VarInt buffer
-uint8_t network_block_palette[] = {
+const uint8_t network_block_palette[] = {
 ${toCArray(networkBlockPalette)}
 };
 
 // Block-to-item mapping
-uint16_t B_to_I[] = { ${itemsAndBlocks.mappingWithOverrides.join(", ")} };
+static const uint16_t B_to_I[] = { ${itemsAndBlocks.mappingWithOverrides.join(", ")} };
+uint16_t registry_block_item (uint32_t id) {
+  return id < 256 ? B_to_I[id] : 0;
+}
 // Item-to-block mapping
-uint8_t I_to_B (uint16_t item) {
+uint8_t I_to_B (uint32_t item) {
   switch (item) {
     ${itemsAndBlocks.mapping.map((c, i) => c ? `case ${c}: return ${i};\n    ` : "").join("")}
     default: break;
@@ -444,16 +263,19 @@ uint8_t I_to_B (uint16_t item) {
 #ifndef H_REGISTRIES
 #define H_REGISTRIES
 
+#define REGISTRY_PROTOCOL_VERSION ${snapshot.protocol}
+#define REGISTRY_ITEM_MAX_ID 1415
+
 #include <stdint.h>
 
 // Binary packet data (${fullRegistryBuffer.length + tagBuffer.length} bytes total)
-extern uint8_t registries_bin[${fullRegistryBuffer.length}];
-extern uint8_t tags_bin[${tagBuffer.length}];
+extern const uint8_t registries_bin[${fullRegistryBuffer.length}];
+extern const uint8_t tags_bin[${tagBuffer.length}];
 
-extern uint16_t block_palette[256]; // Block palette
-extern uint8_t network_block_palette[${networkBlockPalette.length}]; // Block palette as VarInt buffer
-extern uint16_t B_to_I[256]; // Block-to-item mapping
-uint8_t I_to_B (uint16_t item); // Item-to-block mapping
+extern const uint16_t block_palette[256]; // Block palette
+extern const uint8_t network_block_palette[${networkBlockPalette.length}]; // Block palette as VarInt buffer
+uint16_t registry_block_item (uint32_t id); // Checked block-to-item mapping
+uint8_t I_to_B (uint32_t item); // Item-to-block mapping
 
 // Block identifiers
 ${Object.keys(itemsAndBlocks.palette).map((c, i) => `#define B_${c} ${i}`).join("\n")}
@@ -476,4 +298,4 @@ ${registries["damage_type"].map((c, i) => `#define D_${c} ${i}`).join("\n")}
 
 }
 
-convert().catch(console.error);
+convert().catch(error => { console.error(error); process.exitCode = 1; });

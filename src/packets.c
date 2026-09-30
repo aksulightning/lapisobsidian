@@ -19,6 +19,8 @@
 #include "tools.h"
 #include "varnum.h"
 #include "registries.h"
+#include "registry.h"
+#include "protocol.h"
 #include "worldgen.h"
 #include "crafting.h"
 #include "procedures.h"
@@ -28,7 +30,7 @@
 int sc_statusResponse (int client_fd) {
 
   char header[] = "{"
-    "\"version\":{\"name\":\"1.21.8\",\"protocol\":772},"
+    "\"version\":{\"name\":\"" LAPIS_MINECRAFT_VERSION "\",\"protocol\":" LAPIS_STRINGIFY(LAPIS_PROTOCOL_VERSION) "},"
     "\"description\":{\"text\":\"";
   char footer[] = "\"}}";
 
@@ -49,13 +51,18 @@ int sc_statusResponse (int client_fd) {
 int cs_handshake (int client_fd) {
   printf("Received Handshake:\n");
 
-  printf("  Protocol version: %d\n", (int)readVarInt(client_fd));
+  int protocol = readVarInt(client_fd);
+  printf("  Protocol version: %d\n", protocol);
   readString(client_fd);
   if (recv_count == -1) return 1;
   printf("  Server address: %s\n", recv_buffer);
   printf("  Server port: %u\n", readUint16(client_fd));
   int intent = readVarInt(client_fd);
-  if (intent == VARNUM_ERROR) return 1;
+  if ((intent != STATE_STATUS && intent != STATE_LOGIN) ||
+      (intent == STATE_LOGIN && protocol != LAPIS_PROTOCOL_VERSION)) {
+    recv_count = 0;
+    return 1;
+  }
   printf("  Intent: %d\n\n", intent);
   setClientState(client_fd, intent);
 
@@ -144,6 +151,21 @@ int sc_knownPacks (int client_fd) {
   };
   writeVarInt(client_fd, 24);
   send_all(client_fd, &known_packs, 24);
+  return 0;
+}
+
+// C->S Serverbound Plugin Message
+int cs_knownPacks (int client_fd) {
+  /* The compact snapshot omits NBT only for this exact built-in pack. */
+  if (readVarInt(client_fd) != 1) return 1;
+  const char *expected[] = { "minecraft", "core", LAPIS_MINECRAFT_VERSION };
+  for (size_t i = 0; i < 3; i ++) {
+    readString(client_fd);
+    if (recv_count <= 0 || strcmp((const char *)recv_buffer, expected[i]) != 0) {
+      fputs("Lapis Obsidian requires the matching Minecraft core pack\n", stderr);
+      return 1;
+    }
+  }
   return 0;
 }
 
@@ -331,7 +353,7 @@ int sc_setCenterChunk (int client_fd, int x, int y) {
 // S->C Chunk Data and Update Light
 int sc_chunkDataAndUpdateLight (int client_fd, int _x, int _z) {
 
-  const int chunk_data_size = (4101 + sizeVarInt(256) + sizeof(network_block_palette)) * 20 + 6 * 12;
+  const int chunk_data_size = (4101 + sizeVarInt(256) + sizeof(network_block_palette)) * 20 + 6 * 4;
   const int light_data_size = 14 + (sizeVarInt(2048) + 2048) * 26;
 
   writeVarInt(client_fd, 11 + sizeVarInt(chunk_data_size) + chunk_data_size + light_data_size);
@@ -374,17 +396,6 @@ int sc_chunkDataAndUpdateLight (int client_fd, int _x, int _z) {
     // yield to idle task
     task_yield();
   }
-
-  // send 8 chunk sections (up to Y=192) with no blocks
-  for (int i = 0; i < 8; i ++) {
-    writeUint16(client_fd, 4096); // block count
-    writeByte(client_fd, 0); // block bits
-    writeVarInt(client_fd, 0); // block palette (air)
-    writeByte(client_fd, 0); // biome bits
-    writeByte(client_fd, 0); // biome palette
-  }
-  // yield to idle task
-  task_yield();
 
   writeVarInt(client_fd, 0); // omit block entities
 
@@ -469,10 +480,12 @@ int sc_setContainerSlot (int client_fd, int window_id, uint16_t slot, uint8_t co
 
 // S->C Block Update
 int sc_blockUpdate (int client_fd, int64_t x, int64_t y, int64_t z, uint8_t block) {
-  writeVarInt(client_fd, 9 + sizeVarInt(block_palette[block]));
+  uint16_t state;
+  if (!registry_block_state(block, &state)) return 1;
+  writeVarInt(client_fd, 9 + sizeVarInt(state));
   writeByte(client_fd, 0x08);
   writeUint64(client_fd, ((x & 0x3FFFFFF) << 38) | ((z & 0x3FFFFFF) << 12) | (y & 0xFFF));
-  writeVarInt(client_fd, block_palette[block]);
+  writeVarInt(client_fd, state);
   return 0;
 }
 
@@ -527,8 +540,8 @@ int sc_openScreen (int client_fd, uint8_t window, const char *title, uint16_t le
 // C->S Use Item
 int cs_useItem (int client_fd) {
 
-  uint8_t hand = readByte(client_fd);
-  int sequence = readVarInt(client_fd);
+  readByte(client_fd); // hand (ignored)
+  readVarInt(client_fd); // sequence (ignored)
 
   // Ignore yaw/pitch
   recv_all(client_fd, recv_buffer, 8, false);
@@ -544,7 +557,7 @@ int cs_useItem (int client_fd) {
 // C->S Use Item On
 int cs_useItemOn (int client_fd) {
 
-  uint8_t hand = readByte(client_fd);
+  readByte(client_fd); // hand (ignored)
 
   int64_t pos = readInt64(client_fd);
   int x = pos >> 38;
@@ -612,7 +625,6 @@ int cs_clickContainer (int client_fd) {
 
   uint8_t slot, count, craft = false;
   uint16_t item;
-  int tmp;
 
   uint16_t *p_item;
   uint8_t *p_count;
@@ -657,8 +669,15 @@ int cs_clickContainer (int client_fd) {
       continue;
     }
 
-    item = readVarInt(client_fd);
-    count = (uint8_t)readVarInt(client_fd);
+    int incoming_item = readVarInt(client_fd);
+    int incoming_count = readVarInt(client_fd);
+    if (incoming_item < 0 || !registry_item_id_valid((uint32_t)incoming_item) ||
+        incoming_count < 0 || incoming_count > 99) {
+      recv_count = 0;
+      return 1;
+    }
+    item = (uint16_t)incoming_item;
+    count = (uint8_t)incoming_count;
 
     // ignore components
     readLengthPrefixedData(client_fd);

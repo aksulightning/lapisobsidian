@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+cd "$(dirname "$0")"
+
 # Check for registries before attempting to compile, prevents confusion
 if [ ! -f "include/registries.h" ]; then
   echo "Error: 'include/registries.h' is missing."
-  echo "Please follow the 'Compilation' section of the README to generate it."
+  echo "Restore the checked-in registry snapshot from this repository."
   exit 1
 fi
 
@@ -23,7 +26,7 @@ case "$unameOut" in
 esac
 
 # Default compiler
-compiler="gcc"
+compiler="${CC:-gcc}"
 
 # Handle arguments for windows 9x build
 for arg in "$@"; do
@@ -40,6 +43,9 @@ for arg in "$@"; do
   esac
 done
 
-rm -f "bareiron$exe"
-$compiler src/*.c -O2 -Iinclude -o "bareiron$exe" $windows_linker
-"./bareiron$exe"
+flags=(-O2 -Wall -Wextra)
+if [[ "${DEBUG:-0}" == 1 ]]; then
+  flags=(-O1 -g -Wall -Wextra -Wconversion -Wshadow -fsanitize=address,undefined -fno-omit-frame-pointer)
+fi
+# Disable contraction so density vectors do not depend on FMA availability.
+"$compiler" src/*.c "${flags[@]}" -ffp-contract=off -Iinclude -o "lapis-obsidian$exe" $windows_linker -lm

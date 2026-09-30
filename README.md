@@ -1,53 +1,46 @@
-# bareiron
-Minimalist Minecraft server for memory-restrictive embedded systems.
+# Lapis Obsidian
 
-The goal of this project is to enable hosting Minecraft servers on very weak devices, such as the ESP32. The project's priorities are, in order: **memory usage**, **performance**, and **features**. Because of this, compliance with vanilla Minecraft is not guaranteed, nor is it a goal of the project.
+A lightweight C Minecraft Java server, based on bareiron, targeting a Beta
+1.7.3-style world with selected modern conveniences. Not affiliated with Mojang
+Studios or Microsoft.
 
-- Minecraft version: `1.21.8`
-- Protocol version: `772`
+Supported client: **Minecraft Java 1.21.8, protocol 772**, with the built-in
+`minecraft:core` pack. Other protocol versions are rejected for login.
 
-> [!WARNING]
-> Currently, only the vanilla client is officially supported. Issues have been reported when using Fabric or similar.
+## Build and run
 
-## Quick start
-For PC x86_64 platforms, grab the [latest build binary](https://github.com/p2r3/bareiron/releases/download/latest/bareiron.exe) and run it. The file is a [Cosmopolitan polyglot](https://github.com/jart/cosmopolitan), which means it'll run on Windows, Linux, and possibly Mac, despite the file extension. Note that the server's default settings cannot be reconfigured without compiling from source.
+```sh
+./build.sh
+./lapis-obsidian
+```
 
-For microcontrollers, see the section on **compilation** below.
+Requires a C compiler (GCC by default), a shell, and the system C/math libraries.
+The build finishes without launching the server. It downloads nothing and needs
+no Java, Minecraft installation, game assets, or data extraction. The checked-in
+`src/registries.c` and `include/registries.h` are the compatibility snapshot.
+Set `CC` to select a compiler. `DEBUG=1 ./build.sh` enables ASan/UBSan and additional
+conversion/shadow diagnostics. The existing MinGW `--9x` build option is retained.
+Embedded ESP-IDF support is inherited and has not been validated by this fork.
 
-## Compilation
-Before compiling, you'll need to dump registry data from a vanilla Minecraft server. On Linux, this can be done automatically using the `extract_registries.sh` script. Otherwise, the manual process is as follows: create a folder called `notchian` here, and put a Minecraft server JAR in it. Then, follow [this guide](https://minecraft.wiki/w/Minecraft_Wiki:Projects/wiki.vg_merge/Data_Generators) to dump all of the registries (use the _second_ command with the `--all` flag). Finally, run `build_registries.js` with either [bun](https://bun.sh/), [node](https://nodejs.org/en/download), or [deno](https://docs.deno.com/runtime/getting_started/installation/).
+## Tests
 
-- To compile on Linux, install `gcc` and run `./build.sh`.
-- For compiling on Windows, there are a few options:
-  - To compile a native Windows binary: install [MSYS2](https://www.msys2.org/) and open the "MSYS2 MINGW64" shell. From there, run `pacman -Sy mingw-w64-x86_64-gcc`, navigate to this project's directory, and run `./build.sh`.
-  - To compile a native 32-bit binary (compatible with Windows 95/98, but why would you ever want that), use the same steps above, except with `pacman -Sy mingw-w64-cross-gcc` and `./build.sh --9x`.
-  - To compile a MSYS2-linked binary: install [MSYS2](https://www.msys2.org/), and open the "MSYS2 MSYS" shell. From there, install `gcc` (run `pacman -Sy gcc`), navigate to this project's directory and run `./build.sh`. 
-  - To compile and run a Linux binary from Windows: install WSL, and from there install `gcc` and run `./build.sh` in this project's directory.
-- To target an ESP variant, set up a PlatformIO project (select the ESP-IDF framework, **not Arduino**) and clone this repository on top of it. See **Configuration** below for further steps. For better performance, consider changing the clock speed and enabling compiler optimizations. If you don't know how to do this, there are plenty of resources online.
+```sh
+./tests/run.sh
+SANITIZE=1 ./tests/run.sh
+```
 
-## Configuration
-Configuring the server requires compiling it from its source code as described in the section above.
+The tests include a source-only build with a restricted PATH that excludes Java
+and JavaScript runtimes. Maintainers can additionally run
+`node build_registries.js` and check that the generated C files have no diff.
+Node is only used for optional snapshot maintenance.
 
-Most user-friendly configuration options are available in `include/globals.h`, including WiFi credentials for embedded setups. Some other details, like the MOTD or starting time of day, can be found in `src/globals.c`. For everything else, you'll have to dig through the code.
+## Configuration and scope
 
-Here's a summary of some of the more important yet less trivial options for those who plan to use this on a real microcontroller with real players:
+Configuration is currently compile-time, in `include/globals.h`. The server uses
+port 25565 and stores bounded world edits and player records in `world.bin`.
+The low-level network core, inventory, ticks, and edit storage come from bareiron.
+This is an experimental server, not a plugin platform or a complete survival
+implementation. A full audit of inherited packet handling is still required.
 
-- Depending on the player count, the performance of the MCU, and the bandwidth of your network, player position broadcasting could potentially throttle your connection. If you find this to be the case, try commenting out `BROADCAST_ALL_MOVEMENT` and `SCALE_MOVEMENT_UPDATES_TO_PLAYER_COUNT`. This will tie movement to the tickrate. If this change makes movement too choppy, you can decrease `TIME_BETWEEN_TICKS` at the cost of more compute.
-- If you experience crashes or instability related to chests or water, those features can be disabled with `ALLOW_CHESTS` and `DO_FLUID_FLOW`, respectively.
-- If you find frequent repeated chunk generation to choke the server, increasing `VISITED_HISTORY` might help. There isn't _that_ much of a memory footprint for this - increasing it to `64` for example would only take up 240 extra bytes per allocated player.
-
-## Non-volatile storage (optional)
-This section applies to those who target ESP variants and wish to persist world data after a shutdown. *This is not necessary on PC platforms*, as world and player data is written to `world.bin` by default.
-
-The simplest way to accomplish this is to set up LittleFS in PlatformIO and comment out the `#ifndef` surrounding `SYNC_WORLD_TO_DISK` in `globals.h`. Since flash writes are typically slow and blocking, you'll likely want to uncomment `DISK_SYNC_BLOCKS_ON_INTERVAL`. Depending on the flash size of your board, you may also have to decrease `MAX_BLOCK_CHANGES`, so that the world data fits in your LittleFS partition.
-
-If using an SD card module or other virtual file system, you'll have to implement the filesystem setup routine on your own. The built-in serializer should still work though, as it uses POSIX filesystem calls.
-
-Alternatively, if you can't set up a file system, you can dump and upload world data over TCP. This can be enabled by uncommenting `DEV_ENABLE_BEEF_DUMPS` in `globals.h`. *Note: this system implements no security or authentication.* With this option enabled, anyone with access to the server can upload arbitrary world data.
-
-## Contribution
-- Create issues and discuss with the maintainer(s) before making pull requests. Even for small changes.
-- Follow the existing code style. Ensure that your changes fit in with the surrounding code, even if you disagree with the style. Pull requests with inconsistent style will be nitpicked.
-- Test your code before creating a pull request or requesting a review, regardless of how "simple" your change is. It's a basic form of respect towards the maintainer and reviewer.
-- Development tooling and compilation improvements _are not welcome,_ unless you've worked with the codebase long enough to have noticed practical shortcomings in that area. Adding a single compiler flag is not a meaningful first contribution.
-- For information on the Minecraft server protocol, [refer to the wiki](https://minecraft.wiki/w/Java_Edition_protocol/Packets). For everything else, use a [search engine](https://google.com).
+See [registry maintenance](docs/registries.md) for data provenance and protocol
+constraints, and [notices](NOTICE.md) for upstream attribution.

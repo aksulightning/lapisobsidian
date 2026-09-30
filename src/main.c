@@ -37,6 +37,7 @@
 #include "packets.h"
 #include "worldgen.h"
 #include "registries.h"
+#include "registry.h"
 #include "procedures.h"
 #include "serialize.h"
 
@@ -89,7 +90,6 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
       } else if (state == STATE_CONFIGURATION) {
         if (cs_clientInformation(client_fd)) break;
         if (sc_knownPacks(client_fd)) break;
-        if (sc_registries(client_fd)) break;
 
         #ifdef SEND_BRAND
         if (sc_sendPluginMessage(client_fd, "minecraft:brand", (uint8_t *)brand, brand_len)) break;
@@ -164,6 +164,8 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
 
     case 0x07:
       if (state == STATE_CONFIGURATION) {
+        if (cs_knownPacks(client_fd)) { recv_count = 0; return; }
+        if (sc_registries(client_fd)) { recv_count = 0; return; }
         printf("Received Client's Known Packs\n");
         printf("  Finishing configuration\n\n");
         sc_finishConfiguration(client_fd);
@@ -497,6 +499,10 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
 }
 
 int main () {
+  if (!registry_validate()) {
+    fputs("Lapis Obsidian: invalid protocol registry snapshot\n", stderr);
+    return EXIT_FAILURE;
+  }
   #ifdef _WIN32 //initialize windows socket
     WSADATA wsa;
       if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
@@ -693,13 +699,13 @@ int main () {
 
     // Read packet length
     int length = readVarInt(client_fd);
-    if (length == VARNUM_ERROR) {
+    if (length <= 0 || length > 2097151) {
       disconnectClient(&clients[client_index], 2);
       continue;
     }
     // Read packet ID
     int packet_id = readVarInt(client_fd);
-    if (packet_id == VARNUM_ERROR) {
+    if (packet_id < 0 || sizeVarInt((uint32_t)packet_id) > length) {
       disconnectClient(&clients[client_index], 3);
       continue;
     }

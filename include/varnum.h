@@ -5,7 +5,7 @@
 
 #define SEGMENT_BITS 0x7F
 #define CONTINUE_BIT 0x80
-#define VARNUM_ERROR 0xFFFFFFFF
+#define VARNUM_ERROR INT32_C(-1)
 
 int32_t readVarInt (int client_fd);
 int sizeVarInt (uint32_t value);

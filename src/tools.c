@@ -139,8 +139,8 @@ void discard_all (int client_fd, size_t remaining, uint8_t require_first) {
   while (remaining > 0) {
     size_t recv_n = remaining > MAX_RECV_BUF_LEN ? MAX_RECV_BUF_LEN : remaining;
     ssize_t received = recv_all(client_fd, recv_buffer, recv_n, require_first);
-    if (received < 0) return;
-    if (received > remaining) return;
+    if (received <= 0) return;
+    if ((size_t)received > remaining) return;
     remaining -= received;
     require_first = false;
   }
@@ -232,7 +232,7 @@ double readDouble (int client_fd) {
 ssize_t readLengthPrefixedData (int client_fd) {
   uint32_t length = readVarInt(client_fd);
   if (length >= MAX_RECV_BUF_LEN) {
-    printf("ERROR: Received length (%lu) exceeds maximum (%u)\n", length, MAX_RECV_BUF_LEN);
+    printf("ERROR: Received length (%u) exceeds maximum (%u)\n", length, MAX_RECV_BUF_LEN);
     disconnectClient(&client_fd, -1);
     recv_count = 0;
     return 0;
@@ -243,6 +243,11 @@ ssize_t readLengthPrefixedData (int client_fd) {
 // Reads a networked string into recv_buffer
 void readString (int client_fd) {
   recv_count = readLengthPrefixedData(client_fd);
+  if (recv_count < 0 || (size_t)recv_count >= sizeof(recv_buffer)) {
+    recv_buffer[0] = '\0';
+    recv_count = -1;
+    return;
+  }
   recv_buffer[recv_count] = '\0';
 }
 // Reads a networked string of up to N bytes into recv_buffer
@@ -256,11 +261,21 @@ void readStringN (int client_fd, uint32_t max_length) {
   uint32_t length = readVarInt(client_fd);
   if (max_length > length) {
     recv_count = recv_all(client_fd, recv_buffer, length, false);
-    recv_buffer[recv_count] = '\0';
+    if (recv_count < 0 || (size_t)recv_count >= sizeof(recv_buffer)) {
+    recv_buffer[0] = '\0';
+    recv_count = -1;
+    return;
+  }
+  recv_buffer[recv_count] = '\0';
     return;
   }
   // Read string up to maximum, dump the rest
   recv_count = recv_all(client_fd, recv_buffer, max_length, false);
+  if (recv_count < 0 || (size_t)recv_count >= sizeof(recv_buffer)) {
+    recv_buffer[0] = '\0';
+    recv_count = -1;
+    return;
+  }
   recv_buffer[recv_count] = '\0';
   uint8_t dummy;
   for (uint32_t i = max_length; i < length; i ++) {
