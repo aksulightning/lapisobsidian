@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "commands.h"
+#include "mobs.h"
 #include "packets.h"
 #include "procedures.h"
 
@@ -16,6 +17,16 @@ int sc_synchronizePlayerPosition (int fd, double x, double y, double z, float ya
 int sc_teleportEntity (int fd, int id, double x, double y, double z, float yaw, float pitch) { (void)fd;(void)id;(void)x;(void)y;(void)z;(void)yaw;(void)pitch;return 0; }
 int sc_updateTime (int fd, uint64_t t) { (void)fd;assert(t == world_time);return 0; }
 int sc_changeGameMode (PlayerData *player, uint8_t mode) { assert(mode == commands_gamemode(player));changes++;return 0; }
+static unsigned mob_spawns;
+const MobType *mobs_by_name (const char *name) {
+  static const MobType skeleton = {"skeleton",MOB_SKELETON,20};
+  return !strcmp(name,"skeleton") ? &skeleton : NULL;
+}
+bool mobs_spawn (uint8_t type, int x, int y, int z) {
+  assert(type == MOB_SKELETON);
+  if (x < -32768 || x > 32767 || y < 1 || y > 253 || z < -32768 || z > 32767) return false;
+  mob_spawns++; return true;
+}
 static CommandResult run (const char *input) { server_ticks += 10; return commands_execute(&player_data[0],input,strlen(input)); }
 int main (void) {
   for (int i = 0; i < MAX_PLAYERS; i ++) player_data[i].client_fd = -1;
@@ -35,6 +46,7 @@ int main (void) {
   assert(run("time set day") == COMMAND_DENIED);
   assert(run("tp Target") == COMMAND_DENIED);
   assert(run("gamemode creative") == COMMAND_DENIED);
+  assert(run("spawnmob skeleton") == COMMAND_DENIED && !mob_spawns);
   assert(run("admin abc") == COMMAND_DENIED);
   assert(run("spawn") == COMMAND_OK && teleports == 1 && p->x == 8 && p->y == 71 && p->grounded_y == 71);
   assert(commands_execute(p,"spawn",5) == COMMAND_DENIED && teleports == 1);
@@ -44,6 +56,18 @@ int main (void) {
   assert(run("admin wrong") == COMMAND_DENIED);
   assert(run("admin 0123456789abcdef0123456789abcdef") == COMMAND_OK && commands_is_admin(p));
   assert(!commands_is_admin(q));
+  assert(run("spawnmob skeleton") == COMMAND_OK && mob_spawns == 1);
+  assert(run("spawnmob skeleton -32768 253 32767") == COMMAND_OK && mob_spawns == 2);
+  assert(run("spawnmob") == COMMAND_USAGE);
+  assert(run("spawnmob dragon") == COMMAND_USAGE);
+  assert(run("spawnmob skeleton 1 2") == COMMAND_USAGE);
+  assert(run("spawnmob skeleton nan 2 0") == COMMAND_USAGE);
+  assert(run("spawnmob skeleton 0 254 0") == COMMAND_USAGE);
+  assert(run("spawnmob skeleton 32768 2 0") == COMMAND_USAGE);
+  assert(run("spawnmob skeleton 0 -1 0") == COMMAND_USAGE);
+  assert(run("spawnmob skeleton 0 1 0 extra") == COMMAND_USAGE && mob_spawns == 2);
+  p->health = 0; assert(run("spawnmob skeleton") == COMMAND_DENIED); p->health = 20;
+
   assert(run("time set night") == COMMAND_OK && world_time == 13000);
   assert(run("time set 23999") == COMMAND_OK && world_time == 23999);
   assert(run("time set 24000") == COMMAND_USAGE && world_time == 23999);

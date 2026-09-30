@@ -15,10 +15,11 @@ No plugin, scripting runtime, database or permission framework is involved.
 | `/time` or `/time query` | Everyone | Shows the current day time |
 | `/time set <day\|night\|ticks>` | Administrator | Sets day time; day=1000, night=13000, ticks=0..23999 |
 | `/gamemode <mode> [player]` | Administrator | Changes the caller's or named online player's mode |
+| `/spawnmob <type> [x y z]` | Administrator | Spawns one supported mob on safe ground; see [mob details](mobs.md) |
 | `/admin <token>` | Everyone | Authenticates administrator access for this connection |
 
 Modes accept survival/creative/adventure/spectator or 0/1/2/3. Coordinates must
-be X/Z=-32768..32767 and Y=0..255. Fractions, relative coordinates, selectors,
+be X/Z=-32768..32767 and Y=0..255 for teleporting (Y=1..253 for mob spawning). Fractions, relative coordinates, selectors,
 quoted arguments and teleporting another player are not supported. Names must
 match an online player's stored name exactly; the core's existing name-length
 limit remains. Teleports have a two-second per-connection cooldown and cannot

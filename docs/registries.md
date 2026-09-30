@@ -67,3 +67,16 @@ minecraft-data `blocks.json`, guarded by a protocol-772 assertion. It computes
 upper/lower, open/closed, fixed-left-hinge, unpowered states without changing
 compact block ID 144. Review this snapshot and its sixteen wire-state fixtures
 alongside the sign extension when upgrading protocol; see `docs/doors.md`.
+
+## Mob extension
+
+The gameplay extension retains five extra item names/IDs in the ordered snapshot:
+bow=858, arrow=859, string=907, gunpowder=909, bone=1038. The block palette and all
+existing mappings are unchanged. `mobs.c` and `mob_packets.c` use minimal entity
+and particle constants checked against the same versioned minecraft-data source:
+[entities](https://github.com/PrismarineJS/minecraft-data/blob/master/data/pc/1.21.8/entities.json),
+[protocol](https://github.com/PrismarineJS/minecraft-data/blob/master/data/pc/1.21.8/protocol.json),
+[particles](https://github.com/PrismarineJS/minecraft-data/blob/master/data/pc/1.21.8/particles.json),
+and [sounds](https://github.com/PrismarineJS/minecraft-data/blob/master/data/pc/1.21.8/sounds.json).
+Named sound holders avoid storing the full sound registry. Compile-time protocol
+assertions and independent packet-decoding tests guard this compatibility data.

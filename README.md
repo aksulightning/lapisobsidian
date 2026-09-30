@@ -65,14 +65,18 @@ Q/Ctrl-Q and inventory drop actions work, with gravity, stack merging, partial
 pickup, a five-minute lifetime and a fixed 128-item-entity limit. Drops are
 transient across restarts. See [item behavior and tests](docs/items.md).
 
-The [gameplay roadmap](docs/roadmap.md) tracks the next mob additions, neutral
-spiders, non-destructive firecracker creepers, basic redstone, note blocks and
-MIDI musicboxes. These later features are not implemented yet.
+Skeletons shoot arrows, spiders are neutral until attacked, and creepers produce
+harmless firecracker bursts. Admins can use `/spawnmob <type> [x y z]`.
+Short grass can drop seeds, one grass item crafts one seed, and flowers now break
+instantly. See [mobs, plant fixes and limits](docs/mobs.md).
+
+The [gameplay roadmap](docs/roadmap.md) tracks the remaining basic redstone,
+note-block and MIDI musicbox work. Those features are not implemented yet.
 
 ## Commands
 
 `/help`, `/seed`, `/worldinfo`, `/spawn`, and `/time query` work for everyone.
-`/tp`, `/time set`, and `/gamemode` require administrator access. Configure a
+`/tp`, `/time set`, `/gamemode`, and `/spawnmob` require administrator access. Configure a
 private random `LAPIS_ADMIN_TOKEN` environment value (32..128 non-space ASCII
 bytes), then use `/admin <token>` in-game. Admin login is disabled by default.
 Permissions and game modes reset on reconnect; no world-file migration is needed.

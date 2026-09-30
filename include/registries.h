@@ -595,6 +595,11 @@ uint8_t I_to_B (uint32_t item); // Item-to-block mapping
 #define I_mutton 1212
 #define I_cooked_mutton 1213
 #define I_composter 1288
+#define I_bow 858
+#define I_arrow 859
+#define I_string 907
+#define I_gunpowder 909
+#define I_bone 1038
 
 // Biome identifiers
 #define W_plains 0

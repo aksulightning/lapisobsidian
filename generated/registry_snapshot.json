@@ -657,7 +657,12 @@
     "wither_skeleton_skull": 1184,
     "mutton": 1212,
     "cooked_mutton": 1213,
-    "composter": 1288
+    "composter": 1288,
+    "bow": 858,
+    "arrow": 859,
+    "string": 907,
+    "gunpowder": 909,
+    "bone": 1038
   },
   "mapping": [
     0,

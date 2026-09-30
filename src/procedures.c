@@ -1,4 +1,5 @@
 #include "items.h"
+#include "mobs.h"
 #include "doors.h"
 #include "signs.h"
 #include "commands.h"
@@ -57,6 +58,7 @@ int getClientIndex (int client_fd) {
 // Restores player data to initial state (fresh spawn)
 void resetPlayerData (PlayerData *player) {
   items_forget_player(player);
+  mobs_forget_player(player);
   player->health = 20;
   player->hunger = 20;
   player->saturation = 2500;
@@ -83,6 +85,7 @@ int reservePlayerData (int client_fd, uint8_t *uuid, char *name) {
     // Found existing player entry (UUID match)
     if (memcmp(player_data[i].uuid, uuid, 16) == 0) {
       commands_reset_player(&player_data[i]);
+      mobs_forget_player(&player_data[i]);
       signs_reset_player(&player_data[i]);
       // Set network file descriptor and username
       player_data[i].client_fd = client_fd;
@@ -109,6 +112,7 @@ int reservePlayerData (int client_fd, uint8_t *uuid, char *name) {
     if (empty) {
       if (player_data_count >= MAX_PLAYERS) return 1;
       commands_reset_player(&player_data[i]);
+      mobs_forget_player(&player_data[i]);
       signs_reset_player(&player_data[i]);
       player_data[i].client_fd = client_fd;
       player_data[i].flags |= 0x20;
@@ -159,6 +163,7 @@ void handlePlayerDisconnect (int client_fd) {
     commands_reset_player(&player_data[i]);
     signs_reset_player(&player_data[i]);
     items_forget_player(&player_data[i]);
+    mobs_forget_player(&player_data[i]);
     // Mark the player as being offline
     player_data[i].client_fd = -1;
     // Prepare leave message for broadcast
@@ -206,6 +211,7 @@ void handlePlayerJoin (PlayerData* player) {
   player->flags &= ~0x20;
   player->flagval_16 = 0;
   items_sync_player(player);
+  mobs_sync_player(player);
 
 }
 
@@ -666,6 +672,11 @@ uint16_t getMiningResult (uint16_t held_item, uint8_t block) {
 
   switch (block) {
 
+    case B_short_grass:
+    case B_fern:
+      if (held_item == I_shears) return registry_block_item(block);
+      return (fast_rand()&7u) == 0 ? I_wheat_seeds : 0;
+
     case B_oak_leaves:
       if (held_item == I_shears) return I_oak_leaves;
       uint32_t r = fast_rand();
@@ -755,6 +766,11 @@ void bumpToolDurability (PlayerData *player) {
 
 }
 
+/* Single-block flowers and mushrooms share the modern client's instant break. */
+static uint8_t isSmallPlant (uint8_t block) {
+  return (block >= B_dandelion && block <= B_red_mushroom) || block == B_fern;
+}
+
 // Checks whether the given block would be mined instantly with the held tool
 uint8_t isInstantlyMined (PlayerData *player, uint8_t block) {
 
@@ -775,6 +791,7 @@ uint8_t isInstantlyMined (PlayerData *player, uint8_t block) {
     return held_item == I_shears;
 
   return (
+    isSmallPlant(block) ||
     block == B_dead_bush ||
     block == B_short_grass ||
     block == B_torch ||
@@ -787,6 +804,7 @@ uint8_t isInstantlyMined (PlayerData *player, uint8_t block) {
 // Checks whether the given block has to have something beneath it
 uint8_t isColumnBlock (uint8_t block) {
   return (
+    isSmallPlant(block) ||
     block == B_snow ||
     block == B_moss_carpet ||
     block == B_cactus ||
@@ -801,6 +819,7 @@ uint8_t isColumnBlock (uint8_t block) {
 // Checks whether the given block is non-solid
 uint8_t isPassableBlock (uint8_t block) {
   return (
+    isSmallPlant(block) ||
     block == B_air ||
     block == B_oak_sign ||
     (block >= B_water && block < B_water + 8) ||
@@ -908,7 +927,7 @@ uint8_t getItemStackSize (uint16_t item) {
     item == I_diamond_hoe ||
     item == I_netherite_hoe ||
     // Shears
-    item == I_shears
+    item == I_shears || item == I_bow
   ) return 1;
 
   if (
@@ -1391,47 +1410,6 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
 
 }
 
-void spawnMob (uint8_t type, short x, uint8_t y, short z, uint8_t health) {
-
-  for (int i = 0; i < MAX_MOBS; i ++) {
-    // Look for type 0 (unallocated)
-    if (mob_data[i].type != 0) continue;
-
-    // Assign it the input parameters
-    mob_data[i].type = type;
-    mob_data[i].x = x;
-    mob_data[i].y = y;
-    mob_data[i].z = z;
-    mob_data[i].data = health & 31;
-
-    // Forge a UUID from a random number and the mob's index
-    uint8_t uuid[16];
-    uint32_t r = fast_rand();
-    memcpy(uuid, &r, 4);
-    memcpy(uuid + 4, &i, 4);
-
-    // Broadcast entity creation to all players
-    for (int j = 0; j < MAX_PLAYERS; j ++) {
-      if (player_data[j].client_fd == -1) continue;
-      sc_spawnEntity(
-        player_data[j].client_fd,
-        -2 - i, // Use negative IDs to avoid conflicts with player IDs
-        uuid, // Use the UUID generated above
-        type, (double)x + 0.5f, y, (double)z + 0.5f,
-        // Face opposite of the player, as if looking at them when spawning
-        (player_data[j].yaw + 127) & 255, 0
-      );
-    }
-
-    // Freshly spawned mobs currently don't need metadata updates.
-    // If this changes, uncomment this line.
-    // broadcastMobMetadata(-1, i);
-
-    break;
-  }
-
-}
-
 void interactEntity (int entity_id, int interactor_id) {
 
   PlayerData *player;
@@ -1582,6 +1560,10 @@ void hurtEntity (int entity_id, int attacker_id, uint8_t damage_type, uint8_t da
     // Don't continue if the mob is already dead
     if (mob_health == 0) return;
 
+    if (attacker_id > 0) {
+      PlayerData *attacker;
+      if (!getPlayerData(attacker_id,&attacker)) mobs_attacked(entity_id,attacker);
+    }
     // Set the mob's panic timer
     mob->data |= (3 << 6);
 
@@ -1595,11 +1577,15 @@ void hurtEntity (int entity_id, int attacker_id, uint8_t damage_type, uint8_t da
         case 28: loot = I_beef; count = (uint8_t)(1+fast_rand()%3); break;
         case 95: loot = I_porkchop; count = (uint8_t)(1+fast_rand()%3); break;
         case 106: loot = I_mutton; count = (uint8_t)(1+(fast_rand()&1)); break;
+        case MOB_SKELETON: loot = I_bone; count = (uint8_t)(1+fast_rand()%2); break;
+        case MOB_SPIDER: loot = I_string; count = (uint8_t)(1+fast_rand()%2); break;
+        case MOB_CREEPER: loot = I_gunpowder; count = (uint8_t)(fast_rand()%3); break;
         case 145: loot = I_rotten_flesh; count = (uint8_t)(fast_rand()%3); break;
         default: break;
       }
       /* Save the position before Y becomes the inherited death-animation timer. */
       if (count) items_spawn(loot,count,mob->x,mob->y,mob->z,500);
+      if (mob->type == MOB_SKELETON) items_spawn(I_arrow,(uint8_t)(1+fast_rand()%2),mob->x,mob->y,mob->z,500);
       mob->data -= mob_health;
       mob->y = 0;
       entity_died = true;
@@ -1709,226 +1695,7 @@ void handleServerTick (int64_t time_since_last_tick) {
    */
   if (rng_seed == 0) rng_seed = (uint32_t)world_seed | 1u;
 
-  // Tick mob behavior
-  for (int i = 0; i < MAX_MOBS; i ++) {
-    if (mob_data[i].type == 0) continue;
-    int entity_id = -2 - i;
-
-    // Handle deallocation on mob death
-    if ((mob_data[i].data & 31) == 0) {
-      if (mob_data[i].y < (unsigned int)TICKS_PER_SECOND) {
-        mob_data[i].y ++;
-        continue;
-      }
-      mob_data[i].type = 0;
-      for (int j = 0; j < MAX_PLAYERS; j ++) {
-        if (player_data[j].client_fd == -1) continue;
-        // Spawn death smoke particles
-        sc_entityEvent(player_data[j].client_fd, entity_id, 60);
-        // Remove the entity from the client
-        sc_removeEntity(player_data[j].client_fd, entity_id);
-      }
-      continue;
-    }
-
-    uint8_t passive = (
-      mob_data[i].type == 25 || // Chicken
-      mob_data[i].type == 28 || // Cow
-      mob_data[i].type == 95 || // Pig
-      mob_data[i].type == 106 // Sheep
-    );
-    // Mob "panic" timer, set to 3 after being hit
-    // Currently has no effect on hostile mobs
-    uint8_t panic = (mob_data[i].data >> 6) & 3;
-
-    // Burn hostile mobs if above ground during sunlight
-    if (!passive && (world_time < 13000 || world_time > 23460) && mob_data[i].y > 48) {
-      hurtEntity(entity_id, -1, D_on_fire, 2);
-    }
-
-    uint32_t r = fast_rand();
-
-    if (passive) {
-      if (panic) {
-        // If panicking, move randomly at up to 4 times per second
-        if (TICKS_PER_SECOND >= 4) {
-          uint32_t ticks_per_panic = (uint32_t)(TICKS_PER_SECOND / 4);
-          if (server_ticks % ticks_per_panic != 0) continue;
-        }
-        // Reset panic state after timer runs out
-        // Each panic timer tick takes one second
-        if (server_ticks % (uint32_t)TICKS_PER_SECOND == 0) {
-          mob_data[i].data -= (1 << 6);
-        }
-      } else {
-        // When not panicking, move idly once per 4 seconds on average
-        if (r % (4 * (unsigned int)TICKS_PER_SECOND) != 0) continue;
-      }
-    } else {
-      // Update hostile mobs once per second
-      if (server_ticks % (uint32_t)TICKS_PER_SECOND != 0) continue;
-    }
-
-    // Find the player closest to this mob
-    PlayerData* closest_player = &player_data[0];
-    uint32_t closest_dist = 2147483647;
-    for (int j = 0; j < MAX_PLAYERS; j ++) {
-      if (player_data[j].client_fd == -1) continue;
-      uint16_t curr_dist = (
-        abs(mob_data[i].x - player_data[j].x) +
-        abs(mob_data[i].z - player_data[j].z)
-      );
-      if (curr_dist < closest_dist) {
-        closest_dist = curr_dist;
-        closest_player = &player_data[j];
-      }
-    }
-
-    // Despawn mobs past a certain distance from nearest player
-    if (closest_dist > MOB_DESPAWN_DISTANCE) {
-      mob_data[i].type = 0;
-      continue;
-    }
-
-    short old_x = mob_data[i].x, old_z = mob_data[i].z;
-    uint8_t old_y = mob_data[i].y;
-
-    short new_x = old_x, new_z = old_z;
-    uint8_t new_y = old_y, yaw = 0;
-
-    if (passive) { // Passive mob movement handling
-
-      // Move by one block on the X or Z axis
-      // Yaw is set to face in the direction of motion
-      if ((r >> 2) & 1) {
-        if ((r >> 1) & 1) { new_x += 1; yaw = 192; }
-        else { new_x -= 1; yaw = 64; }
-      } else {
-        if ((r >> 1) & 1) { new_z += 1; yaw = 0; }
-        else { new_z -= 1; yaw = 128; }
-      }
-
-    } else { // Hostile mob movement handling
-
-      // If we're already next to the player, hurt them and skip movement
-      if (closest_dist < 3 && abs(old_y - closest_player->y) < 2) {
-        hurtEntity(closest_player->client_fd, entity_id, D_generic, 6);
-        continue;
-      }
-
-      // Move towards the closest player on 8 axis
-      // The condition nesting ensures a correct yaw at 45 degree turns
-      if (closest_player->x < old_x) {
-        new_x -= 1; yaw = 64;
-        if (closest_player->z < old_z) { new_z -= 1; yaw += 32; }
-        else if (closest_player->z > old_z) { new_z += 1; yaw -= 32; }
-      }
-      else if (closest_player->x > old_x) {
-        new_x += 1; yaw = 192;
-        if (closest_player->z < old_z) { new_z -= 1; yaw -= 32; }
-        else if (closest_player->z > old_z) { new_z += 1; yaw += 32; }
-      } else {
-        if (closest_player->z < old_z) { new_z -= 1; yaw = 128; }
-        else if (closest_player->z > old_z) { new_z += 1; yaw = 0; }
-      }
-
-    }
-
-    // Holds the block that the mob is moving into
-    uint8_t block = getBlockAt(new_x, new_y, new_z);
-    // Holds the block above the target block, i.e. the "head" block
-    uint8_t block_above = getBlockAt(new_x, new_y + 1, new_z);
-
-    // Validate movement on X axis
-    if (new_x != old_x && (
-      !isPassableBlock(getBlockAt(new_x, new_y + 1, old_z)) ||
-      (
-        !isPassableBlock(getBlockAt(new_x, new_y, old_z)) &&
-        !isPassableBlock(getBlockAt(new_x, new_y + 2, old_z))
-      )
-    )) {
-      new_x = old_x;
-      block = getBlockAt(old_x, new_y, new_z);
-      block_above = getBlockAt(old_x, new_y + 1, new_z);
-    }
-    // Validate movement on Z axis
-    if (new_z != old_z && (
-      !isPassableBlock(getBlockAt(old_x, new_y + 1, new_z)) ||
-      (
-        !isPassableBlock(getBlockAt(old_x, new_y, new_z)) &&
-        !isPassableBlock(getBlockAt(old_x, new_y + 2, new_z))
-      )
-    )) {
-      new_z = old_z;
-      block = getBlockAt(new_x, new_y, old_z);
-      block_above = getBlockAt(new_x, new_y + 1, old_z);
-    }
-    // Validate diagonal movement
-    if (new_x != old_x && new_z != old_z && (
-      !isPassableBlock(block_above) ||
-      (
-        !isPassableBlock(block) &&
-        !isPassableBlock(getBlockAt(new_x, new_y + 2, new_z))
-      )
-    )) {
-      // We know that movement along just one axis is fine thanks to the
-      // checks above, pick one based on proximity.
-      int dist_x = abs(old_x - closest_player->x);
-      int dist_z = abs(old_z - closest_player->z);
-      if (dist_x < dist_z) new_z = old_z;
-      else new_x = old_x;
-      block = getBlockAt(new_x, new_y, new_z);
-    }
-
-    // Check if we're supposed to climb/drop one block
-    // The checks above already ensure that there's enough space to climb
-    if (!isPassableBlock(block)) new_y += 1;
-    else if (isPassableBlock(getBlockAt(new_x, new_y - 1, new_z))) new_y -= 1;
-
-    // Exit early if all movement was cancelled
-    if (new_x == mob_data[i].x && new_z == old_z && new_y == old_y) continue;
-
-    // Prevent collisions with other mobs
-    uint8_t colliding = false;
-    for (int j = 0; j < MAX_MOBS; j ++) {
-      if (j == i) continue;
-      if (mob_data[j].type == 0) continue;
-      if (
-        mob_data[j].x == new_x &&
-        mob_data[j].z == new_z &&
-        abs((int)mob_data[j].y - (int)new_y) < 2
-      ) {
-        colliding = true;
-        break;
-      }
-    }
-    if (colliding) continue;
-
-    if ( // Hurt mobs that stumble into lava
-      (block >= B_lava && block < B_lava + 4) ||
-      (block_above >= B_lava && block_above < B_lava + 4)
-    ) hurtEntity(entity_id, -1, D_lava, 8);
-
-    // Store new mob position
-    mob_data[i].x = new_x;
-    mob_data[i].y = new_y;
-    mob_data[i].z = new_z;
-
-    // Vary the yaw angle to look just a little less robotic
-    yaw += ((r >> 7) & 31) - 16;
-
-    // Broadcast relevant entity movement packets
-    for (int j = 0; j < MAX_PLAYERS; j ++) {
-      if (player_data[j].client_fd == -1) continue;
-      sc_teleportEntity (
-        player_data[j].client_fd, entity_id,
-        (double)new_x + 0.5, new_y, (double)new_z + 0.5,
-        yaw * 360 / 256, 0
-      );
-      sc_setHeadRotation(player_data[j].client_fd, entity_id, yaw);
-    }
-
-  }
+  mobs_tick(time_since_last_tick);
 
 }
 

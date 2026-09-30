@@ -109,6 +109,31 @@ int cs_clickContainer (int fd, int length) {
   for (uint32_t i = 0; i < n; i++) if (!((w == 0 || w == 12) && changes[i].slot == 0) && !accessible(p,w,changes[i].slot)) return 1;
   if ((p->flags&0x33) || !p->health || commands_gamemode(p) == 3) return 0;
 
+  if (output) {
+    uint8_t result_count; uint16_t result_item;
+    getCraftingOutput(p,&result_count,&result_item);
+    if (!result_count || result_item == I_wheat_seeds) {
+      /* The vanilla client has no recipe for grass -> seeds. Consume that
+       * ingredient and produce the cursor item here, never from predictions. */
+      if (result_count && mode == 0 && (!p->flagval_8 || p->flagval_16 == I_wheat_seeds) && p->flagval_8 < 64) {
+        for (uint16_t wire = 1; wire <= (w == 0 ? 4 : 9); wire++) {
+          if (!accessible(p,w,wire)) continue;
+          Stack ingredient = read_slot(p,w,wire);
+          if (ingredient.item != I_short_grass || !ingredient.count) continue;
+          ingredient.count--; if (!ingredient.count) ingredient.item = 0;
+          put_slot(p,w,wire,ingredient); sync_slot(p,w,wire);
+          p->flagval_16 = I_wheat_seeds; p->flagval_8++;
+          break;
+        }
+      }
+      for (uint32_t i = 0; i < n; i++) sync_slot(p,w,changes[i].slot);
+      getCraftingOutput(p,&result_count,&result_item);
+      sc_setContainerSlot(fd,w,0,result_count,result_item);
+      sc_setCursorItem(fd,p->flagval_16,p->flagval_8);
+      return 0;
+    }
+  }
+
   if (mode == 4 || (mode == 0 && clicked == 64537)) {
     if (button > 1) return 1;
     if (mode == 4 && accessible(p,w,clicked)) {

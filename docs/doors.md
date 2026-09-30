@@ -18,8 +18,7 @@ The first implementation supports ordinary oak doors with a fixed left hinge.
 Automatic double-door hinge selection/linking, iron-door activation, redstone,
 sounds, other wood variants and trapdoors are not implemented here. Existing
 other-door palette entries do not imply functional two-block support. Players
-use the modern client's door collision shape; inherited mob navigation still
-classifies the compact door ID as a solid obstacle, even when open. Support
+use the modern client's door collision shape; mob and projectile collision treats open oak doors as passable. Support
 checks use the existing core classification, with door blocks explicitly excluded.
 
 ## Storage and compatibility

@@ -6,6 +6,8 @@ flags=(-std=c11 -O2 -Wall -Wextra -Wconversion -Wshadow -Werror -ffp-contract=of
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   flags+=(-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie)
 fi
+"${CC:-gcc}" "${flags[@]}" -c src/mobs.c -o .tests/mobs.o
+"${CC:-gcc}" "${flags[@]}" -c src/mob_packets.c -o .tests/mob-packets.o
 "${CC:-gcc}" "${flags[@]}" -c src/items.c -o .tests/items.o
 "${CC:-gcc}" "${flags[@]}" -c src/inventory_packets.c -o .tests/inventory-packets.o
 "${CC:-gcc}" "${flags[@]}" -c src/doors.c -o .tests/doors.o
@@ -43,4 +45,6 @@ if ! .tests/packet_input 2>.tests/packet-rejections.log; then cat .tests/packet-
 .tests/doors
 "${CC:-gcc}" "${integration_flags[@]}" tests/items.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/items
 .tests/items
+"${CC:-gcc}" "${integration_flags[@]}" tests/mobs.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/mobs
+.tests/mobs
 ./tests/no-jar.sh

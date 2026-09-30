@@ -9,10 +9,10 @@ in C, and separate from the low-level networking and world generator.
 2. **Passive mobs — inherited baseline to refine.** Chickens, cows, pigs and
    sheep already have basic wandering, health and loot. Improve the small
    existing implementation instead of adding a second entity framework.
-3. **Hostile and neutral mobs — next.** Retain melee zombies; add skeletons
-   with arrows, spiders that retaliate only when attacked, and creepers with
-   a hiss and firecracker-style sound/particle burst. Creepers destroy no
-   blocks; the proposed default also does no player damage.
+3. **Hostile and neutral mobs — implemented.** Melee zombies, skeletons with
+   arrows, neutral spiders, and creepers with a hiss and harmless firecracker
+   burst. Admin spawning and grass/flower fixes are included. See
+   [behavior, implementation and tests](mobs.md).
 4. **Basic redstone — planned.** Dust, power-providing/inverting torches and
    switches for simple circuits, doors and note blocks. Bound update work and
    document intentional differences from vanilla.

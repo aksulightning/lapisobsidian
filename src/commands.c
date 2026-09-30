@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "commands.h"
+#include "mobs.h"
 #include "packets.h"
 #include "procedures.h"
 #include "worldgen.h"
@@ -129,7 +130,7 @@ CommandResult commands_execute (PlayerData *player, const char *input, size_t le
   char output[256];
   if (!strcmp(argv[0],"help")) {
     if (argc != 1) return reply(player,COMMAND_USAGE,"Usage: /help");
-    return reply(player,COMMAND_OK,"Commands: /help, /seed, /worldinfo, /spawn, /time query, /admin <token>. Admin: /tp <player|x y z>, /time set <day|night|0..23999>, /gamemode <mode> [player].");
+    return reply(player,COMMAND_OK,"Commands: /help, /seed, /worldinfo, /spawn, /time query, /admin <token>. Admin: /tp <player|x y z>, /time set <day|night|0..23999>, /gamemode <mode> [player], /spawnmob <type> [x y z].");
   }
   if (!strcmp(argv[0],"admin")) {
     if (argc != 2) return reply(player,COMMAND_USAGE,"Usage: /admin <token>");
@@ -185,6 +186,19 @@ CommandResult commands_execute (PlayerData *player, const char *input, size_t le
     if (!player->health) return reply(player,COMMAND_DENIED,"Respawn before teleporting.");
     if (!teleport_ready(slot)) return reply(player,COMMAND_DENIED,"Wait two seconds between teleports.");
     teleport(player,x,y,z); return reply(player,COMMAND_OK,"Teleported.");
+  }
+  if (!strcmp(argv[0],"spawnmob")) {
+    if (!commands_is_admin(player)) return reply(player,COMMAND_DENIED,"Administrator permission required.");
+    if (argc != 2 && argc != 5) return reply(player,COMMAND_USAGE,"Usage: /spawnmob <chicken|cow|pig|sheep|zombie|skeleton|spider|creeper> [x y z]");
+    const MobType *type = mobs_by_name(argv[1]);
+    if (!type) return reply(player,COMMAND_USAGE,"Unknown mob. Use chicken, cow, pig, sheep, zombie, skeleton, spider or creeper.");
+    if (!player->health || (player->flags&0x22)) return reply(player,COMMAND_DENIED,"Spawn mobs after loading or respawning.");
+    int x = player->x, y = player->y, z = (int)player->z+2;
+    if (argc == 5 && (!number(argv[2],-32768,32767,&x) || !number(argv[3],1,253,&y) || !number(argv[4],-32768,32767,&z)))
+      return reply(player,COMMAND_USAGE,"Coordinates must be integers: X/Z -32768..32767, Y 1..253.");
+    if (!mobs_spawn(type->type,x,y,z)) return reply(player,COMMAND_DENIED,"Cannot spawn: need safe ground, clear space, no overlap and a free mob slot.");
+    snprintf(output,sizeof(output),"Spawned %s at %d %d %d.",type->name,x,y,z);
+    return reply(player,COMMAND_OK,output);
   }
   if (!strcmp(argv[0],"gamemode")) {
     if (!commands_is_admin(player)) return reply(player,COMMAND_DENIED,"Administrator permission required.");

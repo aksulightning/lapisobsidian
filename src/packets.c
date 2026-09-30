@@ -979,33 +979,6 @@ int sc_systemChat (int client_fd, char* message, uint16_t len) {
   return 0;
 }
 
-// C->S Interact
-int cs_interact (int client_fd) {
-
-  int entity_id = readVarInt(client_fd);
-  uint8_t type = readByte(client_fd);
-
-  if (type == 2) {
-    // Ignore target coordinates
-    recv_all(client_fd, recv_buffer, 12, false);
-  }
-  if (type != 1) {
-    // Ignore hand
-    recv_all(client_fd, recv_buffer, 1, false);
-  }
-
-  // Ignore sneaking flag
-  recv_all(client_fd, recv_buffer, 1, false);
-
-  if (type == 0) { // Interact
-    interactEntity(entity_id, client_fd);
-  } else if (type == 1) { // Attack
-    hurtEntity(entity_id, client_fd, D_generic, 1);
-  }
-
-  return 0;
-}
-
 // S->C Entity Event
 int sc_entityEvent (int client_fd, int entity_id, uint8_t status) {
 

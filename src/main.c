@@ -1,4 +1,5 @@
 #include "items.h"
+#include "mobs.h"
 #include "doors.h"
 #include "signs.h"
 #include "commands.h"
@@ -150,24 +151,6 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
           sc_spawnEntityPlayer(client_fd, player_data[i]);
         }
 
-        // Send information about all other entities (mobs):
-        // Use a random number for the first half of the UUID
-        uint8_t uuid[16];
-        uint32_t r = fast_rand();
-        memcpy(uuid, &r, 4);
-        // Send allocated living mobs, use ID for second half of UUID
-        for (int i = 0; i < MAX_MOBS; i ++) {
-          if (mob_data[i].type == 0) continue;
-          if ((mob_data[i].data & 31) == 0) continue;
-          memcpy(uuid + 4, &i, 4);
-          // For more info on the arguments here, see the spawnMob function
-          sc_spawnEntity(
-            client_fd, -2 - i, uuid,
-            mob_data[i].type, mob_data[i].x, mob_data[i].y, mob_data[i].z,
-            0, 0
-          );
-          broadcastMobMetadata(client_fd, -2 - i);
-        }
 
       }
       break;
@@ -214,7 +197,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
       break;
 
     case 0x19:
-      if (state == STATE_PLAY) cs_interact(client_fd);
+      if (state == STATE_PLAY && cs_interact(client_fd,length)) { recv_count = 0; return; }
       break;
 
     case 0x1D:
@@ -382,44 +365,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
         player->visited_x[VISITED_HISTORY - 1] = _x;
         player->visited_z[VISITED_HISTORY - 1] = _z;
 
-        uint32_t r = fast_rand();
-        // One in every 4 new chunks spawns a mob
-        if ((r & 3) == 0) {
-          // The mob is placed in the middle of the new chunk row,
-          // at a random position within the chunk
-          short mob_x = (_x + dx * VIEW_DISTANCE) * 16 + ((r >> 4) & 15);
-          short mob_z = (_z + dz * VIEW_DISTANCE) * 16 + ((r >> 8) & 15);
-          // Start at the Y coordinate of the spawning player and move upward
-          // until a valid space is found
-          uint8_t mob_y = cy - 8;
-          uint8_t b_low = getBlockAt(mob_x, mob_y - 1, mob_z);
-          uint8_t b_mid = getBlockAt(mob_x, mob_y, mob_z);
-          uint8_t b_top = getBlockAt(mob_x, mob_y + 1, mob_z);
-          while (mob_y < 255) {
-            if ( // Solid block below, non-solid(spawnable) at feet and above
-              !isPassableBlock(b_low) &&
-              isPassableSpawnBlock(b_mid) &&
-              isPassableSpawnBlock(b_top)
-            ) break;
-            b_low = b_mid;
-            b_mid = b_top;
-            b_top = getBlockAt(mob_x, mob_y + 2, mob_z);
-            mob_y ++;
-          }
-          if (mob_y != 255) {
-            // Spawn passive mobs above ground during the day,
-            // or hostiles underground and during the night
-            if ((world_time < 13000 || world_time > 23460) && mob_y > 48) {
-              uint32_t mob_choice = (r >> 12) & 3;
-              if (mob_choice == 0) spawnMob(25, mob_x, mob_y, mob_z, 4); // Chicken
-              else if (mob_choice == 1) spawnMob(28, mob_x, mob_y, mob_z, 10); // Cow
-              else if (mob_choice == 2) spawnMob(95, mob_x, mob_y, mob_z, 10); // Pig
-              else if (mob_choice == 3) spawnMob(106, mob_x, mob_y, mob_z, 8); // Sheep
-            } else {
-              spawnMob(145, mob_x, mob_y, mob_z, 20); // Zombie
-            }
-          }
-        }
+        mobs_spawn_exploration(_x,_z,dx,dz,cy,fast_rand());
 
         int count = 0;
         #ifdef DEV_LOG_CHUNK_GENERATION
@@ -666,6 +612,7 @@ int main (int argc, char **argv) {
 
   // Track time of last server tick (in microseconds)
   int64_t last_tick_time = get_program_time();
+  int64_t last_arrow_time = last_tick_time;
 
   /**
    * Cycles through all connected clients, handling one packet at a time
@@ -699,6 +646,12 @@ int main (int argc, char **argv) {
     client_index ++;
     if (client_index == MAX_PLAYERS) client_index = 0;
 
+    // Only projectiles use the 100 ms cadence; world/AI ticks remain unchanged.
+    int64_t arrow_now = get_program_time();
+    if (arrow_now-last_arrow_time >= 100000) {
+      mobs_tick_arrows(arrow_now-last_arrow_time);
+      last_arrow_time = arrow_now;
+    }
     // Handle periodic events (server ticks)
     int64_t time_since_last_tick = get_program_time() - last_tick_time;
     if (time_since_last_tick > TIME_BETWEEN_TICKS) {

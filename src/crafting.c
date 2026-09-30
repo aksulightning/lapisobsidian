@@ -38,6 +38,7 @@ void getCraftingOutput (PlayerData *player, uint8_t *count, uint16_t *item) {
 
     case 1:
       switch (first_item) {
+        case I_short_grass: *item = I_wheat_seeds; *count = 1; return;
         case I_oak_log: *item = I_oak_planks; *count = 4; return;
         case I_oak_planks: *item = I_oak_button; *count = 1; return;
         case I_iron_block: *item = I_iron_ingot; *count = 9; return;
