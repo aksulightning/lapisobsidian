@@ -6,6 +6,9 @@ flags=(-std=c11 -O2 -Wall -Wextra -Wconversion -Wshadow -Werror -ffp-contract=of
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   flags+=(-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie)
 fi
+"${CC:-gcc}" "${flags[@]}" -c src/command_packets.c -o .tests/command-packets.o
+"${CC:-gcc}" "${flags[@]}" tests/commands.c tests/sanitizer.c src/commands.c src/globals.c -o .tests/commands
+.tests/commands
 "${CC:-gcc}" "${flags[@]}" tests/registry.c tests/sanitizer.c src/registry.c src/registries.c -o .tests/registry
 .tests/registry
 "${CC:-gcc}" "${flags[@]}" tests/worldgen.c tests/sanitizer.c src/beta173_*.c -lm -o .tests/worldgen
@@ -27,4 +30,6 @@ for source in src/*.c; do
 done
 "${CC:-gcc}" "${integration_flags[@]}" tests/packet_input.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/packet_input
 if ! .tests/packet_input 2>.tests/packet-rejections.log; then cat .tests/packet-rejections.log; exit 1; fi
+"${CC:-gcc}" "${integration_flags[@]}" tests/command_packets.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/command_packets
+.tests/command_packets
 ./tests/no-jar.sh

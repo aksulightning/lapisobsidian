@@ -1,3 +1,4 @@
+#include "commands.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -247,7 +248,7 @@ int sc_loginPlay (int client_fd) {
   // hashed seed
   writeUint64(client_fd, 0x0123456789ABCDEF);
   // gamemode
-  writeByte(client_fd, GAMEMODE);
+  writeByte(client_fd, commands_mode_for_fd(client_fd));
   // previous gamemode
   writeByte(client_fd, 0xFF);
   // is debug
@@ -623,6 +624,7 @@ int cs_clickContainer (int client_fd) {
 
   PlayerData *player;
   if (getPlayerData(client_fd, &player)) return 1;
+  if (commands_gamemode(player) == 3) return 0;
 
   uint8_t apply_changes = true;
   // prevent dropping items
@@ -906,10 +908,10 @@ int cs_closeContainer (int client_fd) {
 // S->C Player Info Update, "Add Player" action
 int sc_playerInfoUpdateAddPlayer (int client_fd, PlayerData player) {
 
-  writeVarInt(client_fd, 21 + strlen(player.name)); // Packet length
+  writeVarInt(client_fd, 22 + strlen(player.name)); // Packet length
   writeByte(client_fd, 0x3F); // Packet ID
 
-  writeByte(client_fd, 0x01); // EnumSet: Add Player
+  writeByte(client_fd, 0x05); // Add Player + Update Game Mode
   writeByte(client_fd, 1); // Player count (1 per packet)
 
   // Player UUID
@@ -920,6 +922,7 @@ int sc_playerInfoUpdateAddPlayer (int client_fd, PlayerData player) {
   // Properties (don't send any)
   writeByte(client_fd, 0);
 
+  writeVarInt(client_fd,commands_mode_for_fd(player.client_fd));
   return 0;
 }
 
@@ -1106,7 +1109,7 @@ int sc_respawn (int client_fd) {
   // hashed seed
   writeUint64(client_fd, 0x0123456789ABCDEF);
   // gamemode
-  writeByte(client_fd, GAMEMODE);
+  writeByte(client_fd, commands_mode_for_fd(client_fd));
   // previous gamemode
   writeByte(client_fd, 0xFF);
   // is debug
@@ -1144,126 +1147,35 @@ int cs_clientStatus (int client_fd) {
 
 // S->C System Chat
 int sc_systemChat (int client_fd, char* message, uint16_t len) {
-
-  writeVarInt(client_fd, 5 + len);
-  writeByte(client_fd, 0x72);
-
-  // String NBT tag
-  writeByte(client_fd, 8);
-  writeUint16(client_fd, len);
-  send_all(client_fd, message, len);
-
-  // Is action bar message?
-  writeByte(client_fd, false);
-
-  return 0;
-}
-
-// C->S Chat Message
-int cs_chat (int client_fd) {
-
-  // To be safe, cap messages to 32 bytes before the buffer length
-  readStringN(client_fd, 224);
-
-  PlayerData *player;
-  if (getPlayerData(client_fd, &player)) return 1;
-
-  size_t message_len = strlen((char *)recv_buffer);
-  uint8_t name_len = strlen(player->name);
-
-  if (recv_buffer[0] != '!') { // Standard chat message
-
-    // Shift message contents forward to make space for player name tag
-    memmove(recv_buffer + name_len + 3, recv_buffer, message_len + 1);
-    // Copy player name to index 1
-    memcpy(recv_buffer + 1, player->name, name_len);
-    // Surround player name with brackets and a space
-    recv_buffer[0] = '<';
-    recv_buffer[name_len + 1] = '>';
-    recv_buffer[name_len + 2] = ' ';
-
-    // Forward message to all connected players
-    for (int i = 0; i < MAX_PLAYERS; i ++) {
-      if (player_data[i].client_fd == -1) continue;
-      if (player_data[i].flags & 0x20) continue;
-      sc_systemChat(player_data[i].client_fd, (char *)recv_buffer, message_len + name_len + 3);
-    }
-
-    goto cleanup;
+  /* NBT TAG_String uses Java modified UTF-8. Supplementary characters use
+   * two encoded UTF-16 surrogates, unlike the incoming chat string's UTF-8. */
+  uint8_t encoded[1024]; size_t used = 0;
+  if (!message || len > 512) return 1;
+  for (size_t i = 0; i < len; i ++) {
+    uint8_t ch = (uint8_t)message[i];
+    if (!ch) { encoded[used++] = 0xc0; encoded[used++] = 0x80; }
+    else if ((ch & 0xf8u) == 0xf0u) {
+      if (i+3 >= len) return 1;
+      uint32_t cp = ch & 7u;
+      for (unsigned j = 1; j <= 3; j ++) {
+        uint8_t next = (uint8_t)message[i+j];
+        if ((next & 0xc0u) != 0x80u) return 1;
+        cp = (cp<<6) | (next & 63u);
+      }
+      if (cp < 0x10000 || cp > 0x10ffff) return 1;
+      cp -= 0x10000;
+      uint32_t halves[2] = {0xd800u+(cp>>10),0xdc00u+(cp & 1023u)};
+      for (unsigned j = 0; j < 2; j ++) {
+        encoded[used++] = (uint8_t)(0xe0u | (halves[j]>>12));
+        encoded[used++] = (uint8_t)(0x80u | ((halves[j]>>6) & 63u));
+        encoded[used++] = (uint8_t)(0x80u | (halves[j] & 63u));
+      }
+      i += 3;
+    } else encoded[used++] = ch;
   }
-
-  // Handle chat commands
-
-  if (!strncmp((char *)recv_buffer, "!msg", 4)) {
-
-    int target_offset = 5;
-    int target_end_offset = 0;
-    int text_offset = 0;
-
-    // Skip spaces after "!msg"
-    while (recv_buffer[target_offset] == ' ') target_offset++;
-    target_end_offset = target_offset;
-    // Extract target name
-    while (recv_buffer[target_end_offset] != ' ' && recv_buffer[target_end_offset] != '\0' && target_end_offset < 21) target_end_offset++;
-    text_offset = target_end_offset;
-    // Skip spaces before message
-    while (recv_buffer[text_offset] == ' ') text_offset++;
-
-    // Send usage guide if arguments are missing
-    if (target_offset == target_end_offset || target_end_offset == text_offset) {
-      sc_systemChat(client_fd, "§7Usage: !msg <player> <message>", 33);
-      goto cleanup;
-    }
-
-    // Query the target player
-    PlayerData *target = getPlayerByName(target_offset, target_end_offset, recv_buffer);
-    if (target == NULL) {
-      sc_systemChat(client_fd, "Player not found", 16);
-      goto cleanup;
-    }
-
-    // Format output as a vanilla whisper
-    int name_len = strlen(player->name);
-    int text_len = message_len - text_offset;
-    memmove(recv_buffer + name_len + 24, recv_buffer + text_offset, text_len);
-    snprintf((char *)recv_buffer, sizeof(recv_buffer), "§7§o%s whispers to you:", player->name);
-    recv_buffer[name_len + 23] = ' ';
-    // Send message to target player
-    sc_systemChat(target->client_fd, (char *)recv_buffer, (uint16_t)(name_len + 24 + text_len));
-
-    // Format output for sending player
-    int target_len = target_end_offset - target_offset;
-    memmove(recv_buffer + target_len + 23, recv_buffer + name_len + 24, text_len);
-    snprintf((char *)recv_buffer, sizeof(recv_buffer), "§7§oYou whisper to %s:", target->name);
-    recv_buffer[target_len + 22] = ' ';
-    // Report back to sending player
-    sc_systemChat(client_fd, (char *)recv_buffer, (uint16_t)(target_len + 23 + text_len));
-
-    goto cleanup;
-  }
-
-  if (!strncmp((char *)recv_buffer, "!help", 5)) {
-    // Send command guide
-    const char help_msg[] = "§7Commands:\n"
-    "  !msg <player> <message> - Send a private message\n"
-    "  !help - Show this help message";
-    sc_systemChat(client_fd, (char *)help_msg, (uint16_t)sizeof(help_msg) - 1);
-    goto cleanup;
-  }
-
-  // Handle fall-through case
-  sc_systemChat(client_fd, "§7Unknown command", 18);
-
-cleanup:
-  readUint64(client_fd); // Ignore timestamp
-  readUint64(client_fd); // Ignore salt
-  // Ignore signature (if any)
-  uint8_t has_signature = readByte(client_fd);
-  if (has_signature) recv_all(client_fd, recv_buffer, 256, false);
-  readVarInt(client_fd); // Ignore message count
-  // Ignore acknowledgement bitmask and checksum
-  recv_all(client_fd, recv_buffer, 4, false);
-
+  writeVarInt(client_fd,(uint32_t)(5+used)); writeByte(client_fd,0x72);
+  writeByte(client_fd,8); writeUint16(client_fd,(uint16_t)used);
+  send_all(client_fd,encoded,(ssize_t)used); writeByte(client_fd,false);
   return 0;
 }
 

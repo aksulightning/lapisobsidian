@@ -1,3 +1,4 @@
+#include "commands.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -135,6 +136,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
 
         // Send full client spawn sequence
         spawnPlayer(player);
+        sc_commands(client_fd);
 
         // Register all existing players and spawn their entities
         for (int i = 0; i < MAX_PLAYERS; i ++) {
@@ -167,7 +169,12 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
       }
       break;
 
+    case 0x06:
+      if (state == STATE_PLAY && cs_chatCommand(client_fd,length,false)) { recv_count = 0; return; }
+      break;
+
     case 0x07:
+      if (state == STATE_PLAY && cs_chatCommand(client_fd,length,true)) { recv_count = 0; return; }
       if (state == STATE_CONFIGURATION) {
         if (cs_knownPacks(client_fd)) { recv_count = 0; return; }
         if (sc_registries(client_fd)) { recv_count = 0; return; }
@@ -178,7 +185,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
       break;
 
     case 0x08:
-      if (state == STATE_PLAY) cs_chat(client_fd);
+      if (state == STATE_PLAY && cs_chat(client_fd,length)) { recv_count = 0; return; }
       break;
 
     case 0x0B:
@@ -243,7 +250,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
         // Handle fall damage
         if (on_ground) {
           int16_t damage = player->grounded_y - player->y - 3;
-          if (damage > 0 && (GAMEMODE == 0 || GAMEMODE == 2) && !swimming) {
+          if (damage > 0 && (commands_gamemode(player) == 0 || commands_gamemode(player) == 2) && !swimming) {
             hurtEntity(client_fd, -1, D_fall, damage);
           }
           player->grounded_y = player->y;
@@ -318,12 +325,14 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
         // simulate hunger with a timer-based system, where the timer ticks
         // down with each position packet. The timer value itself then
         // naturally works as a substitute for saturation.
-        if (player->saturation == 0) {
-          if (player->hunger > 0) player->hunger--;
-          player->saturation = 200;
-          sc_setHealth(client_fd, player->health, player->hunger, player->saturation);
-        } else if (player->flags & 0x08) {
-          player->saturation -= 1;
+        if (commands_gamemode(player) != 1 && commands_gamemode(player) != 3) {
+          if (player->saturation == 0) {
+            if (player->hunger > 0) player->hunger--;
+            player->saturation = 200;
+            sc_setHealth(client_fd, player->health, player->hunger, player->saturation);
+          } else if (player->flags & 0x08) {
+            player->saturation -= 1;
+          }
         }
 
         // Cast the values to short to get integer position
@@ -460,6 +469,10 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
       if (state == STATE_PLAY) cs_playerLoaded(client_fd);
       break;
 
+    case 0x37:
+      if (state == STATE_PLAY && cs_creativeSlot(client_fd,length)) { recv_count = 0; return; }
+      break;
+
     case 0x34:
       if (state == STATE_PLAY) cs_setHeldItem(client_fd);
       break;
@@ -528,6 +541,11 @@ int main (int argc, char **argv) {
         exit(EXIT_FAILURE);
       }
   #endif
+
+  if (!commands_configure(getenv("LAPIS_ADMIN_TOKEN"))) {
+    fputs("LAPIS_ADMIN_TOKEN must contain 32..128 printable non-space ASCII bytes\n",stderr);
+    return EXIT_FAILURE;
+  }
 
   bool explicit_seed = false;
   for (int i = 1; i < argc; i ++) {
@@ -742,8 +760,10 @@ int main (int argc, char **argv) {
       continue;
     }
     // Read packet ID
+    uint64_t id_start = total_bytes_received;
     int packet_id = readVarInt(client_fd);
-    if (packet_id < 0 || sizeVarInt((uint32_t)packet_id) > length) {
+    uint64_t id_bytes = total_bytes_received-id_start;
+    if (packet_id < 0 || id_bytes > (uint64_t)length) {
       disconnectClient(&clients[client_index], 3);
       continue;
     }
@@ -755,7 +775,7 @@ int main (int argc, char **argv) {
       continue;
     }
     // Handle packet data
-    handlePacket(client_fd, length - sizeVarInt(packet_id), packet_id, state);
+    handlePacket(client_fd, length - (int)id_bytes, packet_id, state);
     if (recv_count == 0 || (recv_count == -1 && errno != EAGAIN && errno != EWOULDBLOCK)) {
       disconnectClient(&clients[client_index], 4);
       continue;

@@ -1,3 +1,4 @@
+#include "commands.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -77,6 +78,7 @@ int reservePlayerData (int client_fd, uint8_t *uuid, char *name) {
   for (int i = 0; i < MAX_PLAYERS; i ++) {
     // Found existing player entry (UUID match)
     if (memcmp(player_data[i].uuid, uuid, 16) == 0) {
+      commands_reset_player(&player_data[i]);
       // Set network file descriptor and username
       player_data[i].client_fd = client_fd;
       memcpy(player_data[i].name, name, 16);
@@ -101,6 +103,7 @@ int reservePlayerData (int client_fd, uint8_t *uuid, char *name) {
     // Found free space for a player, initialize default parameters
     if (empty) {
       if (player_data_count >= MAX_PLAYERS) return 1;
+      commands_reset_player(&player_data[i]);
       player_data[i].client_fd = client_fd;
       player_data[i].flags |= 0x20;
       player_data[i].flagval_16 = 0;
@@ -147,6 +150,7 @@ void handlePlayerDisconnect (int client_fd) {
   // Search for a corresponding player in the player data array
   for (int i = 0; i < MAX_PLAYERS; i ++) {
     if (player_data[i].client_fd != client_fd) continue;
+    commands_reset_player(&player_data[i]);
     // Mark the player as being offline
     player_data[i].client_fd = -1;
     // Prepare leave message for broadcast
@@ -360,12 +364,7 @@ void spawnPlayer (PlayerData *player) {
   // Sync client clock time
   sc_updateTime(player->client_fd, world_time);
 
-  #ifdef ENABLE_PLAYER_FLIGHT
-  if (GAMEMODE != 1 && GAMEMODE != 3) {
-    // Give the player flight (for testing)
-    sc_playerAbilities(player->client_fd, 0x04);
-  }
-  #endif
+  sc_playerAbilities(player->client_fd,commands_abilities(player));
 
   // Calculate player's chunk coordinates
   short _x = div_floor(player->x, 16), _z = div_floor(player->z, 16);
@@ -991,7 +990,7 @@ uint8_t getArmorItemSlot (uint16_t item) {
 uint8_t handlePlayerEating (PlayerData *player, uint8_t just_check) {
 
   // Exit early if player is unable to eat
-  if (player->hunger >= 20) return false;
+  if (commands_gamemode(player) == 1 || commands_gamemode(player) == 3 || player->hunger >= 20) return false;
 
   uint16_t *held_item = &player->inventory_items[player->hotbar];
   uint8_t *held_count = &player->inventory_count[player->hotbar];
@@ -1174,12 +1173,14 @@ void handlePlayerAction (PlayerData *player, int action, short x, short y, short
     player->flags &= ~0x10;
   }
 
+  if (commands_gamemode(player) >= 2) return;
+
   // Ignore further actions not pertaining to mining blocks
   if (action != 0 && action != 2) return;
 
   // In creative, only the "start mining" action is sent
   // No additional verification is performed, the block is simply removed
-  if (action == 0 && GAMEMODE == 1) {
+  if (action == 0 && commands_gamemode(player) == 1) {
     makeBlockChange(x, y, z, 0);
     return;
   }
@@ -1229,6 +1230,7 @@ void handlePlayerAction (PlayerData *player, int action, short x, short y, short
 }
 
 void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t face) {
+  if (commands_gamemode(player) == 3) return;
 
   // Get targeted block (if coordinates are provided)
   uint8_t target = face == 255 ? 0 : getBlockAt(x, y, z);
@@ -1251,7 +1253,7 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
       uint32_t compost_chance = isCompostItem(*item);
       if (compost_chance != 0) {
         // Take away composted item
-        if ((*count -= 1) == 0) *item = 0;
+        if (commands_gamemode(player) != 1 && (*count -= 1) == 0) *item = 0;
         sc_setContainerSlot(player->client_fd, 0, serverSlotToClientSlot(0, player->hotbar), *count, *item);
         // Test compost chance and give bone meal on success
         if (fast_rand() < compost_chance) {
@@ -1305,7 +1307,7 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
     if (target == B_oak_sapling) {
       // Consume the bone meal (yes, even before checks)
       // Wasting bone meal on misplanted saplings is vanilla behavior
-      if ((*count -= 1) == 0) *item = 0;
+      if (commands_gamemode(player) != 1 && (*count -= 1) == 0) *item = 0;
       sc_setContainerSlot(player->client_fd, 0, serverSlotToClientSlot(0, player->hotbar), *count, *item);
       if ( // Saplings can only grow when placed on these blocks
         target_below == B_dirt ||
@@ -1338,6 +1340,8 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
     return;
   }
 
+  if (commands_gamemode(player) == 2) return;
+
   // Don't proceed with block placement if no coordinates were provided
   if (face == 255) return;
 
@@ -1369,7 +1373,7 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
     // Apply server-side block change
     if (makeBlockChange(x, y, z, block)) return;
     // Decrease item amount in selected slot
-    *count -= 1;
+    if (commands_gamemode(player) != 1) *count -= 1;
     // Clear item id in slot if amount is zero
     if (*count == 0) *item = 0;
     // Calculate fluid flow
@@ -1433,6 +1437,7 @@ void interactEntity (int entity_id, int interactor_id) {
   PlayerData *player;
   if (getPlayerData(interactor_id, &player)) return;
 
+  if (commands_gamemode(player) == 3) return;
   int mob_index = -entity_id - 2;
   if (mob_index < 0 || mob_index >= MAX_MOBS) return;
   MobData *mob = &mob_data[mob_index];
@@ -1479,6 +1484,8 @@ void hurtEntity (int entity_id, int attacker_id, uint8_t damage_type, uint8_t da
     PlayerData *player;
     if (getPlayerData(attacker_id, &player)) return;
 
+    if (commands_gamemode(player) == 3) return;
+
     // Check if attack cooldown flag is set
     if (player->flags & 0x01) return;
 
@@ -1504,6 +1511,8 @@ void hurtEntity (int entity_id, int attacker_id, uint8_t damage_type, uint8_t da
 
     PlayerData *player;
     if (getPlayerData(entity_id, &player)) return;
+
+    if (commands_gamemode(player) == 1 || commands_gamemode(player) == 3) return;
 
     // Don't continue if the player is already dead
     if (player->health == 0) return;
