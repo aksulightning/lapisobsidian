@@ -52,6 +52,13 @@ The inherited connection is unencrypted and does not verify player UUIDs; use
 administrator commands on a trusted network or protected tunnel. See
 [command syntax, permissions and limits](docs/commands.md) for details.
 
+## Signs
+
+Place an oak sign on the top or side of a solid block, then enter text in the
+client editor. Right-click either side to edit it again. Up to 128 signs persist
+in `signs.bin`, with four lines per side (96 UTF-8 bytes per line). Existing worlds
+remain compatible. See [sign behavior, storage and limits](docs/signs.md).
+
 ## Configuration and scope
 
 Configuration is currently compile-time, in `include/globals.h`. The server uses
@@ -60,17 +67,17 @@ The low-level network core, inventory, ticks, and edit storage come from bareiro
 This is an experimental server, not a plugin platform or a complete survival
 implementation. A full audit of inherited packet handling is still required.
 
-Milestones 0–3 are implemented: self-contained protocol data, deterministic
+Milestones 0–4 are implemented: self-contained protocol data, deterministic
 Beta-style terrain, biome surfaces, caves, ores, ordinary oaks and basic ground
 cover. Trees and decoration are an initial subset; see [world generation](docs/worldgen.md)
 for deliberate differences and deferred variants. Built-in slash commands are
-available; persistent signs are next. No scripting runtime, plugin system or database is included.
+available, and oak signs support persistent front/back text. No scripting runtime, plugin system or database is included.
 Inherited gameplay, including sprinting and hunger, remains; the Beta gameplay
 pass is still pending.
 
 Create a new world with `./lapis-obsidian --seed -12345`, using a signed 64-bit
 decimal seed. Later runs load the seed from `world.meta`. Supplying a different
-seed for the same world fails. Keep `world.meta` and `world.bin` together. Run the
+seed for the same world fails. Keep `world.meta`, `world.bin`, and `signs.bin` together. Run the
 binary from a fresh directory to start another world. Legacy saves without
 metadata are rejected rather than overlaid onto a different terrain generator.
 Generator version 2 also rejects Milestone 1/version 1 saves. Start a fresh world

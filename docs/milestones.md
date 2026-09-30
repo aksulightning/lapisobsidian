@@ -1,7 +1,7 @@
 # Lapis Obsidian milestone report — 2026-09-30
 
-Implemented scope: Milestones 0–3, with ordinary oaks and basic ground cover as
-the initial vegetation subset. Milestone 4 (persistent signs) remains pending.
+Implemented scope: Milestones 0–4, with ordinary oaks and basic ground cover as
+the initial vegetation subset. Milestone 4 adds persistent oak signs.
 No scripting runtime, plugin system, database or third-party runtime dependency
 was added. The Milestone 0/1 sections below describe their original scope;
 Milestone 2 supersedes the earlier terrain/biome limitations.
@@ -205,6 +205,39 @@ use a trusted network or tunnel. Graphical client playtesting and a full audit o
 inherited packet/inventory paths remain outstanding. Exact commands and details
 are in `docs/commands.md` and the build/test section below.
 
+## Milestone 4: persistent signs
+
+Added `include/signs.h`, `include/sign_protocol.h`, `src/signs.c`,
+`src/sign_packets.c`, `tests/signs.c` and `docs/signs.md`. Updated the main packet
+routing/startup path, packet declarations and chunk transmission, block-change
+and player-session hooks, crafting, test runner/input fixtures, README and registry
+documentation. Existing world/player binary layouts and generator version remain.
+
+The fixed 128-record C pool stores four plain UTF-8 lines on each side, with
+bounded editor sessions per connection. Standing and wall oak signs support
+placement, orientation, editing, broadcasts/chunk reloads, direct removal,
+support removal and stale-record cleanup. Existing block changes remain in
+`world.bin`; versioned explicit-width text records use `signs.bin`. Writes use a
+temporary snapshot and rename; no database or new runtime/dependency is added.
+See `docs/signs.md` for cross-file crash consistency and backup requirements.
+
+Protocol code encodes modern sign block entities and front/back editor packets.
+Sign, placement and mining frames are fully validated before world mutation;
+coordinate narrowing, UTF-8, byte limits, edit authorization and session expiry
+are checked. The compact palette stays unchanged, while a protocol-pinned small
+state table supplies the extra standing/wall orientations. The Beta-era oak-sign
+recipe yields one sign. Two sanitizer-reported unaligned inventory reads, an
+empty-grid crafting index and chest-content traversal on the touched paths were
+fixed without changing storage formats or refactoring unrelated systems.
+
+Validation: normal build, full regression/no-JAR suite, strict warnings for new
+modules, and ASan/UBSan passed. Sign tests cover sides, placement, malformed and
+truncated input, Unicode/NBT, permissions, editor locks, storage limits, failed
+writes, corrupt files, restart, removal and stale cleanup. A live server socket
+test verifies placement/editor, Unicode text, process restart/chunk transmission,
+re-edit, removal and malformed-packet disconnection. Graphical playtesting remains
+outstanding. Full details, compatibility limits and exact commands: `docs/signs.md`.
+
 ## Commands and results
 
 Run from the repository root:
@@ -232,7 +265,8 @@ the execution sandbox cannot inspect `/proc`; leak testing is not claimed.
 - This is Beta-style terrain, not historical bit-for-bit emulation. Shared
   world-space climate samples and direct interpolation are documented adaptations;
   reference-based density/height fixtures include those adaptations.
-- Persistent signs remain pending. Vegetation is the initial
+- Signs support ordinary oak standing/wall forms; dyes, glow, wax and hanging
+  signs are deferred. Vegetation is the initial
   subset described above. Inherited survival hunger remains; creative/spectator
   bypass its updates. Sprinting remains supported.
 - The inherited compact coordinate limits and raw world-edit/player layout

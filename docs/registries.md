@@ -49,3 +49,13 @@ states, biome order, dimension height and tags; regenerate; run tests including
 chunk decoding; verify a real matching vanilla client login. Do not reorder the
 internal block palette without a saved-world migration. Numeric ID agreement and
 wire-format tests do not replace a real client interoperability check.
+
+## Sign state extension
+
+Milestone 4 adds `include/sign_protocol.h`, a small maintained protocol-772
+snapshot for sixteen dry standing-sign states, four dry wall-sign states and
+sign block-entity type 7. Compact block ID 143 remains unchanged in saved worlds.
+Orientation-specific states are sent as updates after the chunk packet, with
+bounded sign block-entity NBT. See `docs/signs.md` for provenance, encoding and
+validation. This table must be reviewed alongside generated registries during
+protocol upgrades; normal builds do not regenerate either snapshot.
