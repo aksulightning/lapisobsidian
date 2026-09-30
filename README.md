@@ -63,8 +63,15 @@ binary from a fresh directory to start another world. Legacy saves without
 metadata are rejected rather than overlaid onto a different terrain generator.
 Generator version 2 also rejects Milestone 1/version 1 saves. Start a fresh world
 in another directory; no migration is provided.
-To mirror a new world's terrain horizontally, set `WORLD_MIRROR_HORIZONTAL` to
-`1` in `include/globals.h`, then run `./build.sh`. The default is `0` (off).
+Enable horizontal world mirroring with a startup argument, optionally with a seed:
+
+```sh
+./lapis-obsidian --mirror-horizontal
+./lapis-obsidian --seed -12345 --mirror-horizontal
+```
+
+Arguments can appear in either order. Mirroring defaults to off; no rebuild is
+needed. Repeat `--mirror-horizontal` whenever starting a mirrored world.
 This flips X using `x -> -x - 1`; Y and Z stay unchanged. Surfaces, caves, ores,
 trees, decoration and biome columns are reflected together. Player edits remain
 at their placed coordinates. The setting is stored in `world.meta`; an existing

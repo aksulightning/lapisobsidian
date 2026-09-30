@@ -530,15 +530,20 @@ int main (int argc, char **argv) {
   #endif
 
   bool explicit_seed = false;
-  if (argc == 3 && strcmp(argv[1], "--seed") == 0) {
-    if (!beta173_seed_parse(argv[2], &world_seed)) {
-      fputs("Invalid seed: expected a signed 64-bit decimal integer\n", stderr);
+  for (int i = 1; i < argc; i ++) {
+    if (strcmp(argv[i], "--seed") == 0 && !explicit_seed) {
+      if (i + 1 >= argc || !beta173_seed_parse(argv[i + 1], &world_seed)) {
+        fputs("Invalid seed: expected a signed 64-bit decimal integer\n", stderr);
+        return EXIT_FAILURE;
+      }
+      i ++;
+      explicit_seed = true;
+    } else if (strcmp(argv[i], "--mirror-horizontal") == 0 && !world_mirror_horizontal) {
+      world_mirror_horizontal = 1;
+    } else {
+      fputs("Usage: lapis-obsidian [--seed <signed-64-bit-integer>] [--mirror-horizontal]\n", stderr);
       return EXIT_FAILURE;
     }
-    explicit_seed = true;
-  } else if (argc > 1) {
-    fputs("Usage: lapis-obsidian [--seed <signed-64-bit-integer>]\n", stderr);
-    return EXIT_FAILURE;
   }
   #if defined(SYNC_WORLD_TO_DISK) && !defined(ESP_PLATFORM)
   if (!world_metadata_open("world.meta", "world.bin", &world_seed, explicit_seed, world_mirror_horizontal != 0)) return EXIT_FAILURE;

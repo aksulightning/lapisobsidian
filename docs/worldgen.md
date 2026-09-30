@@ -77,9 +77,10 @@ blocks use per-column climate biomes. Fine-grained client biome tinting is defer
 
 ## Optional horizontal mirroring
 
-`WORLD_MIRROR_HORIZONTAL` in `include/globals.h` defaults to 0 and initializes
-the startup variable `world_mirror_horizontal`. Set the constant to 1 and rebuild
-to enable it. The server reflects complete generated chunks across the plane
+The startup argument `--mirror-horizontal` enables `world_mirror_horizontal`;
+the default is off. It works with `--seed <signed-64-bit-integer>` in either
+argument order and requires no rebuild. Repeat the flag on each start of a
+mirrored world. The server reflects complete generated chunks across the plane
 X=-0.5: block X maps to `-X-1`, source chunk X maps to `-chunkX-1`, and local X
 maps to `15-localX`. Y/Z are unchanged. This bijection preserves both compact
 coordinate boundaries and reflects features that cross chunk borders. It reverses
