@@ -22,6 +22,21 @@ Set `CC` to select a compiler. `DEBUG=1 ./build.sh` enables ASan/UBSan and addit
 conversion/shadow diagnostics. The existing MinGW `--9x` build option is retained.
 Embedded ESP-IDF support is inherited and has not been validated by this fork.
 
+## Alpine Linux (RISC-V 64, ARM64, x86-64)
+
+On the target Alpine machine, install the C toolchain as root, then build:
+
+```sh
+apk add --no-cache build-base
+./build-alpine.sh
+./lapis-obsidian
+```
+
+This script works with Alpine's default `/bin/sh` and detects the compiler target.
+Optional checks: `--arch riscv64`, `--arch arm64`, or `--arch x64`; `--static`
+creates a static musl build. See [Alpine build options and cross compilation](docs/build-alpine.md)
+for toolchain requirements and validation limits. No Java or vanilla JAR is needed.
+
 ## Tests
 
 ```sh

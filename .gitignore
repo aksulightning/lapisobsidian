@@ -5,3 +5,6 @@ lapis-obsidian.exe
 world.meta
 *.o
 cc*.s
+
+.alpine-build.*/
+lapis-obsidian-alpine-*
