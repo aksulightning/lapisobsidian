@@ -6,8 +6,8 @@
 
 #include <stdint.h>
 
-// Binary packet data (1063 bytes total)
-extern const uint8_t registries_bin[904];
+// Binary packet data (1102 bytes total)
+extern const uint8_t registries_bin[943];
 extern const uint8_t tags_bin[159];
 
 extern const uint16_t block_palette[256]; // Block palette
@@ -602,6 +602,11 @@ uint8_t I_to_B (uint32_t item); // Item-to-block mapping
 #define W_desert 2
 #define W_snowy_plains 3
 #define W_beach 4
+#define W_forest 5
+#define W_taiga 6
+#define W_jungle 7
+#define W_swamp 8
+#define W_savanna 9
 
 // Damage type identifiers
 #define D_arrow 0

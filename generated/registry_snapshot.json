@@ -1422,5 +1422,17 @@
     "moss_carpet": 1049,
     "mud": 1059
   },
-  "maxItemId": 1415
+  "maxItemId": 1415,
+  "biomes": [
+    "plains",
+    "mangrove_swamp",
+    "desert",
+    "snowy_plains",
+    "beach",
+    "forest",
+    "taiga",
+    "jungle",
+    "swamp",
+    "savanna"
+  ]
 }

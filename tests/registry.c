@@ -35,7 +35,7 @@ int main (void) {
   assert(registry_block_item(UINT32_MAX) == 0);
   assert(!strcmp(registry_biome_by_id(W_plains), "plains"));
   assert(!strcmp(registry_biome_by_id(W_beach), "beach"));
-  assert(registry_biome_by_id(5) == NULL);
+  assert(registry_biome_by_id(10) == NULL);
   assert(registry_biome_by_id(UINT32_MAX) == NULL);
   assert(!strcmp(registry_dimension_by_id(0), "overworld"));
   assert(registry_dimension_by_id(1) == NULL);

@@ -24,7 +24,8 @@ bool registry_item_id_valid (uint32_t id) {
 
 const char *registry_biome_by_id (uint32_t id) {
   static const char *const names[] = {
-    "plains", "mangrove_swamp", "desert", "snowy_plains", "beach"
+    "plains", "mangrove_swamp", "desert", "snowy_plains", "beach",
+    "forest", "taiga", "jungle", "swamp", "savanna"
   };
   return id < sizeof(names) / sizeof(names[0]) ? names[id] : NULL;
 }

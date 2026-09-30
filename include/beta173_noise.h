@@ -16,4 +16,6 @@ double beta173_noise_2d (const Beta173Noise *noise, size_t count,
   double x, double z, double frequency);
 double beta173_climate_noise (const Beta173Noise *noise, size_t count,
   double x, double z, double frequency, double lacunarity);
+void beta173_noise_surface (const Beta173Noise *noise, double x, double z,
+  double frequency, double out[16]);
 #endif

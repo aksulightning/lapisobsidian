@@ -151,3 +151,31 @@ double beta173_climate_noise (const Beta173Noise *noise, size_t count,
   }
   return sum;
 }
+
+/* Surface sand/stone use a 16-sample Y run with world Z as its origin.
+ * The cached-gradient quirk makes independent per-point Perlin samples wrong. */
+void beta173_noise_surface (const Beta173Noise *noise, double x, double z,
+  double frequency, double out[16]) {
+  if (!noise || !out) return;
+  for (unsigned y = 0; y < 16; y ++) out[y] = 0;
+  if (!valid_point(x * frequency, z * frequency, 0)) return;
+  double scale = 1;
+  for (unsigned octave = 0; octave < 4; octave ++) {
+    const Beta173Noise *n = &noise[octave];
+    double wx = x * (frequency * scale) + n->ox, wz = n->oz;
+    unsigned ix = cell(floor(wx)), iz = cell(floor(wz));
+    wx -= floor(wx); wz -= floor(wz);
+    unsigned last_y = 256;
+    double c[4] = {0};
+    for (unsigned y = 0; y < 16; y ++) {
+      double wy = (z + y) * (frequency * scale) + n->oy;
+      unsigned iy = cell(floor(wy)); wy -= floor(wy);
+      if (iy != last_y) {
+        gradients(n, ix, iy, iz, wx, wy, wz, smooth(wx), c);
+        last_y = iy;
+      }
+      out[y] += lerp(smooth(wz), lerp(smooth(wy), c[0], c[1]), lerp(smooth(wy), c[2], c[3])) / scale;
+    }
+    scale /= 2;
+  }
+}

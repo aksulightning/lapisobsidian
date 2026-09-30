@@ -11,7 +11,7 @@ for (const value of Object.values(snapshot.palette)) {
 for (const value of [...Object.values(snapshot.items), ...snapshot.mapping, ...snapshot.mappingToBlock]) {
   if (!Number.isInteger(value) || value < 0 || value > snapshot.maxItemId) throw Error("Invalid item ID");
 }
-const biomes = ["plains", "mangrove_swamp", "desert", "snowy_plains", "beach"];
+const biomes = snapshot.biomes;
 async function extractItemsAndBlocks () {
   return {palette: snapshot.palette, items: snapshot.items,
     mapping: snapshot.mappingToBlock, mappingWithOverrides: snapshot.mapping,

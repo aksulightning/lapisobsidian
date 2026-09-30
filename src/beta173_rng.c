@@ -40,6 +40,10 @@ uint64_t beta173_rng_long (Beta173Rng *rng) {
   return ((uint64_t)hi << 32) + low;
 }
 
+float beta173_rng_float (Beta173Rng *rng) {
+  return (float)beta173_rng_next(rng, 24) / 16777216.0f;
+}
+
 double beta173_rng_double (Beta173Rng *rng) {
   uint32_t hi = beta173_rng_next(rng, 26);
   uint32_t lo = beta173_rng_next(rng, 27);

@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define BETA173_GENERATOR_VERSION 1
+#define BETA173_GENERATOR_VERSION 2
 #define BETA173_GRID_SIZE 425
 /* Existing player and edit storage uses signed 16-bit X/Z. */
 #define BETA173_MIN_COORD (-32768)
@@ -16,4 +16,7 @@ double beta173_density (int x, int y, int z);
 uint8_t beta173_terrain (int x, int y, int z);
 uint8_t beta173_height (int x, int z);
 void beta173_climate (int x, int z, double *temperature, double *humidity);
+uint64_t beta173_worldgen_seed (void);
+void beta173_surface_fields (int x, int z, double sand[16], double stone[16]);
+double beta173_gravel_noise (int x, int z);
 #endif

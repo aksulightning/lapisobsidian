@@ -7,6 +7,8 @@
 #include "beta173_noise.h"
 #include "registries.h"
 
+static uint64_t generator_seed;
+static Beta173Noise sand_gravel[4], stone_patch[4];
 static Beta173Noise lower[16], upper[16], selector[8], depth[10], scale[16];
 static Beta173Noise temperature_noise[4], humidity_noise[4], rain_noise[2];
 static double cached_grid[BETA173_GRID_SIZE];
@@ -23,10 +25,8 @@ void beta173_worldgen_init (uint64_t seed) {
   init_octaves(lower, 16, &rng);
   init_octaves(upper, 16, &rng);
   init_octaves(selector, 8, &rng);
-  /* Consume surface-generator RNG calls to preserve subsequent noise state.
-   * No surface features are generated in this milestone. */
-  Beta173Noise discarded;
-  for (unsigned i = 0; i < 8; i ++) beta173_noise_init(&discarded, &rng);
+  init_octaves(sand_gravel, 4, &rng);
+  init_octaves(stone_patch, 4, &rng);
   init_octaves(depth, 10, &rng);
   init_octaves(scale, 16, &rng);
   beta173_rng_seed(&rng, seed * UINT64_C(9871));
@@ -37,6 +37,7 @@ void beta173_worldgen_init (uint64_t seed) {
   init_octaves(rain_noise, 2, &rng);
   cache_valid = false;
   initialized = true;
+  generator_seed = seed;
 }
 
 bool beta173_coords_valid (int x, int z) {
@@ -156,4 +157,18 @@ uint8_t beta173_height (int x, int z) {
     if (beta173_density(x, y, z) > 0) return (uint8_t)y;
   }
   return 0;
+}
+
+uint64_t beta173_worldgen_seed (void) {
+  if (!initialized) beta173_worldgen_init(0);
+  return generator_seed;
+}
+void beta173_surface_fields (int x, int z, double sand[16], double stone[16]) {
+  if (!initialized) beta173_worldgen_init(0);
+  beta173_noise_surface(sand_gravel, x, z, 1.0/32, sand);
+  beta173_noise_surface(stone_patch, x, z, 1.0/16, stone);
+}
+double beta173_gravel_noise (int x, int z) {
+  if (!initialized) beta173_worldgen_init(0);
+  return beta173_noise_2d(sand_gravel, 4, x, z, 1.0/32);
 }
