@@ -1,7 +1,7 @@
 # Lapis Obsidian milestone report — 2026-09-30
 
-Implemented scope: Milestones 0–2, with ordinary oaks and basic ground cover as
-the initial vegetation subset. Milestones 3–4 (commands and signs) remain pending.
+Implemented scope: Milestones 0–3, with ordinary oaks and basic ground cover as
+the initial vegetation subset. Milestone 4 (persistent signs) remains pending.
 No scripting runtime, plugin system, database or third-party runtime dependency
 was added. The Milestone 0/1 sections below describe their original scope;
 Milestone 2 supersedes the earlier terrain/biome limitations.
@@ -168,6 +168,43 @@ approximation rather than historical scatter. Climate/interpolation differences
 from Milestone 1 remain. See `docs/worldgen.md` for the precise algorithms, fixture
 provenance and adaptations. A real graphical client play session remains untested.
 
+## Milestone 3: built-in slash commands
+
+Added `include/commands.h`, `src/commands.c`, `src/command_packets.c`,
+`tests/commands.c`, `tests/command_packets.c` and `docs/commands.md`. Updated
+`src/main.c`, `src/packets.c`, `src/procedures.c`, `include/packets.h`, the test
+runner and documentation. No save-layout, generator-version or registry changes.
+
+Implemented all seven requested commands: help, seed, worldinfo, spawn, tp,
+time and gamemode. A small `/admin` token login distinguishes administrative
+commands without trusting client-supplied identities. The default disables admin
+login. Bounded stack parsing, fixed per-player state, complete-packet validation
+and existing packet/chunk/storage paths keep the implementation allocation-free.
+A two-second teleport cooldown bounds repeated chunk transmissions. Normal UTF-8
+chat and the existing !help/!msg syntax are retained, with formatting moved out of
+the packet parser. The client receives a static command tree on entering play.
+
+Game-mode updates now affect both protocol state and core mining, placement,
+damage, hunger and interaction checks. Component-free creative inventory updates
+are supported with slot/count/registry validation. Permissions and modes reset on
+reconnect; the existing raw player-save structure remains unchanged. Time remains
+runtime state. The startup --mirror-horizontal option is unaffected.
+
+Validation: normal build, strict warnings for new modules, full regression tests,
+and ASan/UBSan pass. New tests cover valid and malformed commands, lengths, argument
+bounds, permissions, mode effects, teleport/time values, signed/unsigned command
+packets, every truncated prefix of command/chat fixtures, UTF-8, creative inventory,
+command-tree structure and game-mode packet bytes. A live login/configuration/play
+smoke test exercises all requested commands, administrator login, creative movement,
+teleports, spawn, malformed-command rejection and reconnect permission reset.
+
+Limits: this is not full vanilla command syntax or complete game-mode emulation.
+No selectors, relative/fractional coordinates, scripts, persistent permissions or
+custom item components. Admin tokens cross the inherited unencrypted connection;
+use a trusted network or tunnel. Graphical client playtesting and a full audit of
+inherited packet/inventory paths remain outstanding. Exact commands and details
+are in `docs/commands.md` and the build/test section below.
+
 ## Commands and results
 
 Run from the repository root:
@@ -195,9 +232,9 @@ the execution sandbox cannot inspect `/proc`; leak testing is not claimed.
 - This is Beta-style terrain, not historical bit-for-bit emulation. Shared
   world-space climate samples and direct interpolation are documented adaptations;
   reference-based density/height fixtures include those adaptations.
-- Slash commands and persistent signs remain pending. Vegetation is the initial
-  subset described above. Hunger and other inherited gameplay remain unchanged;
-  sprinting remains supported.
+- Persistent signs remain pending. Vegetation is the initial
+  subset described above. Inherited survival hunger remains; creative/spectator
+  bypass its updates. Sprinting remains supported.
 - The inherited compact coordinate limits and raw world-edit/player layout
   remain. No migration of earlier saves is provided. Fixed spawn may be underwater.
 - Core networking, inventory/chest handling and storage have not received a full

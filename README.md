@@ -40,6 +40,18 @@ rewriting files. New C modules and unit tests compile with `-Wall -Wextra
 Test sanitizer builds disable LeakSanitizer because restricted environments may
 not expose `/proc`; AddressSanitizer and UndefinedBehaviorSanitizer remain enabled.
 
+## Commands
+
+`/help`, `/seed`, `/worldinfo`, `/spawn`, and `/time query` work for everyone.
+`/tp`, `/time set`, and `/gamemode` require administrator access. Configure a
+private random `LAPIS_ADMIN_TOKEN` environment value (32..128 non-space ASCII
+bytes), then use `/admin <token>` in-game. Admin login is disabled by default.
+Permissions and game modes reset on reconnect; no world-file migration is needed.
+
+The inherited connection is unencrypted and does not verify player UUIDs; use
+administrator commands on a trusted network or protected tunnel. See
+[command syntax, permissions and limits](docs/commands.md) for details.
+
 ## Configuration and scope
 
 Configuration is currently compile-time, in `include/globals.h`. The server uses
@@ -48,11 +60,11 @@ The low-level network core, inventory, ticks, and edit storage come from bareiro
 This is an experimental server, not a plugin platform or a complete survival
 implementation. A full audit of inherited packet handling is still required.
 
-Milestones 0–2 are implemented: self-contained protocol data, deterministic
+Milestones 0–3 are implemented: self-contained protocol data, deterministic
 Beta-style terrain, biome surfaces, caves, ores, ordinary oaks and basic ground
 cover. Trees and decoration are an initial subset; see [world generation](docs/worldgen.md)
-for deliberate differences and deferred variants. Commands and persistent signs
-are next. No scripting runtime, plugin system or database is included.
+for deliberate differences and deferred variants. Built-in slash commands are
+available; persistent signs are next. No scripting runtime, plugin system or database is included.
 Inherited gameplay, including sprinting and hunger, remains; the Beta gameplay
 pass is still pending.
 
