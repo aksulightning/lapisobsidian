@@ -59,6 +59,13 @@ client editor. Right-click either side to edit it again. Up to 128 signs persist
 in `signs.bin`, with four lines per side (96 UTF-8 bytes per line). Existing worlds
 remain compatible. See [sign behavior, storage and limits](docs/signs.md).
 
+## Doors
+
+Oak doors support two-block placement, four facing directions, opening/closing
+from either half, and persistent state in `doors.bin`. Craft one from six oak
+planks in two columns. See [door behavior and limits](docs/doors.md). Iron-door
+activation and redstone remain deferred.
+
 ## Configuration and scope
 
 Configuration is currently compile-time, in `include/globals.h`. The server uses
@@ -77,7 +84,7 @@ pass is still pending.
 
 Create a new world with `./lapis-obsidian --seed -12345`, using a signed 64-bit
 decimal seed. Later runs load the seed from `world.meta`. Supplying a different
-seed for the same world fails. Keep `world.meta`, `world.bin`, and `signs.bin` together. Run the
+seed for the same world fails. Keep `world.meta`, `world.bin`, `signs.bin`, and `doors.bin` together. Run the
 binary from a fresh directory to start another world. Legacy saves without
 metadata are rejected rather than overlaid onto a different terrain generator.
 Generator version 2 also rejects Milestone 1/version 1 saves. Start a fresh world

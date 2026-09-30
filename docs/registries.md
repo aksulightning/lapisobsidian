@@ -59,3 +59,11 @@ Orientation-specific states are sent as updates after the chunk packet, with
 bounded sign block-entity NBT. See `docs/signs.md` for provenance, encoding and
 validation. This table must be reviewed alongside generated registries during
 protocol upgrades; normal builds do not regenerate either snapshot.
+
+## Oak door state extension
+
+`src/doors.c` maintains the four oak-door facing bases from the same pinned
+minecraft-data `blocks.json`, guarded by a protocol-772 assertion. It computes
+upper/lower, open/closed, fixed-left-hinge, unpowered states without changing
+compact block ID 144. Review this snapshot and its sixteen wire-state fixtures
+alongside the sign extension when upgrading protocol; see `docs/doors.md`.

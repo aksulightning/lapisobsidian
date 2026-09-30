@@ -1,7 +1,8 @@
 # Lapis Obsidian milestone report — 2026-09-30
 
 Implemented scope: Milestones 0–4, with ordinary oaks and basic ground cover as
-the initial vegetation subset. Milestone 4 adds persistent oak signs.
+the initial vegetation subset. Milestone 4 adds persistent oak signs; the subsequent door feature adds working
+two-block oak doors.
 No scripting runtime, plugin system, database or third-party runtime dependency
 was added. The Milestone 0/1 sections below describe their original scope;
 Milestone 2 supersedes the earlier terrain/biome limitations.
@@ -237,6 +238,24 @@ writes, corrupt files, restart, removal and stale cleanup. A live server socket
 test verifies placement/editor, Unicode text, process restart/chunk transmission,
 re-edit, removal and malformed-packet disconnection. Graphical playtesting remains
 outstanding. Full details, compatibility limits and exact commands: `docs/signs.md`.
+
+## Following Milestone 4: oak doors
+
+Added `include/doors.h`, `src/doors.c`, `tests/doors.c` and `docs/doors.md`.
+Updated crafting, startup, block-update/chunk transmission and block-change/use
+hooks, test runner and documentation. The fixed 256-door pool uses approximately
+2 KiB; `doors.bin` adds explicit-width state records without changing world/player
+layouts. Two-block placement rolls back on capacity/save failure; either half
+operates the door, and removal/replacement/support loss cleans up the pair.
+
+All four facing directions, both halves and open/closed states use a minimal
+protocol-772 snapshot. The Beta recipe yields one oak door. Normal/no-JAR builds,
+full regressions, strict warnings for the module and ASan/UBSan pass. Live socket
+testing covers both placement halves, interaction, process restart, saved open
+state in chunk transmission and paired removal. Graphical playtesting remains
+outstanding. Fixed left hinges, no door sounds/redstone or iron-door activation,
+and inherited mob collision behavior are current limits. See `docs/doors.md` for
+file details, backup/recovery behavior and exact validation commands.
 
 ## Commands and results
 
