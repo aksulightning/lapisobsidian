@@ -47,9 +47,28 @@ static void cave_vectors (void) {
   }
   assert(feof(file) && count == 50); fclose(file);
 }
+static void ore_vectors (void) {
+  FILE *file = fopen("tests/betanium-ore-vectors.txt", "r"); assert(file);
+  char seed_text[32]; uint32_t expected; unsigned count = 0, totals[256] = {0};
+  while (fscanf(file, "%31s %d %d %" SCNu32, seed_text, &chunk.cx, &chunk.cz, &expected) == 4) {
+    uint64_t seed; assert(beta173_seed_parse(seed_text, &seed));
+    for (unsigned i = 0; i < BETA173_CHUNK_BLOCKS; i ++) chunk.blocks[i] = i%128 == 0 ? B_bedrock : B_stone;
+    beta173_ores(seed, &chunk);
+    if (hash(&chunk) != expected) fprintf(stderr, "ores %s %d %d: got %" PRIu32 " expected %" PRIu32 "\n", seed_text, chunk.cx, chunk.cz, hash(&chunk), expected);
+    assert(hash(&chunk) == expected); count ++;
+    for (unsigned i = 0; i < BETA173_CHUNK_BLOCKS; i ++) {
+      totals[chunk.blocks[i]] ++;
+      if (i%128 == 0) assert(chunk.blocks[i] == B_bedrock);
+      if (chunk.blocks[i] == B_diamond_ore || chunk.blocks[i] == B_redstone_ore) assert(i%128 < 22);
+    }
+  }
+  assert(feof(file) && count == 25); fclose(file);
+  assert(totals[B_coal_ore] && totals[B_iron_ore] && totals[B_gold_ore] && totals[B_redstone_ore] && totals[B_lapis_ore] && totals[B_diamond_ore]);
+}
 int main (void) {
   surface_vectors();
   cave_vectors();
+  ore_vectors();
   assert(beta173_biome(0.05, 1) == BETA_TUNDRA);
   assert(beta173_biome(1, 0) == BETA_DESERT);
   assert(beta173_biome(1, 1) == BETA_RAINFOREST);
@@ -69,6 +88,6 @@ int main (void) {
   assert(beta173_generate_chunk(2, 100, 200, BETA_SURFACE, &repeat));
   assert(beta173_generate_chunk(1, -1, 0, BETA_SURFACE, &repeat));
   assert(memcmp(&chunk, &repeat, sizeof(chunk)) == 0);
-  puts("features: 20 surface and 50 cave reference vectors, biomes, bounds and generation order passed");
+  puts("features: 20 surface, 50 cave and 25 ore reference vectors, biomes, bounds and generation order passed");
   return 0;
 }
