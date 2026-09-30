@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define BETA173_GENERATOR_VERSION 2
+#define BETA173_GENERATOR_VERSION 3
 #define BETA173_GRID_SIZE 425
 /* Existing player and edit storage uses signed 16-bit X/Z. */
 #define BETA173_MIN_COORD (-32768)

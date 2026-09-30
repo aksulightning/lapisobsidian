@@ -20,7 +20,9 @@ No plugin, scripting runtime, database or permission framework is involved.
 
 Modes accept survival/creative/adventure/spectator or 0/1/2/3. Coordinates must
 be X/Z=-32768..32767 and Y=0..255 for teleporting (Y=1..253 for mob spawning). Fractions, relative coordinates, selectors,
-quoted arguments and teleporting another player are not supported. Names must
+quoted arguments and teleporting another player are not supported.
+A teleport destination reaching or exceeding X/Z +/-4068 redirects to spawn;
+the wider integer range is only the storage/parser limit. Names must
 match an online player's stored name exactly; the core's existing name-length
 limit remains. Teleports have a two-second per-connection cooldown and cannot
 be used while dead. They update stored position, fall-distance tracking, chunk

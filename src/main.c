@@ -3,6 +3,7 @@
 #include "doors.h"
 #include "signs.h"
 #include "commands.h"
+#include "world_border.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -219,7 +220,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
         if (recv_count <= 0) { recv_count = 0; return; }
         if ((packet_id == 0x1D || packet_id == 0x1E) &&
             (!isfinite(x) || !isfinite(y) || !isfinite(z) ||
-             x < -32768 || x >= 32768 || z < -32768 || z >= 32768 || y < 0 || y >= 256)) {
+             y < 0 || y >= 256)) {
           recv_count = 0;
           return;
         }
@@ -229,6 +230,8 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
         }
         PlayerData *player;
         if (getPlayerData(client_fd, &player)) break;
+
+        if ((packet_id == 0x1D || packet_id == 0x1E) && world_border_guard(player,x,z)) break;
 
         uint8_t block_feet = getBlockAt(player->x, player->y, player->z);
         uint8_t swimming = block_feet >= B_water && block_feet < B_water + 8;
@@ -355,7 +358,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
             break;
           }
         }
-        if (found) break;
+        /* History suppresses repeat natural spawns, never chunk transmission. */
 
         // Update player's recently visited chunks
         for (int i = 0; i < VISITED_HISTORY - 1; i ++) {
@@ -365,43 +368,9 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
         player->visited_x[VISITED_HISTORY - 1] = _x;
         player->visited_z[VISITED_HISTORY - 1] = _z;
 
-        mobs_spawn_exploration(_x,_z,dx,dz,cy,fast_rand());
+        if (!found) mobs_spawn_exploration(_x,_z,dx,dz,cy,fast_rand());
 
-        int count = 0;
-        #ifdef DEV_LOG_CHUNK_GENERATION
-          printf("Sending new chunks (%d, %d)\n", _x, _z);
-          clock_t start, end;
-          start = clock();
-        #endif
-
-        sc_setCenterChunk(client_fd, _x, _z);
-
-        while (dx != 0) {
-          sc_chunkDataAndUpdateLight(client_fd, _x + dx * VIEW_DISTANCE, _z);
-          count ++;
-          for (int i = 1; i <= VIEW_DISTANCE; i ++) {
-            sc_chunkDataAndUpdateLight(client_fd, _x + dx * VIEW_DISTANCE, _z - i);
-            sc_chunkDataAndUpdateLight(client_fd, _x + dx * VIEW_DISTANCE, _z + i);
-            count += 2;
-          }
-          dx += dx > 0 ? -1 : 1;
-        }
-        while (dz != 0) {
-          sc_chunkDataAndUpdateLight(client_fd, _x, _z + dz * VIEW_DISTANCE);
-          count ++;
-          for (int i = 1; i <= VIEW_DISTANCE; i ++) {
-            sc_chunkDataAndUpdateLight(client_fd, _x - i, _z + dz * VIEW_DISTANCE);
-            sc_chunkDataAndUpdateLight(client_fd, _x + i, _z + dz * VIEW_DISTANCE);
-            count += 2;
-          }
-          dz += dz > 0 ? -1 : 1;
-        }
-
-        #ifdef DEV_LOG_CHUNK_GENERATION
-          end = clock();
-          double total_ms = (double)(end - start) / CLOCKS_PER_SEC * 1000;
-          printf("Generated %d chunks in %.0f ms (%.2f ms per chunk)\n", count, total_ms, total_ms / (double)count);
-        #endif
+        world_send_view(client_fd,_x,_z,_x-dx,_z-dz,false);
 
       }
       break;

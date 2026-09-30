@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "commands.h"
+#include "world_border.h"
 #include "mobs.h"
 #include "packets.h"
 #include "procedures.h"
@@ -36,6 +37,7 @@ bool commands_configure (const char *token) {
 void commands_reset_player (PlayerData *player) {
   int i = player_index(player); if (i < 0) return;
   memset(&sessions[i],0,sizeof(sessions[i]));
+  world_border_reset(player);
   sessions[i].mode = GAMEMODE; sessions[i].initialized = 1;
 }
 bool commands_is_admin (const PlayerData *player) {
@@ -88,24 +90,6 @@ static bool teleport_ready (int slot) {
   if (sessions[slot].teleported && (uint32_t)(server_ticks-sessions[slot].teleport_tick) < (uint32_t)(2*TICKS_PER_SECOND)) return false;
   sessions[slot].teleported = 1; sessions[slot].teleport_tick = server_ticks; return true;
 }
-static void teleport (PlayerData *player, int x, int y, int z) {
-  player->x = (short)x; player->y = (uint8_t)y; player->z = (short)z;
-  player->grounded_y = (uint8_t)y;
-  for (unsigned i = 0; i < VISITED_HISTORY; i ++) player->visited_x[i] = player->visited_z[i] = 32767;
-  int cx = div_floor(x,16), cz = div_floor(z,16);
-  sc_setCenterChunk(player->client_fd,cx,cz);
-  sc_chunkDataAndUpdateLight(player->client_fd,cx,cz);
-  for (int dx = -VIEW_DISTANCE; dx <= VIEW_DISTANCE; dx ++) for (int dz = -VIEW_DISTANCE; dz <= VIEW_DISTANCE; dz ++) {
-    if (dx || dz) sc_chunkDataAndUpdateLight(player->client_fd,cx+dx,cz+dz);
-  }
-  float yaw = (float)player->yaw*180.0f/127.0f, pitch = (float)player->pitch*90.0f/127.0f;
-  sc_synchronizePlayerPosition(player->client_fd,x+0.5,y,z+0.5,yaw,pitch);
-  for (int i = 0; i < MAX_PLAYERS; i ++) {
-    PlayerData *other = &player_data[i];
-    if (other->client_fd < 0 || other == player || (other->flags & 0x20)) continue;
-    sc_teleportEntity(other->client_fd,player->client_fd,x+0.5,y,z+0.5,yaw,pitch);
-  }
-}
 CommandResult commands_execute (PlayerData *player, const char *input, size_t length) {
   int slot = player_index(player);
   if (slot < 0 || player->client_fd < 0) return COMMAND_INVALID;
@@ -150,14 +134,14 @@ CommandResult commands_execute (PlayerData *player, const char *input, size_t le
   }
   if (!strcmp(argv[0],"worldinfo")) {
     if (argc != 1) return reply(player,COMMAND_USAGE,"Usage: /worldinfo");
-    snprintf(output,sizeof(output),"Lapis Obsidian | generator %u | protocol %u | mirror X: %s | terrain Y: 0..127 | X/Z: -32768..32767 | time: %u",BETA173_GENERATOR_VERSION,LAPIS_PROTOCOL_VERSION,world_mirror_horizontal ? "on" : "off",world_time);
+    snprintf(output,sizeof(output),"Lapis Obsidian | generator %u | protocol %u | mirror X: %s | terrain Y: 0..127 | border: +/-4068 | Far Lands: +/-3940 | time: %u",BETA173_GENERATOR_VERSION,LAPIS_PROTOCOL_VERSION,world_mirror_horizontal ? "on" : "off",world_time);
     return reply(player,COMMAND_OK,output);
   }
   if (!strcmp(argv[0],"spawn")) {
     if (argc != 1) return reply(player,COMMAND_USAGE,"Usage: /spawn");
     if (!player->health) return reply(player,COMMAND_DENIED,"Respawn before teleporting.");
     if (!teleport_ready(slot)) return reply(player,COMMAND_DENIED,"Wait two seconds between teleports.");
-    teleport(player,8,(int)getHeightAt(8,8)+1,8);
+    world_teleport(player,8,(int)getHeightAt(8,8)+1,8);
     return reply(player,COMMAND_OK,"Teleported to spawn.");
   }
   if (!strcmp(argv[0],"time")) {
@@ -185,7 +169,7 @@ CommandResult commands_execute (PlayerData *player, const char *input, size_t le
     else return reply(player,COMMAND_USAGE,"Usage: /tp <player> or /tp <x y z> (integer coordinates).");
     if (!player->health) return reply(player,COMMAND_DENIED,"Respawn before teleporting.");
     if (!teleport_ready(slot)) return reply(player,COMMAND_DENIED,"Wait two seconds between teleports.");
-    teleport(player,x,y,z); return reply(player,COMMAND_OK,"Teleported.");
+    world_teleport(player,x,y,z); return reply(player,COMMAND_OK,"Teleported.");
   }
   if (!strcmp(argv[0],"spawnmob")) {
     if (!commands_is_admin(player)) return reply(player,COMMAND_DENIED,"Administrator permission required.");

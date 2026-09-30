@@ -7,6 +7,7 @@
 #include "registry.h"
 #include "registries.h"
 #include "worldgen.h"
+#include "farlands.h"
 #include "beta173_worldgen.h"
 #include "beta173_features.h"
 static Beta173Chunk expected_chunk;
@@ -54,11 +55,19 @@ int main (void) {
   for (int i = 0; i < MAX_BLOCK_CHANGES; i ++) block_changes[i].block = 0xff;
   block_changes_count = 1;
   block_changes[0] = (BlockChange){.x=2,.y=80,.z=3,.block=B_obsidian};
-  assert(beta173_generate_chunk(world_seed,0,0,BETA_DECORATION,&expected_chunk));
-  assert(sc_chunkDataAndUpdateLight(0, 0, 0) == 0);
+  const int packet_chunks[][2] = {{0,0},{246,0},{-247,0},{254,254},{625,625}};
+  for (unsigned c = 0; c < 5; c++) {
+  int packet_cx = packet_chunks[c][0], packet_cz = packet_chunks[c][1];
+  written = cursor = 0;
+  assert(beta173_generate_chunk(world_seed,packet_cx,packet_cz,BETA_DECORATION,&expected_chunk));
+  farlands_apply(world_seed,false,&expected_chunk);
+  assert(sc_chunkDataAndUpdateLight(0,packet_cx,packet_cz) == 0);
   size_t size = varint(); assert(size == written-cursor);
   assert(varint() == 0x27);
-  for (unsigned i = 0; i < 8; i ++) assert(byte() == 0); // chunk coordinates
+  for (unsigned axis = 0; axis < 2; axis++) {
+    uint32_t coord = (uint32_t)(axis ? packet_cz : packet_cx);
+    for (unsigned i = 0; i < 4; i++) assert(byte() == ((coord >> (24-8*i)) & 255u));
+  }
   assert(varint() == 0); // heightmaps
   size_t data_size = varint(), start = cursor;
   for (unsigned section = 0; section < 24; section ++) {
@@ -76,7 +85,7 @@ int main (void) {
         unsigned local = index ^ 7u;
         int x = (int)(local % 16), z = (int)((local / 16) % 16);
         int y = (int)((section-4)*16 + local/256);
-        unsigned expected = x == 2 && y == 80 && z == 3 ? B_obsidian : y < 128 ? expected_chunk.blocks[(x*16+z)*128+y] : B_air;
+        unsigned expected = !packet_cx && !packet_cz && x == 2 && y == 80 && z == 3 ? B_obsidian : y < 128 ? expected_chunk.blocks[(x*16+z)*128+y] : B_air;
         assert(byte() == expected);
         if (expected != B_air) expected_count ++;
       }
@@ -91,6 +100,7 @@ int main (void) {
   assert(varint() == 26);
   for (unsigned i = 0; i < 26; i ++) { assert(varint() == 2048); cursor += 2048; assert(cursor <= written); }
   assert(varint() == 0 && cursor == written);
+  }
 
   written = cursor = 0;
   sc_registries(0);
@@ -118,6 +128,7 @@ int main (void) {
     for (unsigned k = 0; k < 6; k ++) {
       int cx = coords[k][0], cz = coords[k][1];
       assert(beta173_generate_chunk(world_seed,cx,cz,BETA_DECORATION,&expected_chunk));
+      farlands_apply(world_seed,false,&expected_chunk);
       for (int y = 0; y < 128; y ++) {
         assert(getTerrainAt(cx*16,y,cz*16,(ChunkAnchor){0}) == expected_chunk.blocks[y]);
       }
@@ -130,6 +141,7 @@ int main (void) {
   for (unsigned k = 0; k < 5; k ++) {
     int cx = mirror_coords[k][0], cz = mirror_coords[k][1];
     assert(beta173_generate_chunk(world_seed,-cx-1,cz,BETA_DECORATION,&expected_chunk));
+    farlands_apply(world_seed,false,&expected_chunk);
     for (int sy = 0; sy < 128; sy += 16) {
       uint8_t biome = buildChunkSection(cx*16,sy,cz*16);
       assert(biome == beta173_biome_protocol((Beta173Biome)expected_chunk.biomes[7*16+8]));
@@ -145,6 +157,7 @@ int main (void) {
   /* Toggle while the last target is cached: the old orientation must not leak. */
   world_mirror_horizontal = 0;
   assert(beta173_generate_chunk(world_seed,2047,-2048,BETA_DECORATION,&expected_chunk));
+  farlands_apply(world_seed,false,&expected_chunk);
   for (int y = 0; y < 128; y ++) assert(getTerrainAt(32752,y,-32768,(ChunkAnchor){0}) == expected_chunk.blocks[y]);
   puts("production chunk packet: framing, 24 sections, palette, edit overlay, biomes, registries and horizontal mirroring passed");
   return 0;

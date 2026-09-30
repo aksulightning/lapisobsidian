@@ -1,4 +1,4 @@
-# Beta world generation (generator version 2)
+# Beta world generation (generator version 3)
 
 The behavior reference is betanium by Aksu Lightning, revision
 03d77b9dae27a086a2398c21abe52fd07f27195c. Inspected modules: java_math, int64,
@@ -96,7 +96,8 @@ New `world.meta` files have 25 bytes: the existing 24-byte header plus a flags b
 whose bit 0 stores horizontal mirroring. Other flag bits and trailing bytes are
 rejected. Earlier 24-byte version-2 headers load as mirroring disabled. Changing
 the requested setting for an existing save is rejected. The generator version
-stays 2 because unmirrored generation is unchanged. Metadata and packet tests
+is now 3 for the custom Far Lands layer. Version 2 metadata is upgraded in place
+after checking protocol, seed and mirror compatibility. Metadata and packet tests
 cover both modes, old headers, mismatches, biome reflection, edits and world edges.
 
 ## Intentional differences and limits
@@ -119,9 +120,9 @@ cover both modes, old headers, mismatches, biome reflection, edits and world edg
 - The modern overworld remains -64..319; the compatibility floor below Y=0 is
   bedrock and above Y=127 is air unless edited. Fixed spawn can be underwater.
   Height queries include trees and ground cover, so spawn can also be on a canopy.
-- `world.meta` binds generator version 2, protocol and seed. Version 1 saves
+- `world.meta` binds generator version 3, protocol and seed. Version 1 saves
   are rejected before edits load. Start a fresh world in another directory and
-  retain old saves separately; no migration is provided. Raw edit/player storage
+  retain version-1 saves separately; those saves have no migration. Raw edit/player storage
   remains upstream's layout. Do not remove metadata to bypass this check.
 
 ## Frozen reference vectors
@@ -155,3 +156,14 @@ and block bytes. Full-suite ASan/UBSan tests cover these paths. To refresh fixtu
 run the pinned reference with these exact inputs; never obtain expected reference
 values from the implementation under test. Generator changes require an explicit
 version change and review of saved-world compatibility.
+
+## Far Lands extension
+
+Generator 3 applies a separate seed-derived, world-coordinate noise layer after
+reflection and before player edits. It changes columns at abs(X) >= 3940 or
+abs(Z) >= 3940, retaining the bottom 16 blocks and the inner world. Perforated
+stone walls, grass ledges and overhangs remain within the 128-block terrain
+height. The physical region boundaries stay at +/-3940 when mirrored; noise
+samples reflect with X -> -X-1. This is intentionally custom terrain, not Java
+overflow or an exact historical Far Lands reproduction. See [the boundary
+implementation](world-border.md) for movement and save compatibility.

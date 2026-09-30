@@ -73,7 +73,7 @@ int main (void) {
   assert(run("time set 24000") == COMMAND_USAGE && world_time == 23999);
   assert(run("time set -1") == COMMAND_USAGE);
   assert(run("time set 99999999999999999999999") == COMMAND_USAGE);
-  assert(run("tp -32768 255 32767") == COMMAND_OK && p->x == -32768 && p->y == 255 && p->z == 32767);
+  assert(run("tp -32768 255 32767") == COMMAND_OK && p->x == 8 && p->y == 71 && p->z == 8);
   assert(run("tp -32769 64 0") == COMMAND_USAGE);
   assert(run("tp 0 256 0") == COMMAND_USAGE);
   assert(run("tp 0 nan 0") == COMMAND_USAGE);

@@ -4,6 +4,7 @@
 #include "registries.h"
 #include "procedures.h"
 #include "worldgen.h"
+#include "farlands.h"
 #include "beta173_worldgen.h"
 #include "beta173_features.h"
 
@@ -57,6 +58,7 @@ static bool ensure_chunk (int cx, int cz) {
     int source_x = world_mirror_horizontal ? -cx-1 : cx;
     if (!beta173_generate_chunk(world_seed,source_x,cz,BETA_DECORATION,entry)) return false;
     if (world_mirror_horizontal) mirror_chunk(entry,cx);
+    farlands_apply(world_seed,world_mirror_horizontal != 0,entry);
   }
   unsigned slot = cache_order[index];
   for (; index > 0; index --) cache_order[index] = cache_order[index-1];

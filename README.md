@@ -120,8 +120,9 @@ decimal seed. Later runs load the seed from `world.meta`. Supplying a different
 seed for the same world fails. Keep `world.meta`, `world.bin`, `signs.bin`, and `doors.bin` together. Run the
 binary from a fresh directory to start another world. Legacy saves without
 metadata are rejected rather than overlaid onto a different terrain generator.
-Generator version 2 also rejects Milestone 1/version 1 saves. Start a fresh world
-in another directory; no migration is provided.
+Generator version 3 upgrades version 2 metadata automatically, retaining seeds,
+mirroring and edits. Terrain at X/Z +/-3940 and beyond becomes custom Far Lands;
+back up existing worlds before upgrading. Milestone 1/version 1 saves remain unsupported.
 Enable horizontal world mirroring with a startup argument, optionally with a seed:
 
 ```sh
@@ -137,8 +138,11 @@ at their placed coordinates. The setting is stored in `world.meta`; an existing
 world rejects a different setting. Older version-2 metadata remains compatible
 with mirroring off. Select the setting before creating a fresh world directory.
 
-The inherited compact coordinate range is X/Z=-32768..32767, with player/edit
-Y=0..255. Network view-distance requests beyond that boundary are not generated.
+The playable square ends at **X/Z +/-4068**: reaching any edge returns the player
+to spawn. **Far Lands-style walls and overhangs start at +/-3940** on either axis.
+They are custom terrain, not the historical Java overflow bug. Interior terrain
+stays unchanged. See [world boundary and Far Lands](docs/world-border.md).
+The internal storage range remains X/Z=-32768..32767 and Y=0..255.
 
 See [the milestone report](docs/milestones.md) for changes, validation and limits.
 

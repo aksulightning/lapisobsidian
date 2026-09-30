@@ -6,6 +6,7 @@ flags=(-std=c11 -O2 -Wall -Wextra -Wconversion -Wshadow -Werror -ffp-contract=of
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   flags+=(-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie)
 fi
+"${CC:-gcc}" "${flags[@]}" -c src/world_border.c -o .tests/world-border.o
 "${CC:-gcc}" "${flags[@]}" -c src/mobs.c -o .tests/mobs.o
 "${CC:-gcc}" "${flags[@]}" -c src/mob_packets.c -o .tests/mob-packets.o
 "${CC:-gcc}" "${flags[@]}" -c src/items.c -o .tests/items.o
@@ -14,8 +15,12 @@ fi
 "${CC:-gcc}" "${flags[@]}" -c src/signs.c -o .tests/signs.o
 "${CC:-gcc}" "${flags[@]}" -c src/sign_packets.c -o .tests/sign-packets.o
 "${CC:-gcc}" "${flags[@]}" -c src/command_packets.c -o .tests/command-packets.o
-"${CC:-gcc}" "${flags[@]}" tests/commands.c tests/sanitizer.c src/commands.c src/globals.c -o .tests/commands
+"${CC:-gcc}" "${flags[@]}" tests/commands.c tests/sanitizer.c src/commands.c src/world_border.c src/globals.c -o .tests/commands
 .tests/commands
+"${CC:-gcc}" "${flags[@]}" tests/world_border.c tests/sanitizer.c src/world_border.c src/globals.c -o .tests/world-border
+.tests/world-border
+"${CC:-gcc}" "${flags[@]}" tests/farlands.c tests/sanitizer.c src/beta173_*.c -lm -o .tests/farlands
+.tests/farlands
 "${CC:-gcc}" "${flags[@]}" tests/registry.c tests/sanitizer.c src/registry.c src/registries.c -o .tests/registry
 .tests/registry
 "${CC:-gcc}" "${flags[@]}" tests/worldgen.c tests/sanitizer.c src/beta173_*.c -lm -o .tests/worldgen

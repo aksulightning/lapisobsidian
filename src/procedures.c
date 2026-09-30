@@ -3,6 +3,7 @@
 #include "doors.h"
 #include "signs.h"
 #include "commands.h"
+#include "world_border.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -338,6 +339,13 @@ int givePlayerItem (PlayerData *player, uint16_t item, uint8_t count) {
 
 // Sends the full sequence for spawning the player to the client
 void spawnPlayer (PlayerData *player) {
+
+  world_border_reset(player);
+  if (world_border_outside(player->x,player->z)) {
+    player->x = player->z = 8;
+    player->y = (uint8_t)(getHeightAt(8,8)+1);
+    player->grounded_y = player->y;
+  }
 
   // Player spawn coordinates, initialized to placeholders
   float spawn_x = 8.5f, spawn_y = 80.0f, spawn_z = 8.5f;

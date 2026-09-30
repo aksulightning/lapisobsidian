@@ -45,6 +45,14 @@ int main (void) {
   assert(world_metadata_open(meta, world, &seed, false, false));
   assert(!world_metadata_open(meta, world, &seed, false, true));
   remove(meta);
+  assert(world_metadata_open(meta,world,&seed,false,true));
+  f = fopen(meta,"r+b"); assert(f); assert(fseek(f,11,SEEK_SET) == 0);
+  assert(fputc(2,f) != EOF); assert(fclose(f) == 0);
+  assert(!world_metadata_open(meta,world,&seed,false,false));
+  assert(world_metadata_open(meta,world,&seed,false,true));
+  f = fopen(meta,"rb"); assert(f); assert(fseek(f,11,SEEK_SET) == 0);
+  assert(fgetc(f) == 3); assert(fclose(f) == 0);
+  remove(meta);
   puts("world metadata: persistence, seed mismatch, corruption, generator version, mirroring and legacy compatibility passed");
   return 0;
 }

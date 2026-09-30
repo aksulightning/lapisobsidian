@@ -18,8 +18,10 @@ bool world_metadata_open (const char *metadata_path, const char *edits_path,
     int extra = fgetc(file);
     bool io_ok = !ferror(file);
     if (fclose(file) != 0) io_ok = false;
+    bool upgrade = read >= 24 && actual[11] == 2;
     if (!io_ok || (read != 24 && read != sizeof(actual)) || extra != EOF ||
-        memcmp(actual, header, 16) || (read == 25 && actual[24] > 1)) {
+        memcmp(actual, header, 11) || (!upgrade && actual[11] != header[11]) ||
+        memcmp(actual+12,header+12,4) || (read == 25 && actual[24] > 1)) {
       fputs("Lapis Obsidian: invalid or incompatible world metadata\n", stderr);
       return false;
     }
@@ -34,6 +36,16 @@ bool world_metadata_open (const char *metadata_path, const char *edits_path,
     if (explicit_seed && saved_seed != *seed) {
       fputs("Lapis Obsidian: requested seed differs from saved world\n", stderr);
       return false;
+    }
+    if (upgrade) {
+      /* Only the version byte changes. Seed, protocol and mirror flags remain
+       * intact, including if an interrupted write leaves the old version. */
+      file = fopen(metadata_path,"r+b");
+      if (!file) { perror("World metadata upgrade"); return false; }
+      bool ok = fseek(file,11,SEEK_SET) == 0 && fputc(header[11],file) != EOF;
+      if (fclose(file) != 0) ok = false;
+      if (!ok) { fputs("Lapis Obsidian: could not persist world upgrade\n",stderr); return false; }
+      fputs("Lapis Obsidian: upgraded world to generator 3; Far Lands terrain begins at X/Z +/-3940. Existing edits retained.\n",stderr);
     }
     *seed = saved_seed;
     return true;
