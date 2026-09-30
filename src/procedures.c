@@ -1,3 +1,4 @@
+#include "doors.h"
 #include "signs.h"
 #include "commands.h"
 #include <stdio.h>
@@ -578,7 +579,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
       #ifndef DISK_SYNC_BLOCKS_ON_INTERVAL
       writeBlockChangesToDisk(i, i);
       #endif
-      signs_block_changed(x,y,z,block); return 0;
+      signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); return 0;
     }
     #ifdef ALLOW_CHESTS
     if (block_changes[i].block == B_chest) i += 14;
@@ -586,7 +587,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
   }
 
   // Don't create a new entry if it contains the base terrain block
-  if (is_base_block) { signs_block_changed(x,y,z,block); return 0; }
+  if (is_base_block) { signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); return 0; }
 
   #ifdef ALLOW_CHESTS
   if (block == B_chest) {
@@ -623,7 +624,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
       #ifndef DISK_SYNC_BLOCKS_ON_INTERVAL
       writeBlockChangesToDisk(last_real_entry + 1, last_real_entry + 15);
       #endif
-      signs_block_changed(x,y,z,block); return 0;
+      signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); return 0;
     }
     // If we're here, no changes were made
     failBlockChange(x, y, z, block);
@@ -651,7 +652,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
     block_changes_count ++;
   }
 
-  signs_block_changed(x,y,z,block); return 0;
+  signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); return 0;
 }
 
 // Returns the result of mining a block, taking into account the block type and tools
@@ -1249,7 +1250,10 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
 
   // Check interaction with containers when not sneaking
   if (!(player->flags & 0x04) && face != 255) {
-    if (target == B_oak_sign) {
+    if (target == B_oak_door) {
+      doors_interact(player,x,y,z);
+      return;
+    } else if (target == B_oak_sign) {
       signs_interact(player,x,y,z);
       return;
     } else if (target == B_crafting_table) {
@@ -1356,6 +1360,15 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
 
   // Don't proceed with block placement if no coordinates were provided
   if (face == 255) return;
+
+  if (player->inventory_items[player->hotbar] == I_oak_door) {
+    if (doors_place(player,x,y,z,face)) {
+      if (commands_gamemode(player) != 1) *count -= 1;
+      if (*count == 0) player->inventory_items[player->hotbar] = 0;
+    }
+    sc_setContainerSlot(player->client_fd,0,serverSlotToClientSlot(0,player->hotbar),*count,player->inventory_items[player->hotbar]);
+    return;
+  }
 
   if (player->inventory_items[player->hotbar] == I_oak_sign) {
     if (signs_place(player,x,y,z,face)) {

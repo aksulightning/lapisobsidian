@@ -272,6 +272,15 @@ void getCraftingOutput (PlayerData *player, uint8_t *count, uint16_t *item) {
       }
       break;
 
+    case 6:
+      if (identical && first_item == I_oak_planks && first < 2 &&
+          player->craft_items[first+1] == I_oak_planks && player->craft_items[first+3] == I_oak_planks &&
+          player->craft_items[first+4] == I_oak_planks && player->craft_items[first+6] == I_oak_planks &&
+          player->craft_items[first+7] == I_oak_planks) {
+        *item = I_oak_door; *count = 1; return;
+      }
+      break;
+
     case 7:
       if (player->craft_items[6] == 0 && player->craft_items[7] == I_stick && player->craft_items[8] == 0) {
         uint8_t planks = true;

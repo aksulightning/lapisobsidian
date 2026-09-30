@@ -1,3 +1,4 @@
+#include "doors.h"
 #include "signs.h"
 #include "commands.h"
 #include <stdio.h>
@@ -599,11 +600,14 @@ int main (int argc, char **argv) {
 
   #ifdef SYNC_WORLD_TO_DISK
     #ifdef ESP_PLATFORM
+    if (!doors_load("/littlefs/doors.bin")) exit(EXIT_FAILURE);
     if (!signs_load("/littlefs/signs.bin")) exit(EXIT_FAILURE);
     #else
+    if (!doors_load("doors.bin")) exit(EXIT_FAILURE);
     if (!signs_load("signs.bin")) exit(EXIT_FAILURE);
     #endif
   #else
+    doors_load(NULL);
     signs_load(NULL);
   #endif
 
