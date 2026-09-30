@@ -99,3 +99,35 @@ Sanitizer tests additionally require target sanitizer support. The portable
 Reference: Alpine's [GCC guide](https://wiki.alpinelinux.org/wiki/GCC) documents
 `build-base`; its [package index](https://pkgs.alpinelinux.org/packages?name=build-base)
 provides packages by release and architecture.
+
+## Nightly GitHub Actions builds
+
+`.github/workflows/nightly.yml` builds at **01:23 UTC daily** (04:23 Helsinki in
+summer, 03:23 in winter), can be started with **Actions → Nightly Alpine builds →
+Run workflow**, and also runs on `main` changes to that workflow or the Alpine
+build script. Scheduled builds use the default branch; manual builds use the
+selected ref. GitHub can delay scheduled runs.
+
+The matrix uses native Ubuntu x86-64/ARM64 runners and QEMU for RISC-V. Each job
+runs the compiler and tests inside the corresponding `alpine:3.23.6` image, builds
+with `--static`, checks executable startup on that CPU/emulator, and runs the full
+C regression/no-JAR suite. Nightly does not run sanitizers under QEMU; the existing
+Ubuntu build workflow retains its sanitizer gate. A failed target does not cancel
+the others, but that target uploads nothing. Each job has a 60-minute timeout.
+
+Download a successful run's architecture-specific artifact from its Actions page.
+Artifacts are retained for 14 days and contain:
+
+- `lapis-obsidian-alpine-<arch>.tar.gz`: executable, LICENSE, notices, README,
+  documentation and build metadata. Extract this tarball to preserve executable
+  permissions, then run `./lapis-obsidian` on the matching architecture.
+- `source.tar.gz`: repository source from the exact built commit.
+- `BUILDINFO.txt`: commit, target, Alpine release, compiler and package versions.
+- `SHA256SUMS`: SHA-256 checksums of the binary and source archives.
+
+Action revisions are pinned to commit SHAs; the Alpine image uses an explicit
+release tag. Package repositories and the QEMU action's default emulator image
+can receive updates, so this is not a bit-for-bit reproducible build claim.
+The workflow only needs read access to repository contents. Static/YAML checks
+were performed locally; a completed three-target Actions run is still required
+to establish that this CI environment builds and tests every target successfully.

@@ -1,0 +1,115 @@
+name: Nightly Alpine builds
+
+on:
+  schedule:
+    # UTC: 04:23 Helsinki in summer, 03:23 in winter.
+    - cron: '23 1 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/nightly.yml'
+      - 'build-alpine.sh'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  alpine:
+    name: Alpine ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            platform: linux/amd64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+          - arch: riscv64
+            platform: linux/riscv64
+            runner: ubuntu-24.04
+    env:
+      ALPINE_IMAGE: alpine:3.23.6
+      TARGET_ARCH: ${{ matrix.arch }}
+      TARGET_PLATFORM: ${{ matrix.platform }}
+      SOURCE_SHA: ${{ github.sha }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Enable RISC-V emulation
+        if: matrix.arch == 'riscv64'
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        with:
+          platforms: riscv64
+
+      - name: Archive matching source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          mkdir -p dist
+          git archive --format=tar.gz --prefix=lapis-obsidian-source/ HEAD > dist/source.tar.gz
+
+      - name: Build, test and package on Alpine
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --platform "$TARGET_PLATFORM" \
+            --volume "$GITHUB_WORKSPACE:/work" --workdir /work \
+            --env TARGET_ARCH --env SOURCE_SHA --env ALPINE_IMAGE \
+            "$ALPINE_IMAGE" sh -eu -c '
+              apk add --no-cache build-base bash
+              package=".tests/nightly-package"
+              mkdir -p "$package"
+              ./build-alpine.sh --arch "$TARGET_ARCH" --static \
+                --output "$package/lapis-obsidian"
+              readelf -l "$package/lapis-obsidian" > .tests/nightly-elf.txt
+              if grep -q INTERP .tests/nightly-elf.txt; then
+                echo "Expected a static executable" >&2
+                exit 1
+              fi
+
+              # Exercise the shipped binary on the target CPU/emulator, without
+              # creating a world or starting a long-lived server.
+              result=0
+              "$package/lapis-obsidian" --nightly-abi-check > .tests/nightly-smoke.log 2>&1 || result=$?
+              test "$result" -eq 1
+              grep -F "Usage: lapis-obsidian" .tests/nightly-smoke.log
+              ./tests/run.sh
+
+              cp LICENSE NOTICE.md README.md "$package/"
+              cp -R docs "$package/docs"
+              {
+                printf "Project: Lapis Obsidian\nCommit: %s\n" "$SOURCE_SHA"
+                printf "Architecture: %s\nContainer: %s\n" "$TARGET_ARCH" "$ALPINE_IMAGE"
+                printf "Alpine release: "; cat /etc/alpine-release
+                printf "Compiler: "; cc --version | head -n 1
+                printf "Linkage: static musl\nChecks: executable smoke and regression suite\n"
+                apk info -v build-base gcc musl musl-dev binutils
+              } > "$package/BUILDINFO.txt"
+              cp "$package/BUILDINFO.txt" dist/BUILDINFO.txt
+              tar -czf "dist/lapis-obsidian-alpine-$TARGET_ARCH.tar.gz" -C "$package" .
+              cd dist
+              sha256sum "lapis-obsidian-alpine-$TARGET_ARCH.tar.gz" source.tar.gz > SHA256SUMS
+            '
+
+      - name: Upload nightly artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: lapis-obsidian-alpine-${{ matrix.arch }}-${{ github.run_number }}-${{ github.run_attempt }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

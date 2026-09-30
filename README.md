@@ -36,6 +36,9 @@ This script works with Alpine's default `/bin/sh` and detects the compiler targe
 Optional checks: `--arch riscv64`, `--arch arm64`, or `--arch x64`; `--static`
 creates a static musl build. See [Alpine build options and cross compilation](docs/build-alpine.md)
 for toolchain requirements and validation limits. No Java or vanilla JAR is needed.
+Nightly static binaries for all three targets are configured in
+[GitHub Actions](https://github.com/aksulightning/lapisobsidian/actions/workflows/nightly.yml),
+with tests, source archives and checksums; see the guide for download details.
 
 ## Tests
 
