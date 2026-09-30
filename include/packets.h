@@ -15,7 +15,7 @@ int cs_setPlayerRotation (int client_fd, float *yaw, float *pitch, uint8_t *on_g
 int cs_setPlayerMovementFlags (int client_fd, uint8_t *on_ground);
 int cs_setHeldItem (int client_fd);
 int cs_swingArm (int client_fd);
-int cs_clickContainer (int client_fd);
+int cs_clickContainer (int client_fd, int length);
 int cs_closeContainer (int client_fd);
 int cs_clientStatus (int client_fd);
 int cs_chat (int client_fd, int length);

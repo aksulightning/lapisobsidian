@@ -1,3 +1,4 @@
+#include "items.h"
 #include "doors.h"
 #include "signs.h"
 #include "commands.h"
@@ -198,7 +199,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
       break;
 
     case 0x11:
-      if (state == STATE_PLAY) cs_clickContainer(client_fd);
+      if (state == STATE_PLAY && cs_clickContainer(client_fd,length)) { recv_count = 0; return; }
       break;
 
     case 0x12:
@@ -697,7 +698,6 @@ int main (int argc, char **argv) {
     // Look for valid connected clients
     client_index ++;
     if (client_index == MAX_PLAYERS) client_index = 0;
-    if (clients[client_index] == -1) continue;
 
     // Handle periodic events (server ticks)
     int64_t time_since_last_tick = get_program_time() - last_tick_time;
@@ -705,6 +705,8 @@ int main (int argc, char **argv) {
       handleServerTick(time_since_last_tick);
       last_tick_time = get_program_time();
     }
+
+    if (clients[client_index] == -1) continue;
 
     // Handle this individual client
     int client_fd = clients[client_index];

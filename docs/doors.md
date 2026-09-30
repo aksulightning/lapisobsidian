@@ -6,7 +6,7 @@ door faces the placing player's horizontal direction. Right-click either half
 without sneaking to open or close both halves. Holding another item does not
 consume it when interacting. Creative placement does not consume the door.
 
-Breaking either half removes its partner. Survival mining returns one door;
+Breaking either half removes its partner. Survival mining drops one collectible door;
 creative mining returns none. Replacing a half preserves the replacement block
 and removes its partner. Losing support removes both halves without spawning
 an item. Neither half can be placed overlapping a loaded player's body. Placement

@@ -58,6 +58,17 @@ rewriting files. New C modules and unit tests compile with `-Wall -Wextra
 Test sanitizer builds disable LeakSanitizer because restricted environments may
 not expose `/proc`; AddressSanitizer and UndefinedBehaviorSanitizer remain enabled.
 
+## Item drops and gameplay plans
+
+Broken blocks and existing mob loot now leave collectible item entities.
+Q/Ctrl-Q and inventory drop actions work, with gravity, stack merging, partial
+pickup, a five-minute lifetime and a fixed 128-item-entity limit. Drops are
+transient across restarts. See [item behavior and tests](docs/items.md).
+
+The [gameplay roadmap](docs/roadmap.md) tracks the next mob additions, neutral
+spiders, non-destructive firecracker creepers, basic redstone, note blocks and
+MIDI musicboxes. These later features are not implemented yet.
+
 ## Commands
 
 `/help`, `/seed`, `/worldinfo`, `/spawn`, and `/time query` work for everyone.

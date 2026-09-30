@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "doors.h"
+#include "items.h"
 #include "signs.h"
 #include "commands.h"
 #include "crafting.h"
@@ -83,6 +84,8 @@ int main (void) {
     handlePlayerUseItem(p,-2,200,-2,1); drain(); unsigned before = p->inventory_count[0];
     handlePlayerAction(p,2,-2,(short)(201+half),-2); drain();
     assert(!doors_at(-2,201,-2) && getBlockAt(-2,201,-2) == B_air && getBlockAt(-2,202,-2) == B_air);
+    assert(p->inventory_count[0] == before);
+    items_tick(1000000); drain();
     assert(p->inventory_count[0] == before+1);
     handlePlayerAction(p,2,-2,(short)(201+half),-2); drain(); assert(p->inventory_count[0] == before+1);
   }

@@ -1,3 +1,4 @@
+#include "items.h"
 #include "doors.h"
 #include "signs.h"
 #include "commands.h"
@@ -55,6 +56,7 @@ int getClientIndex (int client_fd) {
 
 // Restores player data to initial state (fresh spawn)
 void resetPlayerData (PlayerData *player) {
+  items_forget_player(player);
   player->health = 20;
   player->hunger = 20;
   player->saturation = 2500;
@@ -156,6 +158,7 @@ void handlePlayerDisconnect (int client_fd) {
     if (player_data[i].client_fd != client_fd) continue;
     commands_reset_player(&player_data[i]);
     signs_reset_player(&player_data[i]);
+    items_forget_player(&player_data[i]);
     // Mark the player as being offline
     player_data[i].client_fd = -1;
     // Prepare leave message for broadcast
@@ -202,6 +205,7 @@ void handlePlayerJoin (PlayerData* player) {
   // Clear "client loading" flag and fallback timer
   player->flags &= ~0x20;
   player->flagval_16 = 0;
+  items_sync_player(player);
 
 }
 
@@ -437,6 +441,7 @@ void broadcastPlayerMetadata (PlayerData *player) {
 // If client_fd is -1, broadcasts to all player
 void broadcastMobMetadata (int client_fd, int entity_id) {
 
+  if (entity_id > -2 || entity_id < -1-MAX_MOBS) return;
   int mob_index = -entity_id - 2;
   if (mob_index < 0 || mob_index >= MAX_MOBS) return;
   MobData *mob = &mob_data[mob_index];
@@ -1127,51 +1132,11 @@ void checkFluidUpdate (short x, uint8_t y, short z, uint8_t block) {
 
 }
 
-#ifdef ENABLE_PICKUP_ANIMATION
-// Plays the item pickup animation with the given item at the given coordinates
-void playPickupAnimation (PlayerData *player, uint16_t item, double x, double y, double z) {
-
-  // Spawn a new item entity at the input coordinates
-  // ID -1 is safe, as elsewhere it's reserved as a placeholder
-  // The player's name is used as the UUID as it's cheap and unique enough
-  sc_spawnEntity(player->client_fd, -1, (uint8_t *)player->name, 69, x + 0.5, y + 0.5, z + 0.5, 0, 0);
-
-  // Write a Set Entity Metadata packet for the item
-  // There's no packets.c entry for this, as it's not cheaply generalizable
-  writeVarInt(player->client_fd, 12 + sizeVarInt(item));
-  writeByte(player->client_fd, 0x5C);
-  writeVarInt(player->client_fd, -1);
-
-  // Describe slot data array entry
-  writeByte(player->client_fd, 8);
-  writeByte(player->client_fd, 7);
-  // Send slot data
-  writeByte(player->client_fd, 1);
-  writeVarInt(player->client_fd, item);
-  writeByte(player->client_fd, 0);
-  writeByte(player->client_fd, 0);
-  // Terminate entity metadata array
-  writeByte(player->client_fd, 0xFF);
-
-  // Send the Pickup Item packet targeting this entity
-  sc_pickupItem(player->client_fd, -1, player->client_fd, 1);
-
-  // Remove the item entity from the client right away
-  sc_removeEntity(player->client_fd, -1);
-
-}
-#endif
-
 void handlePlayerAction (PlayerData *player, int action, short x, short y, short z) {
 
-  // Re-sync slot when player drops an item
+  if (!player || player->hotbar >= 41) return;
   if (action == 3 || action == 4) {
-    sc_setContainerSlot(
-      player->client_fd, 0,
-      serverSlotToClientSlot(0, player->hotbar),
-      player->inventory_count[player->hotbar],
-      player->inventory_items[player->hotbar]
-    );
+    items_drop_slot(player,player->hotbar,action == 3);
     return;
   }
 
@@ -1187,6 +1152,9 @@ void handlePlayerAction (PlayerData *player, int action, short x, short y, short
   // Ignore further actions not pertaining to mining blocks
   if (action != 0 && action != 2) return;
 
+  if (y < 0 || y > 255 || abs((int)x-player->x) > 6 ||
+      abs((int)y-player->y) > 6 || abs((int)z-player->z) > 6) return;
+
   // In creative, only the "start mining" action is sent
   // No additional verification is performed, the block is simply removed
   if (action == 0 && commands_gamemode(player) == 1) {
@@ -1199,19 +1167,16 @@ void handlePlayerAction (PlayerData *player, int action, short x, short y, short
   // If this is a "start mining" packet, the block must be instamine
   if (action == 0 && !isInstantlyMined(player, block)) return;
 
-  // Don't continue if the block change failed
-  if (makeBlockChange(x, y, z, 0)) return;
-
   uint16_t held_item = player->inventory_items[player->hotbar];
   uint16_t item = getMiningResult(held_item, block);
-  bumpToolDurability(player);
-
-  if (item) {
-    #ifdef ENABLE_PICKUP_ANIMATION
-    playPickupAnimation(player, item, x, y, z);
-    #endif
-    givePlayerItem(player, item, 1);
+  /* At capacity, leave the block and tool intact rather than destroy its loot. */
+  if (item && !items_can_spawn(item,1,x,y,z)) {
+    sc_blockUpdate(player->client_fd,x,y,z,block);
+    return;
   }
+  if (makeBlockChange(x, (uint8_t)y, z, B_air)) return;
+  bumpToolDurability(player);
+  if (item) items_spawn(item,1,x,y,z,500);
 
   // Update nearby fluids
   uint8_t block_above = getBlockAt(x, y + 1, z);
@@ -1225,16 +1190,12 @@ void handlePlayerAction (PlayerData *player, int action, short x, short y, short
 
   // Check if any blocks above this should break, and if so,
   // iterate upward over all blocks in the column and break them
-  uint8_t y_offset = 1;
-  while (isColumnBlock(block_above)) {
-    // Destroy the next block
-    makeBlockChange(x, y + y_offset, z, 0);
-    // Check for item drops *without a tool*
-    uint16_t item = getMiningResult(0, block_above);
-    if (item) givePlayerItem(player, item, 1);
-    // Select the next block in the column
-    y_offset ++;
-    block_above = getBlockAt(x, y + y_offset, z);
+  for (int above_y = y+1; above_y <= 255 && isColumnBlock(block_above); above_y++) {
+    uint16_t above_item = getMiningResult(0,block_above);
+    if (above_item && !items_can_spawn(above_item,1,x,above_y,z)) break;
+    if (makeBlockChange(x,(uint8_t)above_y,z,B_air)) break;
+    if (above_item) items_spawn(above_item,1,x,above_y,z,500);
+    block_above = above_y < 255 ? getBlockAt(x,(uint8_t)(above_y+1),z) : B_air;
   }
 }
 
@@ -1477,6 +1438,7 @@ void interactEntity (int entity_id, int interactor_id) {
   if (getPlayerData(interactor_id, &player)) return;
 
   if (commands_gamemode(player) == 3) return;
+  if (entity_id > -2 || entity_id < -1-MAX_MOBS) return;
   int mob_index = -entity_id - 2;
   if (mob_index < 0 || mob_index >= MAX_MOBS) return;
   MobData *mob = &mob_data[mob_index];
@@ -1493,12 +1455,8 @@ void interactEntity (int entity_id, int interactor_id) {
 
       bumpToolDurability(player);
 
-      #ifdef ENABLE_PICKUP_ANIMATION
-      playPickupAnimation(player, I_white_wool, mob->x, mob->y, mob->z);
-      #endif
-
       uint8_t item_count = 1 + (fast_rand() & 1); // 1-2
-      givePlayerItem(player, I_white_wool, item_count);
+      items_spawn(I_white_wool,item_count,mob->x,mob->y,mob->z,500);
 
       for (int i = 0; i < MAX_PLAYERS; i ++) {
         PlayerData* player = &player_data[i];
@@ -1614,6 +1572,7 @@ void hurtEntity (int entity_id, int attacker_id, uint8_t damage_type, uint8_t da
 
   } else { // The attacked entity is a mob
 
+    if (entity_id > -2 || entity_id < -1-MAX_MOBS) return;
     int mob_index = -entity_id - 2;
     if (mob_index < 0 || mob_index >= MAX_MOBS) return;
     MobData *mob = &mob_data[mob_index];
@@ -1629,23 +1588,21 @@ void hurtEntity (int entity_id, int attacker_id, uint8_t damage_type, uint8_t da
     // Process health change on the server
     if (mob_health <= damage) {
 
+      uint16_t loot = 0;
+      uint8_t count = 0;
+      switch (mob->type) {
+        case 25: loot = I_chicken; count = 1; break;
+        case 28: loot = I_beef; count = (uint8_t)(1+fast_rand()%3); break;
+        case 95: loot = I_porkchop; count = (uint8_t)(1+fast_rand()%3); break;
+        case 106: loot = I_mutton; count = (uint8_t)(1+(fast_rand()&1)); break;
+        case 145: loot = I_rotten_flesh; count = (uint8_t)(fast_rand()%3); break;
+        default: break;
+      }
+      /* Save the position before Y becomes the inherited death-animation timer. */
+      if (count) items_spawn(loot,count,mob->x,mob->y,mob->z,500);
       mob->data -= mob_health;
       mob->y = 0;
       entity_died = true;
-
-      // Handle mob drops
-      if (attacker_id > 0) {
-        PlayerData *player;
-        if (getPlayerData(attacker_id, &player)) return;
-        switch (mob->type) {
-          case 25: givePlayerItem(player, I_chicken, 1); break;
-          case 28: givePlayerItem(player, I_beef, 1 + (fast_rand() % 3)); break;
-          case 95: givePlayerItem(player, I_porkchop, 1 + (fast_rand() % 3)); break;
-          case 106: givePlayerItem(player, I_mutton, 1 + (fast_rand() & 1)); break;
-          case 145: givePlayerItem(player, I_rotten_flesh, (fast_rand() % 3)); break;
-          default: break;
-        }
-      }
 
     } else mob->data -= damage;
 
@@ -1675,6 +1632,7 @@ void handleServerTick (int64_t time_since_last_tick) {
   world_time = (world_time + time_since_last_tick / 50000) % 24000;
   // Increment server tick counter
   server_ticks ++;
+  items_tick(time_since_last_tick);
 
   // Update player events
   for (int i = 0; i < MAX_PLAYERS; i ++) {

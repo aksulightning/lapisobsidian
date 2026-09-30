@@ -1,6 +1,7 @@
 /* Minecraft Java 1.21.8 / protocol 772 command and game-mode packets. */
 #include <string.h>
 #include "commands.h"
+#include "items.h"
 #include "packets.h"
 #include "procedures.h"
 #include "registry.h"
@@ -86,7 +87,13 @@ int cs_creativeSlot (int fd, int length) {
   if (count && (!integer(&reader,&item) || !item || !registry_item_id_valid(item) ||
       !integer(&reader,&added) || !integer(&reader,&removed))) return 1;
   PlayerData *player; if (getPlayerData(fd,&player)) return 1;
-  if (slot < 5 || slot > 45 || commands_gamemode(player) != 1 || (player->flags & 0x20)) return 0;
+  if (commands_gamemode(player) != 1 || (player->flags & 0x22) || !player->health) return 0;
+  if (slot == 65535) {
+    if (added || removed || reader.cursor != reader.length) return 1;
+    if (count) items_drop_stack(player,(uint16_t)item,(uint8_t)count);
+    return 0;
+  }
+  if (slot < 5 || slot > 45) return 0;
   uint8_t index = clientSlotToServerSlot(0,(uint8_t)slot);
   if (index >= 41) return 1;
   if (added || removed) {

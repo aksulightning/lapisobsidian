@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "signs.h"
+#include "items.h"
 #include "commands.h"
 #include "crafting.h"
 #include "packets.h"
@@ -176,7 +177,9 @@ int main (void) {
   for (size_t n = 0; n < sizeof(action); n++) assert(incoming(cs_playerAction,action,n,sizeof(action)) == 1);
   assert(signs_at(-2,201,-2));
   assert(incoming(cs_playerAction,action,sizeof(action),sizeof(action)) == 0);
-  assert(!signs_at(-2,201,-2) && p->inventory_items[0] == I_oak_sign && p->inventory_count[0] == 1);
+  assert(!signs_at(-2,201,-2) && p->inventory_count[0] == 0);
+  items_tick(1000000); drain();
+  assert(p->inventory_items[0] == I_oak_sign && p->inventory_count[0] == 1);
   assert(signs_place(p,-2,200,-2,1)); drain();
   /* Reconcile text records whose world blocks disappeared (crash/old backup). */
   for (int i = 0; i < block_changes_count; i++) if (block_changes[i].block == B_oak_sign) block_changes[i].block = B_air;
