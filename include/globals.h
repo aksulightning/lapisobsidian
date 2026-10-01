@@ -150,10 +150,7 @@
 // If defined, log chunk generation events
 // #define DEV_LOG_CHUNK_GENERATION
 
-// If defined, allows dumping world data by sending 0xBEEF (big-endian),
-// and uploading world data by sending 0xFEED, followed by the data buffer.
-// Doesn't implement authentication, hence disabled by default.
-// #define DEV_ENABLE_BEEF_DUMPS
+// Raw unauthenticated world upload/dump packets have been removed.
 
 #define STATE_NONE 0
 #define STATE_STATUS 1

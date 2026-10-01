@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "items.h"
+#include "inventory.h"
 #include "commands.h"
 #include "doors.h"
 #include "packets.h"
@@ -25,6 +26,7 @@ static void drain (void) { drain_fd(sockets[0]); drain_fd(observer[0]); }
 static unsigned total (void) { unsigned n = 0; for (size_t i = 0; i < ITEM_ENTITY_LIMIT; i++) n += items_at(i)->count; return n; }
 static const DroppedItem *first (void) { for (size_t i = 0; i < ITEM_ENTITY_LIMIT; i++) if (items_at(i)->count) return items_at(i); return NULL; }
 static void clean (void) {
+  inventory_reset(p);
   items_clear(); drain();
   memset(p->inventory_items,0,sizeof(p->inventory_items)); memset(p->inventory_count,0,sizeof(p->inventory_count));
   memset(p->craft_items,0,sizeof(p->craft_items)); memset(p->craft_count,0,sizeof(p->craft_count));
@@ -161,21 +163,25 @@ int main (void) {
   clean(); p->inventory_items[0] = I_dirt; p->inventory_count[0] = 5;
   uint8_t transfer[96] = {0,0,0,36,0,0,1,0,36}; size_t used = 9;
   put_stack(transfer,&used,I_dirt,4,true); put_stack(transfer,&used,I_dirt,1,false);
-  assert(click(transfer,used) == 0 && p->inventory_count[0] == 4 && p->flagval_8 == 1);
+  assert(click(transfer,used) == 0 && p->inventory_count[0] == 0 && p->flagval_8 == 5);
   assert(p->flagval_16 == I_dirt && !total());
-  transfer[3] = 1; transfer[8] = 1; used = 9;
+  transfer[3] = 1; transfer[8] = 1; transfer[4] = 1; used = 9;
   put_stack(transfer,&used,I_dirt,1,false); transfer[used++] = 0;
-  assert(click(transfer,used) == 0 && p->craft_items[0] == I_dirt && p->craft_count[0] == 1 && !p->flagval_8);
+  assert(click(transfer,used) == 0 && p->craft_items[0] == I_dirt && p->craft_count[0] == 1 && p->flagval_8 == 4);
   /* Valid chest storage uses packed memcpy, never unaligned uint16_t access. */
   block(0,201,0,B_chest);
   uint8_t *storage = NULL;
   for (int i = 0; i < block_changes_count; i++) if (block_changes[i].block == B_chest) { storage = (uint8_t *)&block_changes[i+1]; break; }
-  assert(storage); memcpy(p->craft_items,&storage,sizeof(storage)); p->flags = 0x80;
-  transfer[0] = 2; transfer[3] = 0; transfer[8] = 0;
+  assert(storage && inventory_open(p,2)); drain();
+  /* Pick up the returned stack from the chest window's hotbar, then deposit. */
+  const uint8_t chest_pickup[] = {2,0,0,54,0,0,0,0};
+  assert(click(chest_pickup,sizeof(chest_pickup)) == 0 && p->flagval_8 == 5);
+  memcpy(p->craft_items,&storage,sizeof(storage)); p->flags = 0x80;
+  transfer[0] = 2; transfer[3] = 0; transfer[8] = 0; transfer[4] = 0;
   assert(click(transfer,used) == 0);
-  uint16_t stored_item; memcpy(&stored_item,storage,2); assert(stored_item == I_dirt && storage[2] == 1);
+  uint16_t stored_item; memcpy(&stored_item,storage,2); assert(stored_item == I_dirt && storage[2] == 5);
   const uint8_t chest_drop[] = {2,0,0,0,0,4,0,0};
-  assert(click(chest_drop,sizeof(chest_drop)) == 0 && !storage[2] && total() == 1);
+  assert(click(chest_drop,sizeof(chest_drop)) == 0 && storage[2] == 4 && total() == 1);
   clean();
   /* Hostile chest pointer and craft-grid access are rejected before dereference. */
   p->flags = 0x80; memset(p->craft_items,255,sizeof(p->craft_items));

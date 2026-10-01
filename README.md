@@ -84,6 +84,8 @@ Permissions and game modes reset on reconnect; no world-file migration is needed
 The inherited connection is unencrypted and does not verify player UUIDs; use
 administrator commands on a trusted network or protected tunnel. See
 [command syntax, permissions and limits](docs/commands.md) for details.
+[Inventory and packet hardening](docs/security-hardening.md) describes the current
+protections, regression tests and remaining network limitations.
 
 ## Signs
 

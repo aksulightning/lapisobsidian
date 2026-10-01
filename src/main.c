@@ -1,4 +1,5 @@
 #include "items.h"
+#include "packet_input.h"
 #include "mobs.h"
 #include "doors.h"
 #include "circuits.h"
@@ -55,31 +56,8 @@
 #include "procedures.h"
 #include "serialize.h"
 
-/**
- * Routes an incoming packet to its packet handler or procedure.
- *
- * Full disclosure, I think this whole thing is a bit of a mess.
- * The packet handlers started out as having proper error checks and
- * handling, but that turned out to be very tedious and space/time
- * consuming, and didn't really help with resolving errors. Not to mention
- * that all those checks likely compound into a non-negligible performance
- * hit on embedded systems.
- *
- * I think the way forward would be to gut the return values of the packet
- * handlers, as most of them only ever return 0, and others aren't checked
- * here. The length discrepancy checks at the bottom already do a good job
- * at preventing this from derailing completely in case of a bad packet,
- * and I think leaning into those is fine.
- *
- * In other words, I think the sc_/cs_ handlers should be of type `void`,
- * and should simply return early when there's a failure that prevents the
- * server from handling a packet. Any data that's left unhandled/unread
- * will be caught by the length discrepancy checks. That's more or less
- * how it already works, just not explicitly.
- *
- * Why have I not done this yet? Well, I'm close to uploading the video,
- * and I don't want to risk refactoring anything this close to release.
- */
+/* Dispatch only complete, bounded frames. recv_all cannot cross the current
+ * frame; individual handlers validate fields before applying game actions. */
 void handlePacket (int client_fd, int length, int packet_id, int state) {
 
   // Count the amount of bytes received to catch length discrepancies
@@ -190,7 +168,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
       break;
 
     case 0x12:
-      if (state == STATE_PLAY) cs_closeContainer(client_fd);
+      if (state == STATE_PLAY && (length != 1 || cs_closeContainer(client_fd))) { recv_count = 0; return; }
       break;
 
     case 0x1B:
@@ -210,6 +188,8 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
     case 0x20:
       if (state == STATE_PLAY) {
 
+        int expected = packet_id == 0x1D ? 25 : packet_id == 0x1E ? 33 : packet_id == 0x1F ? 9 : 1;
+        if (length != expected) { recv_count = 0; return; }
         double x = 0, y = 0, z = 0;
         float yaw = 0, pitch = 0;
         uint8_t on_ground;
@@ -395,7 +375,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
       break;
 
     case 0x34:
-      if (state == STATE_PLAY) cs_setHeldItem(client_fd);
+      if (state == STATE_PLAY && (length != 2 || cs_setHeldItem(client_fd))) { recv_count = 0; return; }
       break;
 	
     case 0x3B:
@@ -603,6 +583,8 @@ int main (int argc, char **argv) {
    * from each player. With every iteration, attempts to accept a new
    * client connection.
    */
+  PacketInput inputs[MAX_PLAYERS];
+  for (int i = 0; i < MAX_PLAYERS; i++) packet_input_reset(&inputs[i],-1);
   while (true) {
     // Check if it's time to yield to the idle task
     task_yield();
@@ -621,6 +603,7 @@ int main (int argc, char **argv) {
         int flags = fcntl(clients[i], F_GETFL, 0);
         fcntl(clients[i], F_SETFL, flags | O_NONBLOCK);
       #endif
+        packet_input_reset(&inputs[i],clients[i]);
         client_count ++;
       }
       break;
@@ -651,95 +634,18 @@ int main (int argc, char **argv) {
     // Handle this individual client
     int client_fd = clients[client_index];
 
-    // Check if at least 2 bytes are available for reading
-    #ifdef _WIN32
-    recv_count = recv(client_fd, recv_buffer, 2, MSG_PEEK);
-    if (recv_count == 0) {
-      disconnectClient(&clients[client_index], 1);
-      continue;
-    }
-    if (recv_count == SOCKET_ERROR) {
-      int err = WSAGetLastError();
-      if (err == WSAEWOULDBLOCK) {
-        continue; // no data yet, keep client alive
-      } else {
-        disconnectClient(&clients[client_index], 1);
-        continue;
-      }
-    }
-    #else
-    recv_count = recv(client_fd, &recv_buffer, 2, MSG_PEEK);
-    if (recv_count < 2) {
-      if (recv_count == 0 || (recv_count < 0 && errno != EAGAIN && errno != EWOULDBLOCK)) {
-        disconnectClient(&clients[client_index], 1);
-      }
-      continue;
-    }
-    #endif
-    // Handle 0xBEEF and 0xFEED packets for dumping/uploading world data
-    #ifdef DEV_ENABLE_BEEF_DUMPS
-    // Received BEEF packet, dump world data and disconnect
-    if (recv_buffer[0] == 0xBE && recv_buffer[1] == 0xEF && getClientState(client_fd) == STATE_NONE) {
-      // Send block changes and player data back to back
-      // The client is expected to know (or calculate) the size of these buffers
-      send_all(client_fd, block_changes, sizeof(block_changes));
-      send_all(client_fd, player_data, sizeof(player_data));
-      // Flush the socket and receive everything left on the wire
-      shutdown(client_fd, SHUT_WR);
-      recv_all(client_fd, recv_buffer, sizeof(recv_buffer), false);
-      // Kick the client
-      disconnectClient(&clients[client_index], 6);
-      continue;
-    }
-    // Received FEED packet, load world data from socket and disconnect
-    if (recv_buffer[0] == 0xFE && recv_buffer[1] == 0xED && getClientState(client_fd) == STATE_NONE) {
-      // Consume 0xFEED bytes (previous read was just a peek)
-      recv_all(client_fd, recv_buffer, 2, false);
-      // Write full buffers straight into memory
-      recv_all(client_fd, block_changes, sizeof(block_changes), false);
-      recv_all(client_fd, player_data, sizeof(player_data), false);
-      // Recover block_changes_count
-      for (int i = 0; i < MAX_BLOCK_CHANGES; i ++) {
-        if (block_changes[i].block == 0xFF) continue;
-        if (block_changes[i].block == B_chest) i += 14;
-        if (i >= block_changes_count) block_changes_count = i + 1;
-      }
-      // Update data on disk
-      writeBlockChangesToDisk(0, block_changes_count);
-      writePlayerDataToDisk();
-      // Kick the client
-      disconnectClient(&clients[client_index], 7);
-      continue;
-    }
-    #endif
-
-    // Read packet length
-    int length = readVarInt(client_fd);
-    if (length <= 0 || length > 2097151) {
-      disconnectClient(&clients[client_index], 2);
-      continue;
-    }
-    // Read packet ID
-    uint64_t id_start = total_bytes_received;
+    int ready = packet_input_poll(&inputs[client_index],get_program_time());
+    if (ready < 0) { disconnectClient(&clients[client_index],2); continue; }
+    if (!ready) continue;
+    recv_count = 1;
     int packet_id = readVarInt(client_fd);
-    uint64_t id_bytes = total_bytes_received-id_start;
-    if (packet_id < 0 || id_bytes > (uint64_t)length) {
-      disconnectClient(&clients[client_index], 3);
-      continue;
+    if (packet_id < 0 || recv_count <= 0) {
+      packet_input_end(); disconnectClient(&clients[client_index],3); continue;
     }
-    // Get client connection state
     int state = getClientState(client_fd);
-    // Disconnect on legacy server list ping
-    if (state == STATE_NONE && length == 254 && packet_id == 122) {
-      disconnectClient(&clients[client_index], 5);
-      continue;
-    }
-    // Handle packet data
-    handlePacket(client_fd, length - (int)id_bytes, packet_id, state);
-    if (recv_count == 0 || (recv_count == -1 && errno != EAGAIN && errno != EWOULDBLOCK)) {
-      disconnectClient(&clients[client_index], 4);
-      continue;
-    }
+    handlePacket(client_fd,(int)packet_input_remaining(),packet_id,state);
+    bool complete = packet_input_end();
+    if (!complete || recv_count <= 0) { disconnectClient(&clients[client_index],4); continue; }
 
   }
 

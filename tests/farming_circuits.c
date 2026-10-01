@@ -9,6 +9,7 @@
 #include "crafting.h"
 #include "doors.h"
 #include "farming.h"
+#include "inventory.h"
 #include "items.h"
 #include "mobs.h"
 #include "packets.h"
@@ -51,6 +52,7 @@ static void drain (void) {
 }
 static void block (int x, int y, int z, uint8_t b) { assert(!makeBlockChange((short)x,(uint8_t)y,(short)z,b)); drain(); }
 static void clean (void) {
+  inventory_reset(p); p->flagval_8 = 0; p->flagval_16 = 0;
   assert(farming_load(NULL) && circuits_load(NULL) && doors_load(NULL)); mobs_clear(); items_clear(); drain();
   for (int i = 0; i < MAX_BLOCK_CHANGES; i++) block_changes[i].block = 255;
   block_changes_count = 0; p->flags = 0; p->health = 20; p->x = 2; p->y = 201; p->z = 0; p->hotbar = 0;
@@ -153,7 +155,7 @@ int main (void) {
   p->x = FARM_LIMIT; block(FARM_LIMIT,200,0,B_farmland); hold(I_wheat_seeds,1); use(FARM_LIMIT,200,0);
   assert(getBlockAt(FARM_LIMIT,201,0) == B_air && p->inventory_count[0] == 1);
   /* Recipes and authoritative cursor crafting, without trusting predictions. */
-  clean(); p->craft_items[3] = p->craft_items[4] = p->craft_items[5] = I_wheat; recipe(I_bread,1);
+  clean(); assert(inventory_open(p,12)); drain(); p->craft_items[3] = p->craft_items[4] = p->craft_items[5] = I_wheat; recipe(I_bread,1);
   p->craft_count[3] = p->craft_count[4] = p->craft_count[5] = 1;
   const uint8_t click[] = {12,0,0,0,0,0,0,0};
   assert(send(sockets[0],click,sizeof(click),0) == sizeof(click)); recv_count = 1;

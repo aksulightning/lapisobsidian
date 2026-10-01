@@ -61,8 +61,7 @@ custom health and batch counts are intentionally unsupported.
 Short grass (and fern) broken without shears has a **1-in-8 chance** to drop one
 wheat seed. Shears preserve the plant itself. A single short-grass item crafts
 into one wheat seed in either crafting grid. Place it manually and take the
-output with a normal click; shift-click output is not supported for this custom
-recipe. The server consumes the actual ingredient and updates the cursor, rather
+output with a normal or shift click. The server consumes the actual ingredient and updates the cursor, rather
 than relying on the modern client to know a custom recipe. The recipe book is
 not populated with this recipe. Seeds now plant wheat on farmland; see
 [farming and bread](farming-and-controls.md).

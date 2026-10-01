@@ -36,6 +36,7 @@ uint8_t isPassableBlock (uint8_t block);
 uint8_t isPassableSpawnBlock (uint8_t block);
 uint8_t isReplaceableBlock (uint8_t block);
 uint32_t isCompostItem (uint16_t item);
+uint8_t getArmorItemSlot (uint16_t item);
 uint8_t getItemStackSize (uint16_t item);
 
 uint16_t getMiningResult (uint16_t held_item, uint8_t block);

@@ -1,4 +1,5 @@
 #include "doors.h"
+#include "inventory.h"
 #include "circuits.h"
 #include "farming.h"
 #include "signs.h"
@@ -663,10 +664,10 @@ int cs_setHeldItem (int client_fd) {
   PlayerData *player;
   if (getPlayerData(client_fd, &player)) return 1;
 
-  uint8_t slot = readUint16(client_fd);
-  if (slot >= 9) return 1;
+  uint16_t slot = readUint16(client_fd);
+  if (recv_count != 2 || slot >= 9) return 1;
 
-  player->hotbar = slot;
+  player->hotbar = (uint8_t)slot;
 
   return 0;
 }
@@ -685,30 +686,10 @@ int sc_setHeldItem (int client_fd, uint8_t slot) {
 // C->S Close Container (serverbound)
 int cs_closeContainer (int client_fd) {
 
-  uint8_t window_id = readVarInt(client_fd);
-
+  int32_t window_id = readVarInt(client_fd);
   PlayerData *player;
-  if (getPlayerData(client_fd, &player)) return 1;
-
-  // return all items in crafting slots to the player
-  // or, in the case of chests, simply clear the storage pointer
-  for (uint8_t i = 0; i < 9; i ++) {
-    if (window_id != 2) {
-      givePlayerItem(player, player->craft_items[i], player->craft_count[i]);
-      uint8_t client_slot = serverSlotToClientSlot(window_id, 41 + i);
-      if (client_slot != 255) sc_setContainerSlot(player->client_fd, window_id, client_slot, 0, 0);
-    }
-    player->craft_items[i] = 0;
-    player->craft_count[i] = 0;
-    // Unlock craft_items
-    player->flags &= ~0x80;
-  }
-
-  givePlayerItem(player, player->flagval_16, player->flagval_8);
-  sc_setCursorItem(client_fd, 0, 0);
-  player->flagval_16 = 0;
-  player->flagval_8 = 0;
-
+  if (recv_count != 1 || window_id < 0 || getPlayerData(client_fd,&player) || window_id != inventory_window(player)) return 1;
+  inventory_close(player);
   return 0;
 }
 

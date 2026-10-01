@@ -1,4 +1,5 @@
 #include "items.h"
+#include "inventory.h"
 #include "farming.h"
 #include "mobs.h"
 #include "doors.h"
@@ -61,6 +62,7 @@ int getClientIndex (int client_fd) {
 
 // Restores player data to initial state (fresh spawn)
 void resetPlayerData (PlayerData *player) {
+  inventory_reset(player);
   items_forget_player(player);
   mobs_forget_player(player);
   player->health = 20;
@@ -88,6 +90,7 @@ int reservePlayerData (int client_fd, uint8_t *uuid, char *name) {
   for (int i = 0; i < MAX_PLAYERS; i ++) {
     // Found existing player entry (UUID match)
     if (memcmp(player_data[i].uuid, uuid, 16) == 0) {
+      inventory_reset(&player_data[i]);
       commands_reset_player(&player_data[i]);
       mobs_forget_player(&player_data[i]);
       signs_reset_player(&player_data[i]);
@@ -115,6 +118,7 @@ int reservePlayerData (int client_fd, uint8_t *uuid, char *name) {
     // Found free space for a player, initialize default parameters
     if (empty) {
       if (player_data_count >= MAX_PLAYERS) return 1;
+      inventory_reset(&player_data[i]);
       commands_reset_player(&player_data[i]);
       mobs_forget_player(&player_data[i]);
       signs_reset_player(&player_data[i]);
@@ -164,12 +168,13 @@ void handlePlayerDisconnect (int client_fd) {
   // Search for a corresponding player in the player data array
   for (int i = 0; i < MAX_PLAYERS; i ++) {
     if (player_data[i].client_fd != client_fd) continue;
+    // Detach before cleanup: returning stacks must not send to a stalled peer.
+    player_data[i].client_fd = -1;
+    inventory_close(&player_data[i]);
     commands_reset_player(&player_data[i]);
     signs_reset_player(&player_data[i]);
     items_forget_player(&player_data[i]);
     mobs_forget_player(&player_data[i]);
-    // Mark the player as being offline
-    player_data[i].client_fd = -1;
     // Prepare leave message for broadcast
     uint8_t player_name_len = strlen(player_data[i].name);
     strcpy((char *)recv_buffer, player_data[i].name);
@@ -1251,6 +1256,9 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
   uint8_t *count = &player->inventory_count[player->hotbar];
   // Access the packed inventory through its struct, never an unaligned uint16_t pointer.
 
+  if (face != 255 && (y < 0 || y > 255 || abs((int)x-player->x) > 6 ||
+      abs((int)y-player->y) > 6 || abs((int)z-player->z) > 6)) return;
+
   // Check interaction with containers when not sneaking
   if (!(player->flags & 0x04) && face != 255) {
     if (target == B_jukebox) { musicbox_menu(player,x,y,z); return; }
@@ -1262,9 +1270,11 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
       signs_interact(player,x,y,z);
       return;
     } else if (target == B_crafting_table) {
+      if (!inventory_open(player,12)) return;
       sc_openScreen(player->client_fd, 12, "Crafting", 8);
       return;
     } else if (target == B_furnace) {
+      if (!inventory_open(player,14)) return;
       sc_openScreen(player->client_fd, 14, "Furnace", 7);
       return;
     } else if (target == B_composter) {
@@ -1293,7 +1303,7 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
         storage_ptr = (uint8_t *)(&block_changes[i + 1]);
         break;
       }
-      if (storage_ptr == NULL) return;
+      if (storage_ptr == NULL || !inventory_open(player,2)) return;
       // Terrible memory hack!!
       // Copy the pointer into the player's crafting table item array.
       // This allows us to save some memory by repurposing a feature that

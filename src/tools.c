@@ -25,6 +25,7 @@
 #include "varnum.h"
 #include "procedures.h"
 #include "tools.h"
+#include "packet_input.h"
 
 #ifndef htonll
   static uint64_t htonll (uint64_t value) {
@@ -42,6 +43,11 @@
 uint64_t total_bytes_received = 0;
 
 ssize_t recv_all (int client_fd, void *buf, size_t n, uint8_t require_first) {
+  ssize_t framed;
+  if (packet_input_read(client_fd,buf,n,&framed)) {
+    if (framed > 0) total_bytes_received += (uint64_t)framed;
+    return framed;
+  }
   char *p = buf;
   size_t total = 0;
 
@@ -175,18 +181,22 @@ ssize_t writeDouble (int client_fd, double num) {
 }
 
 uint8_t readByte (int client_fd) {
+  memset(recv_buffer,0,1);
   recv_count = recv_all(client_fd, recv_buffer, 1, false);
   return recv_buffer[0];
 }
 uint16_t readUint16 (int client_fd) {
+  memset(recv_buffer,0,2);
   recv_count = recv_all(client_fd, recv_buffer, 2, false);
   return ((uint16_t)recv_buffer[0] << 8) | recv_buffer[1];
 }
 int16_t readInt16 (int client_fd) {
+  memset(recv_buffer,0,2);
   recv_count = recv_all(client_fd, recv_buffer, 2, false);
   return ((int16_t)recv_buffer[0] << 8) | (int16_t)recv_buffer[1];
 }
 uint32_t readUint32 (int client_fd) {
+  memset(recv_buffer,0,4);
   recv_count = recv_all(client_fd, recv_buffer, 4, false);
   return ((uint32_t)recv_buffer[0] << 24) |
          ((uint32_t)recv_buffer[1] << 16) |
@@ -194,6 +204,7 @@ uint32_t readUint32 (int client_fd) {
          ((uint32_t)recv_buffer[3]);
 }
 uint64_t readUint64 (int client_fd) {
+  memset(recv_buffer,0,8);
   recv_count = recv_all(client_fd, recv_buffer, 8, false);
   return ((uint64_t)recv_buffer[0] << 56) |
          ((uint64_t)recv_buffer[1] << 48) |

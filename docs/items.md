@@ -60,10 +60,9 @@ player save layouts are unchanged. There is no horizontal throw trajectory,
 water current, item damage, hopper handling or precise slab/stair collision.
 Collision uses the compact server block classification, with open oak doors
 passable. Inventory stack sizes follow the existing server gameplay table.
-Death-inventory scattering and container-close overflow are not part of this
-milestone; their inherited behavior remains. Normal non-drop inventory clicks
-still use the inherited client-predicted transfer model; this is not a full
-inventory anti-cheat rewrite.
+Death-inventory scattering remains outside this milestone. Inventory actions now
+use server-owned stacks, including ordinary clicks, crafting and transfers.
+See [inventory and packet hardening](security-hardening.md) for behavior and limits.
 
 ## Validation
 

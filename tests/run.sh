@@ -6,7 +6,7 @@ flags=(-std=c11 -O2 -Wall -Wextra -Wconversion -Wshadow -Werror -ffp-contract=of
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   flags+=(-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie)
 fi
-for source in circuits notes midi musicbox farming; do
+for source in circuits notes midi musicbox farming packet_input; do
   "${CC:-gcc}" "${flags[@]}" -c "src/$source.c" -o ".tests/$source.o"
 done
 "${CC:-gcc}" "${flags[@]}" tools/make_demo_song.c tests/sanitizer.c -o .tests/make-demo
@@ -65,4 +65,6 @@ if ! .tests/packet_input 2>.tests/packet-rejections.log; then cat .tests/packet-
 .tests/circuits
 "${CC:-gcc}" "${integration_flags[@]}" tests/farming_circuits.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/farming-circuits
 .tests/farming-circuits
+"${CC:-gcc}" "${integration_flags[@]}" tests/security.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/security
+.tests/security
 ./tests/no-jar.sh
