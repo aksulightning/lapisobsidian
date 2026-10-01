@@ -25,15 +25,17 @@ void sc_arrow_metadata (int fd, int id) {
   writeVarInt(fd,5u+(uint32_t)sizeVarInt((uint32_t)id)); writeByte(fd,0x5c); writeVarInt(fd,(uint32_t)id);
   writeByte(fd,5); writeByte(fd,8); writeByte(fd,1); writeByte(fd,255);
 }
-void sc_mob_sound (int fd, const char *name, int x, int y, int z) {
+void sc_mob_sound_category (int fd, const char *name, int x, int y, int z, uint8_t category) {
+  if (!name || (category != 5 && category != 6)) return;
   size_t n = strlen(name); if (n > 96 || x < -32768 || x > 32767 || y < 0 || y > 255 || z < -32768 || z > 32767) return;
   /* Inline sound holder avoids adding the entire vanilla sound registry. */
   writeVarInt(fd,32u+(uint32_t)sizeVarInt((uint32_t)n)+(uint32_t)n); writeByte(fd,0x6e);
   writeByte(fd,0); writeVarInt(fd,(uint32_t)n); send_all(fd,name,(ssize_t)n); writeByte(fd,0);
-  writeByte(fd,5); /* hostile category */
+  writeByte(fd,category); /* hostile=5, neutral=6 */
   writeUint32(fd,(uint32_t)(x*8+4)); writeUint32(fd,(uint32_t)(y*8)); writeUint32(fd,(uint32_t)(z*8+4));
   writeFloat(fd,1.0f); writeFloat(fd,1.0f); writeUint64(fd,0);
 }
+void sc_mob_sound (int fd, const char *name, int x, int y, int z) { sc_mob_sound_category(fd,name,x,y,z,5); }
 void sc_firecracker (int fd, int x, int y, int z) {
   /* No Explosion packet: only visual firework particles, with no world mutation. */
   writeVarInt(fd,48); writeByte(fd,0x29); writeByte(fd,0); writeByte(fd,0);

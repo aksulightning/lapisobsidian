@@ -70,8 +70,8 @@ harmless firecracker bursts. Admins can use `/spawnmob <type> [x y z]`.
 Short grass can drop seeds, one grass item crafts one seed, and flowers now break
 instantly. See [mobs, plant fixes and limits](docs/mobs.md).
 
-The [gameplay roadmap](docs/roadmap.md) tracks the remaining basic redstone,
-note-block and MIDI musicbox work. Those features are not implemented yet.
+The [gameplay roadmap](docs/roadmap.md) tracks implemented features and the
+remaining scope. Basic redstone, note blocks, MIDI musicboxes and farming work.
 
 ## Commands
 
@@ -97,7 +97,7 @@ remain compatible. See [sign behavior, storage and limits](docs/signs.md).
 Oak doors support two-block placement, four facing directions, opening/closing
 from either half, and persistent state in `doors.bin`. Craft one from six oak
 planks in two columns. See [door behavior and limits](docs/doors.md). Iron-door
-activation and redstone remain deferred.
+activation remains deferred; redstone can operate oak doors.
 
 ## Configuration and scope
 
@@ -117,7 +117,7 @@ pass is still pending.
 
 Create a new world with `./lapis-obsidian --seed -12345`, using a signed 64-bit
 decimal seed. Later runs load the seed from `world.meta`. Supplying a different
-seed for the same world fails. Keep `world.meta`, `world.bin`, `signs.bin`, `doors.bin`, and `circuits.bin` together. Run the
+seed for the same world fails. Keep `world.meta`, `world.bin`, `signs.bin`, `doors.bin`, `circuits.bin`, and `farming.bin` together. Run the
 binary from a fresh directory to start another world. Legacy saves without
 metadata are rejected rather than overlaid onto a different terrain generator.
 Generator version 3 upgrades version 2 metadata automatically, retaining seeds,
@@ -151,10 +151,25 @@ constraints, and [notices](NOTICE.md) for upstream attribution.
 
 ## Redstone and music
 
-Basic flat redstone dust, floor torches/levers and powered oak doors are
+Basic flat redstone dust, floor/wall torches, floor levers and powered oak doors are
 implemented. Note blocks support tuning, five classic instruments and rising-edge
 redstone playback. Jukeboxes act as MIDI musicboxes: put `.mid` files in `songs/`,
 right-click a box, then use `/music <number>` or `/music stop`. Administrators can
 rescan files with `/music reload`. An optional C tool generates an original demo.
 See [redstone and music behavior, limits and tests](docs/redstone-and-music.md)
 and [song setup](songs/README.md).
+
+## Plates, trapdoors, farming and mob sounds
+
+Stone pressure plates detect players and living mobs; oak plates also detect
+item drops. Oak trapdoors open by hand or redstone; iron trapdoors use redstone.
+Wall redstone torches invert input from their supporting block. All share the
+existing bounded circuit table and persist in `circuits.bin`.
+
+Use a hoe on dirt or grass, plant wheat seeds, and keep water within four blocks
+of the soil. Hydrated wheat grows in roughly half-minute stages. Mature crops
+drop one wheat and two seeds; three wheat across a crafting row makes bread.
+Farm state persists in `farming.bin`. Animals and mobs have nearby ambient,
+hurt and death sounds using the client's own resources.
+
+See [farming, controls, recipes and limits](docs/farming-and-controls.md).

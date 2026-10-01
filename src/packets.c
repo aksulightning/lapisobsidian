@@ -1,5 +1,6 @@
 #include "doors.h"
 #include "circuits.h"
+#include "farming.h"
 #include "signs.h"
 #include "commands.h"
 #include <stdio.h>
@@ -452,6 +453,7 @@ int sc_chunkDataAndUpdateLight (int client_fd, int _x, int _z) {
   signs_send_chunk(client_fd, _x, _z);
   doors_send_chunk(client_fd, _x, _z);
   circuits_send_chunk(client_fd,_x,_z);
+  farming_send_chunk(client_fd,_x,_z);
   return 0;
 
 }
@@ -501,7 +503,8 @@ int sc_blockUpdate (int client_fd, int64_t x, int64_t y, int64_t z, uint8_t bloc
   if (block == B_oak_door && x >= -32768 && x <= 32767 && y >= 0 && y <= 255 && z >= -32768 && z <= 32767)
     doors_state_at((int)x,(int)y,(int)z,&state);
   if (x >= -32768 && x <= 32767 && y >= 0 && y <= 255 && z >= -32768 && z <= 32767)
-    circuits_state_at((int)x,(int)y,(int)z,block,&state);
+    { circuits_state_at((int)x,(int)y,(int)z,block,&state);
+      farming_state_at((int)x,(int)y,(int)z,block,&state); }
   writeVarInt(client_fd, 9 + sizeVarInt(state));
   writeByte(client_fd, 0x08);
   writeUint64(client_fd, (((uint64_t)x & 0x3FFFFFFu) << 38) | (((uint64_t)z & 0x3FFFFFFu) << 12) | ((uint64_t)y & 0xFFFu));

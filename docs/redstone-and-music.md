@@ -7,12 +7,15 @@ redstone simulator or a general-purpose MIDI synthesizer.
 ## Building circuits
 
 - Place redstone dust on the top of solid blocks. Dust connects north, south,
-  east and west on the same level. A neighboring torch or enabled lever supplies
+  east and west on the same level. A neighboring torch, pressed plate or enabled lever supplies
   level 15; each subsequent dust block loses one level. Loops lose power when
   their source is removed.
-- Redstone torches stand on the top of solid blocks. A torch switches off when
+- Redstone torches attach to the top or horizontal sides of solid blocks. A torch switches off when
   a circuit component adjacent to its supporting block supplies power, and
   switches on when that input disappears. This allows simple NOT gates.
+- Stone plates activate for living players/mobs; oak plates also detect dropped
+  items. Both release when empty. Oak and iron trapdoors accept adjacent power;
+  oak also opens by hand. See [controls and limits](farming-and-controls.md).
 - Levers are floor-mounted. Right-click to toggle them. Their setting persists.
 - Oak doors open when either half has an adjacent powered component and close
   when that input disappears. A powered door cannot be manually closed.
@@ -22,10 +25,9 @@ redstone simulator or a general-purpose MIDI synthesizer.
 Circuits update at most once per 100 ms. Dust propagation is limited to 15
 passes through a fixed 256-component table. Torch feedback settles one step per
 update; oscillators cannot recurse indefinitely or allocate more work. There is
-no torch burnout model. Flat dust, floor torches, floor levers and direct
-adjacency are the supported subset. Staircase wiring, wall-mounted components,
-general solid-block conduction, repeaters, comparators, pistons, pressure plates,
-buttons and redstone lamps are not implemented by this addition. The torch's
+no torch burnout model. Flat dust, floor/wall torches, floor levers, plates and
+direct adjacency are the supported subset. Staircase wiring, wall levers,
+general solid-block conduction, repeaters, comparators, pistons, buttons and redstone lamps are not implemented by this addition. The torch's
 support-input rule is the one special solid-block rule. Dust visual connections
 and power states are sent to modern clients.
 
@@ -101,7 +103,8 @@ when stopped. A graphical/audio playtest is still needed to judge musical qualit
 ## Storage and implementation
 
 `src/circuits.c` keeps 256 compact nodes and a fixed lookup table (about 3 KiB),
-and uses `circuits.bin` for kinds, lever settings and note tuning. Keep this file
+and uses `circuits.bin` for kinds, attachment direction, trapdoor settings, lever settings and note tuning.
+Version 2 keeps seven-byte records and reads older version-1 saves. Keep this file
 with the other world files. The existing 256-entry block palette is unchanged:
 dust uses the passable redstone-torch carrier plus its distinct side-table kind.
 Chunk/block updates replace that carrier with the correct dust state. Removing

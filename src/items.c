@@ -4,6 +4,7 @@
 #include "items.h"
 #include "commands.h"
 #include "doors.h"
+#include "circuits.h"
 #include "packets.h"
 #include "procedures.h"
 #include "protocol.h"
@@ -81,6 +82,15 @@ static int destination (uint16_t item, uint8_t count, int x, int y, int z) {
   return unused;
 }
 bool items_can_spawn (uint16_t item, uint8_t count, int x, int y, int z) { return destination(item,count,x,y,z) >= 0; }
+bool items_can_spawn_pair (uint16_t a, uint8_t ac, uint16_t b, uint8_t bc, int x, int y, int z) {
+  if (a == b) return (unsigned)ac+bc <= 255 && items_can_spawn(a,(uint8_t)(ac+bc),x,y,z);
+  int first = destination(a,ac,x,y,z), second = destination(b,bc,x,y,z);
+  if (first < 0 || second < 0) return false;
+  if (first != second) return true;
+  /* Both selected the same empty slot: reserve one more before harvesting. */
+  for (unsigned i = 0; i < ITEM_ENTITY_LIMIT; i++) if ((int)i != first && !items[i].count) return true;
+  return false;
+}
 bool items_spawn (uint16_t item, uint8_t count, int x, int y, int z, uint32_t delay) {
   int index = destination(item,count,x,y,z); if (index < 0 || delay > ITEM_LIFETIME_MS) return false;
   size_t i = (size_t)index; DroppedItem *d = &items[i];
@@ -129,6 +139,7 @@ static bool solid (int x, int y, int z) {
   if (y > 255) return false;
   uint8_t block = getBlockAt((short)x,(uint8_t)y,(short)z);
   if (block == B_oak_door) { const Door *d = doors_at(x,y,z); if (d && d->open) return false; }
+  if (block == B_oak_trapdoor || block == B_iron_trapdoor) return !circuits_trapdoor_open(x,y,z);
   return !isPassableBlock(block);
 }
 void items_tick (int64_t elapsed_us) {

@@ -41,6 +41,7 @@ uint8_t getItemStackSize (uint16_t item);
 uint16_t getMiningResult (uint16_t held_item, uint8_t block);
 void bumpToolDurability (PlayerData *player);
 void handlePlayerAction (PlayerData *player, int action, short x, short y, short z);
+uint8_t handlePlayerEating (PlayerData *player, uint8_t just_check);
 void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t face);
 
 void checkFluidUpdate (short x, uint8_t y, short z, uint8_t block);

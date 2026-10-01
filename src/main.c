@@ -2,6 +2,7 @@
 #include "mobs.h"
 #include "doors.h"
 #include "circuits.h"
+#include "farming.h"
 #include "musicbox.h"
 #include "signs.h"
 #include "commands.h"
@@ -531,12 +532,12 @@ int main (int argc, char **argv) {
 
   #ifdef SYNC_WORLD_TO_DISK
     #ifdef ESP_PLATFORM
-    if (!circuits_load("/littlefs/circuits.bin") || !musicbox_init("/littlefs/songs")) exit(EXIT_FAILURE);
+    if (!farming_load("/littlefs/farming.bin") || !circuits_load("/littlefs/circuits.bin") || !musicbox_init("/littlefs/songs")) exit(EXIT_FAILURE);
     #else
-    if (!circuits_load("circuits.bin") || !musicbox_init("songs")) { fputs("Invalid circuits.bin or songs directory.\n",stderr); exit(EXIT_FAILURE); }
+    if (!farming_load("farming.bin") || !circuits_load("circuits.bin") || !musicbox_init("songs")) { fputs("Invalid farming.bin, circuits.bin or songs directory.\n",stderr); exit(EXIT_FAILURE); }
     #endif
   #else
-    circuits_load(NULL); musicbox_init("songs");
+    farming_load(NULL); circuits_load(NULL); musicbox_init("songs");
   #endif
   circuits_tick();
 
@@ -629,12 +630,13 @@ int main (int argc, char **argv) {
     client_index ++;
     if (client_index == MAX_PLAYERS) client_index = 0;
 
-    // Only projectiles use the 100 ms cadence; world/AI ticks remain unchanged.
+    // Projectiles, circuits and the bounded farm sweep use a 100 ms cadence.
     int64_t arrow_now = get_program_time();
     if (arrow_now-last_music_time >= 20000) { musicbox_tick(arrow_now-last_music_time); last_music_time = arrow_now; }
     if (arrow_now-last_arrow_time >= 100000) {
       mobs_tick_arrows(arrow_now-last_arrow_time);
       circuits_tick();
+      farming_tick(arrow_now-last_arrow_time);
       last_arrow_time = arrow_now;
     }
     // Handle periodic events (server ticks)

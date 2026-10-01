@@ -54,6 +54,9 @@ void getCraftingOutput (PlayerData *player, uint8_t *count, uint16_t *item) {
       break;
 
     case 2:
+      if (identical && first_item == I_stone && first_col < 2 && player->craft_items[first+1] == I_stone) {
+        *item = I_stone_pressure_plate; *count = 1; return;
+      }
       switch (first_item) {
         case I_oak_planks:
           if (first_col != 2 && player->craft_items[first + 1] == I_oak_planks) {
@@ -101,6 +104,9 @@ void getCraftingOutput (PlayerData *player, uint8_t *count, uint16_t *item) {
       break;
 
     case 3:
+      if (identical && first_item == I_wheat && first_col == 0 && player->craft_items[first+1] == I_wheat && player->craft_items[first+2] == I_wheat) {
+        *item = I_bread; *count = 1; return;
+      }
       switch (first_item) {
         case I_oak_planks:
         case I_cobblestone:
@@ -161,6 +167,18 @@ void getCraftingOutput (PlayerData *player, uint8_t *count, uint16_t *item) {
       break;
 
     case 4:
+      if (identical && first_item == I_iron_ingot && first_col < 2 && first_row < 2 &&
+          player->craft_items[first+1] == first_item && player->craft_items[first+3] == first_item && player->craft_items[first+4] == first_item) {
+        *item = I_iron_trapdoor; *count = 1; return;
+      }
+      if (first_row == 0 && first_col < 2 && player->craft_items[first+1] == first_item &&
+          ((player->craft_items[first+3] == I_stick && player->craft_items[first+6] == I_stick) ||
+           (player->craft_items[first+4] == I_stick && player->craft_items[first+7] == I_stick))) {
+        uint16_t tool = first_item == I_oak_planks ? I_wooden_hoe : first_item == I_cobblestone ? I_stone_hoe :
+          first_item == I_iron_ingot ? I_iron_hoe : first_item == I_gold_ingot ? I_golden_hoe :
+          first_item == I_diamond ? I_diamond_hoe : first_item == I_netherite_ingot ? I_netherite_hoe : 0;
+        if (tool) { *item = tool; *count = 1; return; }
+      }
       switch (first_item) {
         case I_oak_planks:
         case I_oak_log:
@@ -281,6 +299,11 @@ void getCraftingOutput (PlayerData *player, uint8_t *count, uint16_t *item) {
       break;
 
     case 6:
+      if (identical && first_item == I_oak_planks && first_col == 0 && first_row < 2 &&
+          player->craft_items[first+1] == first_item && player->craft_items[first+2] == first_item &&
+          player->craft_items[first+3] == first_item && player->craft_items[first+4] == first_item && player->craft_items[first+5] == first_item) {
+        *item = I_oak_trapdoor; *count = 2; return;
+      }
       if (identical && first_item == I_oak_planks && first < 2 &&
           player->craft_items[first+1] == I_oak_planks && player->craft_items[first+3] == I_oak_planks &&
           player->craft_items[first+4] == I_oak_planks && player->craft_items[first+6] == I_oak_planks &&

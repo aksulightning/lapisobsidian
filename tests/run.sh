@@ -6,7 +6,7 @@ flags=(-std=c11 -O2 -Wall -Wextra -Wconversion -Wshadow -Werror -ffp-contract=of
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   flags+=(-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie)
 fi
-for source in circuits notes midi musicbox; do
+for source in circuits notes midi musicbox farming; do
   "${CC:-gcc}" "${flags[@]}" -c "src/$source.c" -o ".tests/$source.o"
 done
 "${CC:-gcc}" "${flags[@]}" tools/make_demo_song.c tests/sanitizer.c -o .tests/make-demo
@@ -43,7 +43,7 @@ integration_flags=(-O2 -Wall -Wextra -ffp-contract=off -ffunction-sections -fdat
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   integration_flags+=(-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie)
 fi
-"${CC:-gcc}" "${integration_flags[@]}" tests/chunk_packet.c tests/sanitizer.c src/procedures.c src/circuits.c src/notes.c src/doors.c src/signs.c src/sign_packets.c src/packets.c src/varnum.c src/worldgen.c src/globals.c src/registries.c src/registry.c src/beta173_*.c -Wl,--gc-sections -lm -o .tests/chunk_packet
+"${CC:-gcc}" "${integration_flags[@]}" tests/chunk_packet.c tests/sanitizer.c src/procedures.c src/farming.c src/circuits.c src/notes.c src/doors.c src/signs.c src/sign_packets.c src/packets.c src/varnum.c src/worldgen.c src/globals.c src/registries.c src/registry.c src/beta173_*.c -Wl,--gc-sections -lm -o .tests/chunk_packet
 .tests/chunk_packet
 sources=()
 for source in src/*.c; do
@@ -63,4 +63,6 @@ if ! .tests/packet_input 2>.tests/packet-rejections.log; then cat .tests/packet-
 .tests/mobs
 "${CC:-gcc}" "${integration_flags[@]}" tests/circuits.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/circuits
 .tests/circuits
+"${CC:-gcc}" "${integration_flags[@]}" tests/farming_circuits.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/farming-circuits
+.tests/farming-circuits
 ./tests/no-jar.sh

@@ -90,3 +90,14 @@ torches and tuned note blocks, checked against the same pinned
 side-table kind; individual block updates supply its wire state after chunk
 transmission. `src/notes.c` sends named client note-block sounds, checked against
 `pc/1.21.8/sounds.json`. No complete sound registry or game assets are retained.
+
+
+The controls/farming extension adds only bread=912 to the item-name snapshot.
+`circuits.c` also represents redstone wall torches (5918..5925), stone/oak plates
+(5826..5827, 5892..5893), and dry oak/iron trapdoors (6140..6203,
+11288..11351). `farming.c` represents wheat age (4342..4349) and farmland moisture
+(4350..4357). These ranges and property ordering were checked against the same
+pinned `pc/1.21.8/blocks.json`; bread against `items.json`, mob voices against
+`sounds.json`. Static protocol assertions require review on a version change.
+The 256-entry block palette and the raw world/player/mob record layouts remain
+unchanged. This adds no asset data or normal-build generation step.

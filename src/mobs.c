@@ -1,9 +1,11 @@
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "mobs.h"
 #include "commands.h"
 #include "doors.h"
+#include "circuits.h"
 #include "items.h"
 #include "packets.h"
 #include "procedures.h"
@@ -19,7 +21,7 @@ static const MobType types[] = {
   {"chicken",MOB_CHICKEN,4},{"cow",MOB_COW,10},{"pig",MOB_PIG,10},{"sheep",MOB_SHEEP,8},
   {"zombie",MOB_ZOMBIE,20},{"skeleton",MOB_SKELETON,20},{"spider",MOB_SPIDER,16},{"creeper",MOB_CREEPER,20}
 };
-static struct { uint32_t viewers; uint16_t anger_ms, cooldown_ms, fuse_ms; int8_t target; } state[MAX_MOBS];
+static struct { uint32_t viewers; uint16_t anger_ms, cooldown_ms, fuse_ms, sound_ms; int8_t target; } state[MAX_MOBS];
 typedef struct { float x,y,z,vx,vy,vz; uint32_t viewers; uint16_t age_ms; uint8_t used; } Arrow;
 static Arrow arrows[MOB_ARROW_LIMIT];
 static uint32_t ai_ms;
@@ -39,6 +41,7 @@ static bool clear (int x, int y, int z) {
   if (!coords(x,y,z)) return false;
   uint8_t b = getBlockAt((short)x,(uint8_t)y,(short)z);
   if (b == B_oak_door) { const Door *d = doors_at(x,y,z); return d && d->open; }
+  if (b == B_oak_trapdoor || b == B_iron_trapdoor) return circuits_trapdoor_open(x,y,z);
   return isPassableSpawnBlock(b) != 0;
 }
 static bool space (uint8_t type, int x, int y, int z) {
@@ -149,8 +152,17 @@ void mobs_attacked (int id, PlayerData *attacker) {
   if (mob_data[i].type == MOB_SPIDER) { state[i].target = (int8_t)index; state[i].anger_ms = 15000; }
 }
 static void sound (const MobData *m, const char *name) {
-  for (int p = 0; p < MAX_PLAYERS; p++) if (loaded(&player_data[p]) && abs(player_data[p].x-m->x) <= 32 && abs(player_data[p].z-m->z) <= 32)
-    sc_mob_sound(player_data[p].client_fd,name,m->x,m->y,m->z);
+  for (int p = 0; p < MAX_PLAYERS; p++) if (loaded(&player_data[p]) && abs(player_data[p].x-m->x) <= 32 && abs(player_data[p].z-m->z) <= 32 && abs(player_data[p].y-m->y) <= 32)
+    sc_mob_sound_category(player_data[p].client_fd,name,m->x,m->y,m->z,
+      m->type == MOB_COW || m->type == MOB_PIG || m->type == MOB_SHEEP || m->type == MOB_CHICKEN || m->type == MOB_SPIDER ? 6 : 5);
+}
+static void voice (const MobData *m, const char *event) {
+  const MobType *type = by_type(m->type); if (!type) return;
+  char name[64]; snprintf(name,sizeof(name),"minecraft:entity.%s.%s",type->name,event); sound(m,name);
+}
+void mobs_hurt_sound (int id, bool death) {
+  if (id > -2 || id < -1-MAX_MOBS) return;
+  const MobData *m = &mob_data[-id-2]; if (m->type && (m->data&31)) voice(m,death ? "death" : "hurt");
 }
 static void fuse (size_t i, bool active) {
   for (int p = 0; p < MAX_PLAYERS; p++) if (state[i].viewers&(UINT32_C(1)<<p)) sc_creeper_fuse(player_data[p].client_fd,-2-(int)i,active);
@@ -252,6 +264,12 @@ void mobs_tick (int64_t elapsed_us) {
       if (targetable(&player_data[p]) && d < distance) { nearest = p; distance = d; }
     }
     if (present > MOB_DESPAWN_DISTANCE) { remove_mob(i); continue; }
+    /* Staggered voices use their own timer and never perturb gameplay RNG. */
+    if (state[i].sound_ms < 1000) state[i].sound_ms = (uint16_t)(7000u+(i%6u)*1000u);
+    else {
+      state[i].sound_ms -= 1000;
+      if (!state[i].sound_ms && m->type != MOB_CREEPER && present <= 32) voice(m,"ambient");
+    }
     if (state[i].cooldown_ms >= 1000) state[i].cooldown_ms -= 1000; else state[i].cooldown_ms = 0;
     bool day = world_time < 13000 || world_time > 23460;
     if ((m->type == MOB_ZOMBIE || m->type == MOB_SKELETON) && day) {

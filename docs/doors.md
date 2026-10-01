@@ -15,8 +15,10 @@ the core's integer player position. Adventure permits interaction but not
 placement/mining; spectator permits neither.
 
 The first implementation supports ordinary oak doors with a fixed left hinge.
-Automatic double-door hinge selection/linking, iron-door activation, redstone,
-sounds, other wood variants and trapdoors are not implemented here. Existing
+Automatic double-door hinge selection/linking, iron-door activation, door
+sounds and other wood variants remain outside this module. Adjacent redstone
+now operates oak doors; wood/iron trapdoors live in the circuit module. See
+[farming and controls](farming-and-controls.md). Existing
 other-door palette entries do not imply functional two-block support. Players
 use the modern client's door collision shape; mob and projectile collision treats open oak doors as passable. Support
 checks use the existing core classification, with door blocks explicitly excluded.
@@ -68,7 +70,7 @@ PrismarineJS/minecraft-data revision
 `f5d7d74604d8c6153fd086bfe035e0630a5207cc`,
 `data/pc/1.21.8/blocks.json`. The oak-door range is 4686..4749, with property order
 facing (N/S/W/E), half (upper/lower), hinge (left/right), open (true/false), powered
-(true/false). This module selects only left-hinged, unpowered states. A protocol
+(true/false). This module selects left-hinged states and reflects adjacent circuit power. A protocol
 772 compile-time assertion requires review when upgrading. Wire fixtures cover
 all four facings, both halves and both open states. No registry regeneration,
 Java, vanilla server binary or additional dependency is needed.

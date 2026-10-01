@@ -42,15 +42,48 @@ static Node *at (int x, int y, int z) {
   }
   return NULL;
 }
-static uint8_t carrier (uint8_t kind) { return kind == CIRCUIT_NOTE ? B_note_block : kind == CIRCUIT_LEVER ? B_lever : B_redstone_torch; }
+static bool trapdoor (uint8_t kind) { return kind == CIRCUIT_WOOD_TRAPDOOR || kind == CIRCUIT_IRON_TRAPDOOR; }
+static bool plate (uint8_t kind) { return kind == CIRCUIT_STONE_PLATE || kind == CIRCUIT_WOOD_PLATE; }
+static bool source (uint8_t kind) { return kind && kind != CIRCUIT_NOTE && !trapdoor(kind); }
+bool circuits_wall_torch_at (int x, int y, int z) { const Node *n = at(x,y,z); return n && n->kind == CIRCUIT_WALL_TORCH; }
+bool circuits_trapdoor_open (int x, int y, int z) {
+  const Node *n = at(x,y,z); return n && trapdoor(n->kind) && (n->power || (n->kind == CIRCUIT_WOOD_TRAPDOOR && (n->value&8u)));
+}
+static uint8_t carrier (uint8_t kind) {
+  switch (kind) {
+    case CIRCUIT_NOTE: return B_note_block;
+    case CIRCUIT_LEVER: return B_lever;
+    case CIRCUIT_STONE_PLATE: return B_stone_pressure_plate;
+    case CIRCUIT_WOOD_PLATE: return B_oak_pressure_plate;
+    case CIRCUIT_WOOD_TRAPDOOR: return B_oak_trapdoor;
+    case CIRCUIT_IRON_TRAPDOOR: return B_iron_trapdoor;
+    default: return B_redstone_torch;
+  }
+}
 static uint16_t item (uint8_t kind) {
-  return kind == CIRCUIT_NOTE ? I_note_block : kind == CIRCUIT_LEVER ? I_lever : kind == CIRCUIT_DUST ? I_redstone : I_redstone_torch;
+  switch (kind) {
+    case CIRCUIT_NOTE: return I_note_block;
+    case CIRCUIT_LEVER: return I_lever;
+    case CIRCUIT_STONE_PLATE: return I_stone_pressure_plate;
+    case CIRCUIT_WOOD_PLATE: return I_oak_pressure_plate;
+    case CIRCUIT_WOOD_TRAPDOOR: return I_oak_trapdoor;
+    case CIRCUIT_IRON_TRAPDOOR: return I_iron_trapdoor;
+    case CIRCUIT_DUST: return I_redstone;
+    default: return I_redstone_torch;
+  }
+}
+static void support (const Node *n, int *x, int *y, int *z) {
+  *x = n->x; *y = n->y; *z = n->z;
+  if (n->kind == CIRCUIT_WALL_TORCH) {
+    static const int8_t wall[4][2] = {{0,1},{0,-1},{1,0},{-1,0}};
+    *x += wall[n->value][0]; *z += wall[n->value][1];
+  } else (*y)--;
 }
 static uint8_t incoming (int x, int y, int z, const Node *skip) {
   uint8_t power = 0;
   for (unsigned d = 0; d < 6; d++) {
     Node *n = at(x+offsets[d][0],y+offsets[d][1],z+offsets[d][2]);
-    if (n && n != skip && n->kind != CIRCUIT_NOTE && n->power > power) power = n->power;
+    if (n && n != skip && source(n->kind) && n->power > power) power = n->power;
   }
   return power;
 }
@@ -58,10 +91,11 @@ uint8_t circuits_power (int x, int y, int z) { const Node *n = at(x,y,z); return
 bool circuits_powered (int x, int y, int z) { return incoming(x,y,z,NULL) != 0; }
 uint16_t circuits_drop (int x, int y, int z, uint16_t fallback) { const Node *n = at(x,y,z); return n ? item(n->kind) : fallback; }
 static bool supported (const Node *n) {
-  if (n->kind == CIRCUIT_NOTE) return true;
-  if (!n->y) return false;
-  uint8_t b = getBlockAt(n->x,n->y-1,n->z);
-  return !isPassableBlock(b) && b != B_oak_door && b != B_iron_door;
+  if (n->kind == CIRCUIT_NOTE || trapdoor(n->kind)) return true;
+  int x,y,z; support(n,&x,&y,&z);
+  if (!coords(x,y,z)) return false;
+  uint8_t b = getBlockAt(x,y,z);
+  return !isPassableBlock(b) && b != B_oak_door && b != B_iron_door && b != B_oak_trapdoor && b != B_iron_trapdoor;
 }
 static bool near (const PlayerData *p, int x, int y, int z) {
   if (!p || p->client_fd < 0 || !p->health || (p->flags&0x22) || commands_gamemode(p) == 3 || !coords(x,y,z)) return false;
@@ -81,6 +115,10 @@ bool circuits_state_at (int x, int y, int z, uint8_t block, uint16_t *state) {
     *state = (uint16_t)(3042u+(((e*3u+north)*16u+n->power)*3u+s)*3u+w);
   } else if (n->kind == CIRCUIT_TORCH) *state = (uint16_t)(5916u+(n->power ? 0u : 1u));
   else if (n->kind == CIRCUIT_LEVER) *state = (uint16_t)(5802u+(n->value ? 0u : 1u));
+  else if (n->kind == CIRCUIT_WALL_TORCH) *state = (uint16_t)(5918u+n->value*2u+(n->power ? 0u : 1u));
+  else if (plate(n->kind)) *state = (uint16_t)((n->kind == CIRCUIT_STONE_PLATE ? 5826u : 5892u)+(n->power ? 0u : 1u));
+  else if (trapdoor(n->kind)) *state = (uint16_t)((n->kind == CIRCUIT_WOOD_TRAPDOOR ? 6140u : 11288u)+
+    (n->value&3u)*16u+((n->value&4u) ? 0u : 8u)+(circuits_trapdoor_open(x,y,z) ? 0u : 4u)+(n->power ? 0u : 2u)+1u);
   else *state = (uint16_t)(581u+notes_instrument(x,y,z)*50u+n->value*2u+(n->power ? 0u : 1u));
   return true;
 }
@@ -99,25 +137,32 @@ void circuits_strike (int x, int y, int z) {
 }
 bool circuits_interact (PlayerData *p, int x, int y, int z) {
   Node *n = at(x,y,z);
-  if (!n || !near(p,x,y,z) || (n->kind != CIRCUIT_LEVER && n->kind != CIRCUIT_NOTE)) return false;
+  if (!n || !near(p,x,y,z) || (n->kind != CIRCUIT_LEVER && n->kind != CIRCUIT_NOTE && n->kind != CIRCUIT_WOOD_TRAPDOOR)) return false;
+  if (trapdoor(n->kind) && n->power) return true;
   uint8_t old = n->value;
-  n->value = n->kind == CIRCUIT_LEVER ? (uint8_t)(n->value^1u) : (uint8_t)((n->value+1u)%25u);
+  n->value = n->kind == CIRCUIT_WOOD_TRAPDOOR ? (uint8_t)(n->value^8u) : n->kind == CIRCUIT_LEVER ? (uint8_t)(n->value^1u) : (uint8_t)((n->value+1u)%25u);
   if (!circuits_save()) { n->value = old; return false; }
   dirty = visual_dirty = true; broadcast(n); if (n->kind == CIRCUIT_NOTE) circuits_strike(x,y,z);
   return true;
 }
 bool circuits_place (PlayerData *p, int x, int y, int z, uint8_t face, uint16_t held) {
   uint8_t kind = held == I_redstone ? CIRCUIT_DUST : held == I_redstone_torch ? CIRCUIT_TORCH :
-    held == I_lever ? CIRCUIT_LEVER : held == I_note_block ? CIRCUIT_NOTE : 0;
-  if (!kind || face > 5 || (kind != CIRCUIT_NOTE && face != 1) || !near(p,x,y,z) || commands_gamemode(p) == 2) return false;
+    held == I_lever ? CIRCUIT_LEVER : held == I_note_block ? CIRCUIT_NOTE :
+    held == I_stone_pressure_plate ? CIRCUIT_STONE_PLATE : held == I_oak_pressure_plate ? CIRCUIT_WOOD_PLATE :
+    held == I_oak_trapdoor ? CIRCUIT_WOOD_TRAPDOOR : held == I_iron_trapdoor ? CIRCUIT_IRON_TRAPDOOR : 0;
+  if (kind == CIRCUIT_TORCH && face >= 2 && face <= 5) kind = CIRCUIT_WALL_TORCH;
+  if (!kind || face > 5 || (kind != CIRCUIT_NOTE && !trapdoor(kind) && kind != CIRCUIT_WALL_TORCH && face != 1) || !near(p,x,y,z) || commands_gamemode(p) == 2) return false;
   static const int8_t step[6][3] = {{0,-1,0},{0,1,0},{0,0,-1},{0,0,1},{-1,0,0},{1,0,0}};
   x += step[face][0]; y += step[face][1]; z += step[face][2];
   if (!coords(x,y,z) || !near(p,x,y,z) || at(x,y,z) || !isReplaceableBlock(getBlockAt(x,y,z))) return false;
-  if (kind == CIRCUIT_NOTE) for (int i = 0; i < MAX_PLAYERS; i++) {
+  if (kind == CIRCUIT_NOTE || trapdoor(kind)) for (int i = 0; i < MAX_PLAYERS; i++) {
     const PlayerData *other = &player_data[i];
     if (other->client_fd >= 0 && !(other->flags&0x22) && other->x == x && other->z == z && (other->y == y || other->y+1 == y)) return false;
   }
   Node candidate = {(int16_t)x,(int16_t)z,(uint8_t)y,kind,0,kind == CIRCUIT_TORCH ? 15 : 0};
+  if (kind == CIRCUIT_WALL_TORCH) { candidate.value = (uint8_t)(face-2); candidate.power = 15; }
+  /* Side clicks place bottom halves; underside clicks place top halves. */
+  if (trapdoor(kind)) candidate.value = (uint8_t)((face >= 2 ? face-2 : 0)+(face == 0 ? 4 : 0));
   if (!supported(&candidate)) return false;
   Node *n = NULL; for (unsigned i = 0; i < CIRCUIT_LIMIT; i++) if (!nodes[i].kind) { n = &nodes[i]; break; }
   if (!n) return false;
@@ -132,7 +177,9 @@ void circuits_block_changed (int x, int y, int z, uint8_t block) {
   (void)block; if (changing) return;
   dirty = visual_dirty = true; bool saved = false; changing = true;
   for (unsigned i = 0; i < CIRCUIT_LIMIT; i++) {
-    Node *n = &nodes[i]; if (!n->kind || n->x != x || n->z != z || (y != n->y && y != n->y-1)) continue;
+    Node *n = &nodes[i]; if (!n->kind) continue;
+    int sx,sy,sz; support(n,&sx,&sy,&sz);
+    if (!(n->x == x && n->y == y && n->z == z) && !(sx == x && sy == y && sz == z)) continue;
     bool exists = getBlockAt(n->x,n->y,n->z) == carrier(n->kind);
     if (exists && supported(n)) continue;
     uint16_t drop = item(n->kind); n->kind = 0; index_nodes(); saved = true;
@@ -141,12 +188,32 @@ void circuits_block_changed (int x, int y, int z, uint8_t block) {
   changing = false;
   if (saved && !circuits_save()) fputs("Could not save circuit removal.\n",stderr);
 }
+static bool occupied (const Node *n) {
+  for (int i = 0; i < MAX_PLAYERS; i++) {
+    const PlayerData *p = &player_data[i];
+    if (p->client_fd >= 0 && p->health && !(p->flags&0x22) && commands_gamemode(p) != 3 &&
+        p->x == n->x && p->z == n->z && p->y == n->y) return true;
+  }
+  for (unsigned i = 0; i < MAX_MOBS; i++) {
+    const MobData *m = &mob_data[i];
+    if (m->type && (m->data&31) && m->x == n->x && m->z == n->z && m->y == n->y) return true;
+  }
+  if (n->kind == CIRCUIT_WOOD_PLATE) for (unsigned i = 0; i < ITEM_ENTITY_LIMIT; i++) {
+    const DroppedItem *d = items_at(i);
+    if (d->count && d->x == n->x && d->z == n->z && d->y >= n->y && d->y < (float)n->y+0.6f) return true;
+  }
+  return false;
+}
 void circuits_tick (void) {
+  for (unsigned i = 0; i < CIRCUIT_LIMIT; i++) if (plate(nodes[i].kind) && occupied(&nodes[i]) != (nodes[i].power != 0)) dirty = true;
   if (!dirty) return;
   dirty = false; bool refresh = visual_dirty; visual_dirty = false; uint8_t before[CIRCUIT_LIMIT], next[CIRCUIT_LIMIT];
   for (unsigned i = 0; i < CIRCUIT_LIMIT; i++) {
     Node *n = &nodes[i]; before[i] = n->power; next[i] = n->power;
-    if (n->kind == CIRCUIT_TORCH) next[i] = incoming(n->x,n->y-1,n->z,n) ? 0 : 15;
+    if (n->kind == CIRCUIT_TORCH || n->kind == CIRCUIT_WALL_TORCH) {
+      int x,y,z; support(n,&x,&y,&z); next[i] = incoming(x,y,z,n) ? 0 : 15;
+    }
+    if (plate(n->kind)) next[i] = occupied(n) ? 15 : 0;
     if (n->kind == CIRCUIT_LEVER) next[i] = n->value ? 15 : 0;
     if (n->kind == CIRCUIT_DUST) next[i] = 0;
   }
@@ -156,13 +223,18 @@ void circuits_tick (void) {
     Node *n = &nodes[i]; if (n->kind != CIRCUIT_DUST) continue;
     for (unsigned d = 0; d < 4; d++) {
       const Node *source = at(n->x+offsets[d][0],n->y,n->z+offsets[d][2]);
-      if (!source || source->kind == CIRCUIT_NOTE) continue;
+      if (!source || source->kind == CIRCUIT_NOTE || trapdoor(source->kind)) continue;
       uint8_t power = source->kind == CIRCUIT_DUST ? (source->power ? (uint8_t)(source->power-1) : 0) : source->power;
       if (power > n->power) n->power = power;
     }
   }
+  bool save = false;
   for (unsigned i = 0; i < CIRCUIT_LIMIT; i++) {
     Node *n = &nodes[i]; if (!n->kind) continue;
+    if (trapdoor(n->kind)) {
+      n->power = incoming(n->x,n->y,n->z,n) ? 15 : 0;
+      if (n->power != before[i] && (n->value&8u)) { n->value &= 7u; save = true; }
+    }
     if (n->kind == CIRCUIT_NOTE) {
       n->power = incoming(n->x,n->y,n->z,n) ? 15 : 0;
       if (n->power && !before[i]) circuits_strike(n->x,n->y,n->z);
@@ -170,9 +242,10 @@ void circuits_tick (void) {
     if (before[i] != n->power) dirty = true; /* Let inverter inputs settle next tick. */
     if (refresh || before[i] != n->power) broadcast(n);
   }
+  if (save && !circuits_save()) fputs("Could not save trapdoor state.\n",stderr);
   doors_refresh_power();
 }
-static const uint8_t magic[8] = {'L','O','C','I','R','C',1,0};
+static const uint8_t magic[8] = {'L','O','C','I','R','C',2,0};
 bool circuits_save (void) {
   if (!save_path[0]) return true;
   char temp[260]; snprintf(temp,sizeof(temp),"%s.tmp",save_path);
@@ -195,13 +268,13 @@ bool circuits_load (const char *path) {
   FILE *f = fopen(path,"rb"); if (!f && errno != ENOENT) return false;
   bool ok = true; unsigned count = 0;
   if (f) {
-    uint8_t h[8]; ok = fread(h,1,8,f) == 8 && !memcmp(h,magic,8);
+    uint8_t h[8]; ok = fread(h,1,8,f) == 8 && !memcmp(h,magic,6) && (h[6] == 1 || h[6] == 2) && h[7] == 0;
     while (ok) {
       uint8_t r[7]; size_t len = fread(r,1,7,f);
       if (!len) { if (ferror(f)) ok = false; break; }
-      if (len != 7 || count == CIRCUIT_LIMIT || r[5] < 1 || r[5] > CIRCUIT_NOTE ||
-          (r[5] != CIRCUIT_NOTE && !r[4]) ||
-          (r[5] == CIRCUIT_NOTE ? r[6] > 24 : r[5] == CIRCUIT_LEVER ? r[6] > 1 : r[6] != 0)) { ok = false; break; }
+      if (len != 7 || count == CIRCUIT_LIMIT || r[5] < 1 || r[5] > (h[6] == 1 ? CIRCUIT_NOTE : CIRCUIT_IRON_TRAPDOOR) ||
+          (r[5] != CIRCUIT_NOTE && !trapdoor(r[5]) && r[5] != CIRCUIT_WALL_TORCH && !r[4]) ||
+          (r[5] == CIRCUIT_NOTE ? r[6] > 24 : r[5] == CIRCUIT_LEVER ? r[6] > 1 : r[5] == CIRCUIT_WALL_TORCH ? r[6] > 3 : trapdoor(r[5]) ? r[6] > (r[5] == CIRCUIT_WOOD_TRAPDOOR ? 15 : 7) : r[6] != 0)) { ok = false; break; }
       int x = (int)r[0]*256+r[1], z = (int)r[2]*256+r[3]; if (x >= 32768) x -= 65536; if (z >= 32768) z -= 65536;
       if (at(x,r[4],z)) { ok = false; break; }
       nodes[count++] = (Node){(int16_t)x,(int16_t)z,r[4],r[5],r[6],0}; index_nodes();

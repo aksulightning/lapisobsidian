@@ -112,18 +112,27 @@ int cs_clickContainer (int fd, int length) {
   if (output) {
     uint8_t result_count; uint16_t result_item;
     getCraftingOutput(p,&result_count,&result_item);
-    if (!result_count || result_item == I_wheat_seeds) {
-      /* The vanilla client has no recipe for grass -> seeds. Consume that
-       * ingredient and produce the cursor item here, never from predictions. */
-      if (result_count && mode == 0 && (!p->flagval_8 || p->flagval_16 == I_wheat_seeds) && p->flagval_8 < 64) {
+    if (!result_count || result_item == I_wheat_seeds || result_item == I_bread ||
+        result_item == I_wooden_hoe || result_item == I_stone_hoe || result_item == I_iron_hoe || result_item == I_golden_hoe ||
+        result_item == I_diamond_hoe || result_item == I_netherite_hoe || result_item == I_stone_pressure_plate ||
+        result_item == I_oak_pressure_plate || result_item == I_oak_trapdoor || result_item == I_iron_trapdoor) {
+      /* Consume verified ingredients; never accept predicted output stacks. */
+      if (result_count && mode == 0 && (!p->flagval_8 || p->flagval_16 == result_item) &&
+          (unsigned)p->flagval_8+result_count <= getItemStackSize(result_item)) {
+        bool valid = true;
+        if (w == 0) for (unsigned i = 0; i < 9; i++)
+          if (i != 0 && i != 1 && i != 3 && i != 4 && p->craft_items[i]) valid = false;
         for (uint16_t wire = 1; wire <= (w == 0 ? 4 : 9); wire++) {
-          if (!accessible(p,w,wire)) continue;
           Stack ingredient = read_slot(p,w,wire);
-          if (ingredient.item != I_short_grass || !ingredient.count) continue;
-          ingredient.count--; if (!ingredient.count) ingredient.item = 0;
-          put_slot(p,w,wire,ingredient); sync_slot(p,w,wire);
-          p->flagval_16 = I_wheat_seeds; p->flagval_8++;
-          break;
+          if (ingredient.item && !ingredient.count) valid = false;
+        }
+        if (valid) {
+          for (uint16_t wire = 1; wire <= (w == 0 ? 4 : 9); wire++) {
+            Stack ingredient = read_slot(p,w,wire); if (!ingredient.item) continue;
+            ingredient.count--; if (!ingredient.count) ingredient.item = 0;
+            put_slot(p,w,wire,ingredient); sync_slot(p,w,wire);
+          }
+          p->flagval_16 = result_item; p->flagval_8 = (uint8_t)(p->flagval_8+result_count);
         }
       }
       for (uint32_t i = 0; i < n; i++) sync_slot(p,w,changes[i].slot);

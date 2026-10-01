@@ -536,6 +536,7 @@ uint8_t I_to_B (uint32_t item); // Item-to-block mapping
 #define I_stick 905
 #define I_wheat_seeds 910
 #define I_wheat 911
+#define I_bread 912
 #define I_leather_helmet 913
 #define I_leather_chestplate 914
 #define I_leather_leggings 915

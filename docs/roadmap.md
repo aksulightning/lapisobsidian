@@ -13,8 +13,8 @@ in C, and separate from the low-level networking and world generator.
    arrows, neutral spiders, and creepers with a hiss and harmless firecracker
    burst. Admin spawning and grass/flower fixes are included. See
    [behavior, implementation and tests](mobs.md).
-4. **Basic redstone — implemented.** Flat dust, floor torches and levers,
-   simple inversion and powered oak doors, with bounded updates and persistent
+4. **Basic redstone — implemented.** Flat dust, floor/wall torches, floor levers,
+   pressure plates, simple inversion, powered oak doors and wood/iron trapdoors, with bounded updates and persistent
    settings. Staircase wiring and full vanilla circuitry remain outside this subset.
 5. **Note blocks — implemented.** Tuning, five support-based instruments and
    hand/redstone activation.
@@ -22,5 +22,10 @@ in C, and separate from the low-level networking and world generator.
    a numbered chat menu and `/music` play/stop controls. Two concurrent boxes,
    a bounded C format-0/1 reader and nearby note sounds; no player uploads or
    bundled Minecraft music.
+
+7. **Farming — implemented.** Hoes, irrigated farmland, wheat growth, harvest
+   drops and bread recipes. See [farming and controls](farming-and-controls.md).
+8. **Mob voices — implemented.** Bounded ambient timers and hurt/death sounds
+   from client resources.
 
 See [redstone and music behavior, limits and tests](redstone-and-music.md).

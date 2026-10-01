@@ -98,7 +98,7 @@ int main (void) {
   assert(circuits_interact(p,0,201,0)); drain(); tick(); assert(doors_at(1,201,0)->open);
   assert(doors_save()); f = fopen("doors.bin","rb"); assert(f); assert(!fseek(f,14,SEEK_SET)); assert(fgetc(f) == 0); fclose(f);
   assert(circuits_interact(p,0,201,0)); drain(); tick(); assert(!doors_at(1,201,0)->open);
-  assert(!circuits_place(p,0,255,0,1,I_redstone)); assert(!circuits_place(p,0,200,0,4,I_redstone_torch));
+  assert(!circuits_place(p,0,255,0,1,I_redstone)); assert(!circuits_place(p,0,200,0,0,I_redstone_torch));
   /* Standard recipes, including both grids' shifted two-item recipes. */
   memset(p->craft_items,0,sizeof(p->craft_items)); p->craft_items[1] = I_redstone; p->craft_items[4] = I_stick;
   uint8_t count; uint16_t result; getCraftingOutput(p,&count,&result); assert(count == 1 && result == I_redstone_torch);

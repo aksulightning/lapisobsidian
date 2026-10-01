@@ -1,4 +1,5 @@
 #include "items.h"
+#include "farming.h"
 #include "mobs.h"
 #include "doors.h"
 #include "circuits.h"
@@ -600,7 +601,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
       #ifndef DISK_SYNC_BLOCKS_ON_INTERVAL
       writeBlockChangesToDisk(i, i);
       #endif
-      signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); return 0;
+      signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); farming_block_changed(x,y,z); return 0;
     }
     #ifdef ALLOW_CHESTS
     if (block_changes[i].block == B_chest) i += 14;
@@ -608,7 +609,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
   }
 
   // Don't create a new entry if it contains the base terrain block
-  if (is_base_block) { signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); return 0; }
+  if (is_base_block) { signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); farming_block_changed(x,y,z); return 0; }
 
   #ifdef ALLOW_CHESTS
   if (block == B_chest) {
@@ -645,7 +646,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
       #ifndef DISK_SYNC_BLOCKS_ON_INTERVAL
       writeBlockChangesToDisk(last_real_entry + 1, last_real_entry + 15);
       #endif
-      signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); return 0;
+      signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); farming_block_changed(x,y,z); return 0;
     }
     // If we're here, no changes were made
     failBlockChange(x, y, z, block);
@@ -673,7 +674,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
     block_changes_count ++;
   }
 
-  signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); return 0;
+  signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); farming_block_changed(x,y,z); return 0;
 }
 
 // Returns the result of mining a block, taking into account the block type and tools
@@ -682,6 +683,8 @@ uint16_t getMiningResult (uint16_t held_item, uint8_t block) {
 
   switch (block) {
 
+    case B_farmland: return I_dirt;
+    case B_wheat: return I_wheat_seeds;
     case B_short_grass:
     case B_fern:
       if (held_item == I_shears) return registry_block_item(block);
@@ -761,12 +764,12 @@ void bumpToolDurability (PlayerData *player) {
   // the probability weighted based on vanilla durability.
   uint32_t r = fast_rand();
   if (
-    ((held_item == I_wooden_pickaxe || held_item == I_wooden_axe || held_item == I_wooden_shovel) && r < 72796055) ||
-    ((held_item == I_stone_pickaxe || held_item == I_stone_axe || held_item == I_stone_shovel) && r < 32786009) ||
-    ((held_item == I_iron_pickaxe || held_item == I_iron_axe || held_item == I_iron_shovel) && r < 17179869) ||
-    ((held_item == I_golden_pickaxe || held_item == I_golden_axe || held_item == I_golden_shovel) && r < 134217728) ||
-    ((held_item == I_diamond_pickaxe || held_item == I_diamond_axe || held_item == I_diamond_shovel) && r < 2751420) ||
-    ((held_item == I_netherite_pickaxe || held_item == I_netherite_axe || held_item == I_netherite_shovel) && r < 2114705) ||
+    ((held_item == I_wooden_pickaxe || held_item == I_wooden_axe || held_item == I_wooden_shovel || held_item == I_wooden_hoe) && r < 72796055) ||
+    ((held_item == I_stone_pickaxe || held_item == I_stone_axe || held_item == I_stone_shovel || held_item == I_stone_hoe) && r < 32786009) ||
+    ((held_item == I_iron_pickaxe || held_item == I_iron_axe || held_item == I_iron_shovel || held_item == I_iron_hoe) && r < 17179869) ||
+    ((held_item == I_golden_pickaxe || held_item == I_golden_axe || held_item == I_golden_shovel || held_item == I_golden_hoe) && r < 134217728) ||
+    ((held_item == I_diamond_pickaxe || held_item == I_diamond_axe || held_item == I_diamond_shovel || held_item == I_diamond_hoe) && r < 2751420) ||
+    ((held_item == I_netherite_pickaxe || held_item == I_netherite_axe || held_item == I_netherite_shovel || held_item == I_netherite_hoe) && r < 2114705) ||
     (held_item == I_shears && r < 18046081)
   ) {
     player->inventory_items[player->hotbar] = 0;
@@ -843,7 +846,8 @@ uint8_t isPassableBlock (uint8_t block) {
     block == B_moss_carpet ||
     block == B_short_grass ||
     block == B_dead_bush ||
-    block == B_torch || block == B_redstone_torch || block == B_lever
+    block == B_torch || block == B_redstone_torch || block == B_lever ||
+    block == B_stone_pressure_plate || block == B_oak_pressure_plate || block == B_wheat
   );
 }
 // Checks whether the given block is non-solid and spawnable
@@ -1060,6 +1064,7 @@ uint8_t handlePlayerEating (PlayerData *player, uint8_t just_check) {
     case I_cooked_porkchop: food = 8; saturation = 6400; break;
     case I_cooked_mutton: food = 6; saturation = 4800; break;
     case I_rotten_flesh: food = 4; saturation = 0; break;
+    case I_bread: food = 5; saturation = 3000; break;
     case I_apple: food = 4; saturation = 1200; break;
     default: break;
   }
@@ -1189,6 +1194,8 @@ void handlePlayerAction (PlayerData *player, int action, short x, short y, short
   if (y < 0 || y > 255 || abs((int)x-player->x) > 6 ||
       abs((int)y-player->y) > 6 || abs((int)z-player->z) > 6) return;
 
+  if (farming_harvest(player,x,y,z)) return;
+
   // In creative, only the "start mining" action is sent
   // No additional verification is performed, the block is simply removed
   if (action == 0 && commands_gamemode(player) == 1) {
@@ -1225,7 +1232,7 @@ void handlePlayerAction (PlayerData *player, int action, short x, short y, short
 
   // Check if any blocks above this should break, and if so,
   // iterate upward over all blocks in the column and break them
-  for (int above_y = y+1; above_y <= 255 && isColumnBlock(block_above); above_y++) {
+  for (int above_y = y+1; above_y <= 255 && isColumnBlock(block_above) && !circuits_wall_torch_at(x,above_y,z); above_y++) {
     uint16_t above_item = getMiningResult(0,block_above);
     if (above_item && !items_can_spawn(above_item,1,x,above_y,z)) break;
     if (makeBlockChange(x,(uint8_t)above_y,z,B_air)) break;
@@ -1247,7 +1254,7 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
   // Check interaction with containers when not sneaking
   if (!(player->flags & 0x04) && face != 255) {
     if (target == B_jukebox) { musicbox_menu(player,x,y,z); return; }
-    if (target == B_lever || target == B_note_block) { circuits_interact(player,x,y,z); return; }
+    if (target == B_lever || target == B_note_block || target == B_oak_trapdoor || target == B_iron_trapdoor) { circuits_interact(player,x,y,z); return; }
     if (target == B_oak_door) {
       doors_interact(player,x,y,z);
       return;
@@ -1359,8 +1366,10 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
   // Don't proceed with block placement if no coordinates were provided
   if (face == 255) return;
 
+  if (farming_use(player,x,y,z,face)) return;
+
   uint16_t circuit_item = player->inventory_items[player->hotbar];
-  if (circuit_item == I_redstone || circuit_item == I_redstone_torch || circuit_item == I_lever || circuit_item == I_note_block) {
+  if (circuit_item == I_redstone || circuit_item == I_redstone_torch || circuit_item == I_lever || circuit_item == I_note_block || circuit_item == I_stone_pressure_plate || circuit_item == I_oak_pressure_plate || circuit_item == I_oak_trapdoor || circuit_item == I_iron_trapdoor) {
     if (circuits_place(player,x,y,z,face,circuit_item)) {
       if (commands_gamemode(player) != 1) *count -= 1;
       if (!*count) player->inventory_items[player->hotbar] = 0;
@@ -1592,6 +1601,7 @@ void hurtEntity (int entity_id, int attacker_id, uint8_t damage_type, uint8_t da
       PlayerData *attacker;
       if (!getPlayerData(attacker_id,&attacker)) mobs_attacked(entity_id,attacker);
     }
+    if (damage) mobs_hurt_sound(entity_id,mob_health <= damage);
     // Set the mob's panic timer
     mob->data |= (3 << 6);
 

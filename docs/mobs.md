@@ -64,7 +64,8 @@ into one wheat seed in either crafting grid. Place it manually and take the
 output with a normal click; shift-click output is not supported for this custom
 recipe. The server consumes the actual ingredient and updates the cursor, rather
 than relying on the modern client to know a custom recipe. The recipe book is
-not populated with this recipe. No new crop-growth system is added here.
+not populated with this recipe. Seeds now plant wheat on farmland; see
+[farming and bread](farming-and-controls.md).
 
 Single-block flowers and mushrooms now break on the client's initial mining
 action and drop themselves. They are also classified as passable and dependent
@@ -77,8 +78,8 @@ and poppies. It does not add two-block flowers or new vegetation generation.
 `src/mobs.c` reuses `mob_data` and moves the inherited tick/spawn logic into a
 small gameplay module. A side array holds targeting, cooldown, fuse and viewer
 state without changing `MobData` or `PlayerData`. A fixed 32-entry arrow pool
-adds about 1 KiB; the mob side array adds 192 bytes on the tested build. Only
-projectiles get a 100 ms update cadence; the core tick stays at one second.
+adds about 1 KiB; the mob side array, including sound timers, adds 256 bytes
+on the tested build. AI stays at one-second intervals.
 Projectile collision work is bounded to 40 short steps per update after a stall.
 No per-projectile allocation, scripting engine, database or dependency is added.
 Nearby-client tracking handles spawn, equipment, metadata and removal.
@@ -119,3 +120,14 @@ check also passed. A live TCP smoke test additionally verified protocol-772
 login/play, administrator permission rejection/authentication, spawning all
 three new mobs, skeleton bow equipment, projectile movement and arrow damage.
 Visual appearance and audible playback still need a graphical-client session.
+
+## Mob voices
+
+All eight supported mobs emit their named hurt/death sounds. Chickens, cows,
+pigs, sheep, zombies, skeletons and spiders also emit ambient sounds on separate,
+staggered timers (roughly 8–13 seconds). Creepers keep their existing hiss and
+firework burst; they have no ambient voice. Ambient timers never consume the
+world or gameplay random stream. Passive animals and neutral spiders use the
+neutral sound category; zombies, skeletons and creepers use hostile. Sounds are
+sent only to loaded clients within 32 blocks on each axis; ambient voices use
+a tighter Manhattan-distance check. No audio files are stored or downloaded.

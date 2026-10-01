@@ -4,7 +4,10 @@
 #include <stdint.h>
 #include "globals.h"
 #define CIRCUIT_LIMIT 256
-enum { CIRCUIT_DUST=1, CIRCUIT_TORCH, CIRCUIT_LEVER, CIRCUIT_NOTE };
+enum { CIRCUIT_DUST=1, CIRCUIT_TORCH, CIRCUIT_LEVER, CIRCUIT_NOTE,
+  CIRCUIT_WALL_TORCH, CIRCUIT_STONE_PLATE, CIRCUIT_WOOD_PLATE, CIRCUIT_WOOD_TRAPDOOR, CIRCUIT_IRON_TRAPDOOR };
+bool circuits_wall_torch_at (int x, int y, int z);
+bool circuits_trapdoor_open (int x, int y, int z);
 bool circuits_load (const char *path);
 bool circuits_save (void);
 bool circuits_place (PlayerData *p, int x, int y, int z, uint8_t face, uint16_t item);

@@ -21,6 +21,7 @@ typedef struct {
 const DroppedItem *items_at (size_t index);
 void items_clear (void);
 bool items_can_spawn (uint16_t item, uint8_t count, int x, int y, int z);
+bool items_can_spawn_pair (uint16_t a, uint8_t ac, uint16_t b, uint8_t bc, int x, int y, int z);
 bool items_spawn (uint16_t item, uint8_t count, int x, int y, int z, uint32_t delay_ms);
 bool items_drop_slot (PlayerData *player, uint8_t slot, bool whole_stack);
 bool items_drop_stack (PlayerData *player, uint16_t item, uint8_t count);
