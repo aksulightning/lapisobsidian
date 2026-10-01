@@ -36,6 +36,31 @@ breeding, equipment progression or modern combat system. Mob/arrow state is
 transient across restarts. Player-fired bows and collectible embedded arrows
 are not implemented. Despawn uses the existing 256-block distance cap.
 
+## Smooth walking
+
+Validated walking steps are sent as relative movement at 20 Hz, spread over the
+existing one-second step. Protocol 772 deltas use 1/4096-block fixed-point units;
+rounding is taken from the absolute progress within each step so it cannot build
+up positional drift. Each update is packed into one socket send. Stationary mobs
+send no walking packets. Walking state uses a fixed array (four additional bytes
+per mob on the tested build), with no heap allocation or save-format change.
+
+Step-up animation raises the mob before moving across the ledge; step-down
+animation moves across before lowering it. New viewers spawn at the current
+interpolated position and facing, then receive the same deltas as existing viewers.
+Dead mobs stop moving, and slot reuse resets the animation. After a server stall,
+progress is clamped to the remaining step rather than replaying a burst of packets.
+
+This is visual smoothing of the existing block-based AI. Collision reservations,
+combat distances and drops still use the validated destination cell, so the visual
+position can trail that cell by one step. Walking speed, attack timing, arrow
+physics and pathfinding are unchanged. This does not add continuous collision or
+revalidate an already accepted path when a player places a block mid-step.
+
+Tests decode relative packets and cover both directions, negative coordinates,
+exact endpoints, mid-step view re-entry, stairs, walls, death, slot reuse and lag.
+Run `./build.sh`, `./tests/run.sh`, and `SANITIZE=1 ./tests/run.sh`.
+
 ## Administrator spawning
 
 After authenticating with `/admin <token>`:

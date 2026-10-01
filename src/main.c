@@ -576,6 +576,7 @@ int main (int argc, char **argv) {
   // Track time of last server tick (in microseconds)
   int64_t last_tick_time = get_program_time();
   int64_t last_arrow_time = last_tick_time;
+  int64_t last_mob_move_time = last_tick_time;
   int64_t last_music_time = last_tick_time;
 
   /**
@@ -615,6 +616,10 @@ int main (int argc, char **argv) {
 
     // Projectiles, circuits and the bounded farm sweep use a 100 ms cadence.
     int64_t arrow_now = get_program_time();
+    if (arrow_now-last_mob_move_time >= 50000) {
+      mobs_tick_movement(arrow_now-last_mob_move_time);
+      last_mob_move_time = arrow_now;
+    }
     if (arrow_now-last_music_time >= 20000) { musicbox_tick(arrow_now-last_music_time); last_music_time = arrow_now; }
     if (arrow_now-last_arrow_time >= 100000) {
       mobs_tick_arrows(arrow_now-last_arrow_time);

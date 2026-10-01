@@ -21,7 +21,44 @@ static const MobType types[] = {
   {"chicken",MOB_CHICKEN,4},{"cow",MOB_COW,10},{"pig",MOB_PIG,10},{"sheep",MOB_SHEEP,8},
   {"zombie",MOB_ZOMBIE,20},{"skeleton",MOB_SKELETON,20},{"spider",MOB_SPIDER,16},{"creeper",MOB_CREEPER,20}
 };
-static struct { uint32_t viewers; uint16_t anger_ms, cooldown_ms, fuse_ms, sound_ms; int8_t target; } state[MAX_MOBS];
+static struct {
+  uint32_t viewers;
+  uint16_t anger_ms, cooldown_ms, fuse_ms, sound_ms, walk_ms;
+  int8_t target, step_x, step_y, step_z;
+  uint8_t yaw;
+} state[MAX_MOBS];
+/* Visual offsets from the validated integer destination, in protocol units.
+ * Raise before advancing up a step; advance before dropping down a step. */
+static void walk_offset (size_t i, int16_t *x, int16_t *y, int16_t *z) {
+  unsigned horizontal = state[i].walk_ms, vertical = horizontal;
+  if (state[i].step_y < 0) {
+    horizontal = horizontal <= 500 ? 0 : (horizontal-500)*2;
+    vertical = vertical < 500 ? vertical*2 : 1000;
+  } else if (state[i].step_y > 0) {
+    horizontal = horizontal < 500 ? horizontal*2 : 1000;
+    vertical = vertical <= 500 ? 0 : (vertical-500)*2;
+  }
+  *x = (int16_t)((int)state[i].step_x*(int)(1000-horizontal)*4096/1000);
+  *y = (int16_t)((int)state[i].step_y*(int)(1000-vertical)*4096/1000);
+  *z = (int16_t)((int)state[i].step_z*(int)(1000-horizontal)*4096/1000);
+}
+static void advance_walk (size_t i, unsigned elapsed_ms) {
+  if (state[i].walk_ms >= 1000) return;
+  int16_t ax,ay,az,bx,by,bz; walk_offset(i,&ax,&ay,&az);
+  unsigned next = state[i].walk_ms+elapsed_ms;
+  state[i].walk_ms = (uint16_t)(next > 1000 ? 1000 : next);
+  walk_offset(i,&bx,&by,&bz);
+  if (ax == bx && ay == by && az == bz) return;
+  for (int p = 0; p < MAX_PLAYERS; p++) if (state[i].viewers&(UINT32_C(1)<<p))
+    sc_mob_move(player_data[p].client_fd,-2-(int)i,(int16_t)(bx-ax),(int16_t)(by-ay),(int16_t)(bz-az),
+      state[i].yaw,state[i].step_y == 0 || state[i].walk_ms == 1000);
+}
+void mobs_tick_movement (int64_t elapsed_us) {
+  if (elapsed_us <= 0) return;
+  unsigned elapsed = elapsed_us/1000 > 1000 ? 1000u : (unsigned)(elapsed_us/1000);
+  for (size_t i = 0; i < MAX_MOBS; i++)
+    if (mob_data[i].type && (mob_data[i].data&31)) advance_walk(i,elapsed);
+}
 typedef struct { float x,y,z,vx,vy,vz; uint32_t viewers; uint16_t age_ms; uint8_t used; } Arrow;
 static Arrow arrows[MOB_ARROW_LIMIT];
 static uint32_t ai_ms;
@@ -57,7 +94,9 @@ static bool near (const PlayerData *p, int x, int z) {
 static void spawn_to (int fd, size_t i) {
   const MobData *m = &mob_data[i];
   uint8_t uuid[16] = {'L','a','p','i','s','M','o','b',0,0,0,0,0,0,0,0}; uuid[14] = (uint8_t)(i>>8); uuid[15] = (uint8_t)i;
-  sc_spawnEntity(fd,-2-(int)i,uuid,m->type,m->x+0.5,m->y,m->z+0.5,0,0);
+  int16_t x,y,z; walk_offset(i,&x,&y,&z);
+  sc_spawnEntity(fd,-2-(int)i,uuid,m->type,m->x+0.5+x/4096.0,m->y+y/4096.0,m->z+0.5+z/4096.0,state[i].yaw,0);
+  if (state[i].yaw) sc_setHeadRotation(fd,-2-(int)i,state[i].yaw);
   broadcastMobMetadata(fd,-2-(int)i);
   if (m->type == MOB_SKELETON) sc_mob_equipment(fd,-2-(int)i);
   if (m->type == MOB_CREEPER) sc_creeper_fuse(fd,-2-(int)i,state[i].fuse_ms != 0);
@@ -124,7 +163,7 @@ bool mobs_spawn (uint8_t type, int x, int y, int z) {
         abs(mob_data[i].z-z) < (type == MOB_SPIDER || mob_data[i].type == MOB_SPIDER ? 2 : 1) && abs((int)mob_data[i].y-y) < 2) return false;
   }
   if (slot < 0) return false;
-  memset(&state[slot],0,sizeof(state[slot])); state[slot].target = -1;
+  memset(&state[slot],0,sizeof(state[slot])); state[slot].target = -1; state[slot].walk_ms = 1000;
   mob_data[slot] = (MobData){type,(short)x,(uint8_t)y,(short)z,definition->health};
   for (int p = 0; p < MAX_PLAYERS; p++) mobs_sync_player(&player_data[p]);
   return true;
@@ -188,7 +227,7 @@ static void shoot (size_t mob, const PlayerData *p) {
     arrows[i] = (Arrow){.x=(float)m->x+0.5f,.y=(float)m->y+1.4f,.z=(float)m->z+0.5f,
       .vx=dx/distance*12.0f,.vy=vy,.vz=dz/distance*12.0f,.used=1};
     for (int player = 0; player < MAX_PLAYERS; player++) mobs_sync_player(&player_data[player]);
-    uint8_t yaw = (uint8_t)((int)(atan2f(-dx,dz)*40.74367f)&255);
+    uint8_t yaw = (uint8_t)((int)(atan2f(-dx,dz)*40.74367f)&255); state[mob].yaw = yaw;
     for (int player = 0; player < MAX_PLAYERS; player++) if (state[mob].viewers&(UINT32_C(1)<<player)) {
       sc_updateEntityRotation(player_data[player].client_fd,-2-(int)mob,yaw,0);
       sc_setHeadRotation(player_data[player].client_fd,-2-(int)mob,yaw);
@@ -242,10 +281,12 @@ static bool walk (size_t i, int x, int z) {
   for (int p = 0; p < MAX_PLAYERS; p++) if (loaded(&player_data[p]) && player_data[p].x == x && player_data[p].z == z && abs(player_data[p].y-y) < 2) return false;
   if (x == m->x && z == m->z && y == m->y) return true;
   float yaw = atan2f((float)m->x-(float)x,(float)z-(float)m->z)*57.29578f;
+  state[i].step_x = (int8_t)(m->x-x); state[i].step_y = (int8_t)(m->y-y); state[i].step_z = (int8_t)(m->z-z);
+  state[i].walk_ms = 0; state[i].yaw = (uint8_t)((int)(yaw*256.0f/360.0f)&255);
   m->x = (short)x; m->y = (uint8_t)y; m->z = (short)z;
   for (int p = 0; p < MAX_PLAYERS; p++) if (state[i].viewers&(UINT32_C(1)<<p)) {
-    sc_teleportEntity(player_data[p].client_fd,-2-(int)i,x+0.5,y,z+0.5,yaw,0);
-    int angle = (int)(yaw*256.0f/360.0f); sc_setHeadRotation(player_data[p].client_fd,-2-(int)i,(uint8_t)(angle&255));
+    sc_updateEntityRotation(player_data[p].client_fd,-2-(int)i,state[i].yaw,0);
+    sc_setHeadRotation(player_data[p].client_fd,-2-(int)i,state[i].yaw);
   }
   return true;
 }
@@ -257,6 +298,8 @@ void mobs_tick (int64_t elapsed_us) {
   for (size_t i = 0; i < MAX_MOBS; i++) {
     MobData *m = &mob_data[i]; if (!m->type) continue;
     if (!(m->data&31)) { remove_mob(i); continue; }
+    /* Finish the previous step before the next AI decision, including after lag. */
+    advance_walk(i,1000);
     int nearest = -1, distance = INT32_MAX, present = INT32_MAX;
     for (int p = 0; p < MAX_PLAYERS; p++) if (loaded(&player_data[p])) {
       int d = abs(player_data[p].x-m->x)+abs(player_data[p].z-m->z)+abs(player_data[p].y-m->y);

@@ -11,6 +11,18 @@
 #include "varnum.h"
 
 _Static_assert(LAPIS_PROTOCOL_VERSION == 772, "Review mob packets, metadata and entity/particle IDs");
+/* Protocol 772 relative movement uses signed deltas at 1/4096 block precision.
+ * Unlike teleport packets, these updates use the client's normal interpolation. */
+void sc_mob_move (int fd, int id, int16_t dx, int16_t dy, int16_t dz, uint8_t yaw, bool grounded) {
+  uint8_t packet[16] = {0,0x2f}; size_t at = 2;
+  uint32_t raw = (uint32_t)id;
+  do { packet[at++] = (uint8_t)((raw&127u)|(raw > 127 ? 128u : 0u)); raw >>= 7; } while (raw);
+  uint16_t deltas[] = {(uint16_t)dx,(uint16_t)dy,(uint16_t)dz};
+  for (unsigned i = 0; i < 3; i++) { packet[at++] = (uint8_t)(deltas[i]>>8); packet[at++] = (uint8_t)deltas[i]; }
+  packet[at++] = yaw; packet[at++] = 0; packet[at++] = grounded ? 1 : 0;
+  packet[0] = (uint8_t)(at-1);
+  send_all(fd,packet,(ssize_t)at);
+}
 void sc_mob_equipment (int fd, int id) {
   writeVarInt(fd,5u+(uint32_t)sizeVarInt((uint32_t)id)+(uint32_t)sizeVarInt(I_bow)); writeByte(fd,0x5f);
   writeVarInt(fd,(uint32_t)id); writeByte(fd,0); /* main hand, last entry */

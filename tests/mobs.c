@@ -46,6 +46,64 @@ static unsigned frame (uint8_t *b, size_t *n, size_t *at) {
   int len = readVarInt(fd[0]); assert(len > 0 && len <= 256); assert(recv_all(fd[0],b,(size_t)len,false) == len);
   *n = (size_t)len; *at = 0; return var(b,*n,at);
 }
+static int delta (const uint8_t *b, size_t *at) {
+  unsigned raw = (unsigned)b[*at]*256u+b[*at+1]; *at += 2;
+  return raw < 32768 ? (int)raw : (int)raw-65536;
+}
+static void movement (int dx, int dy, int dz, bool grounded) {
+  uint8_t b[256]; size_t n,at;
+  assert(frame(b,&n,&at) == 0x2f && var(b,n,&at) == UINT32_MAX-1);
+  assert(n-at == 9 && delta(b,&at) == dx && delta(b,&at) == dy && delta(b,&at) == dz);
+  at++; assert(b[at++] == 0 && b[at++] == grounded && at == n);
+}
+static bool quiet (void) { uint8_t b; return recv(fd[0],&b,1,MSG_DONTWAIT) < 0; }
+static double number (const uint8_t *b, size_t *at) {
+  uint64_t bits = 0; for (unsigned i = 0; i < 8; i++) bits = (bits<<8)|b[(*at)++];
+  double value; memcpy(&value,&bits,sizeof(value)); return value;
+}
+static void walking_tests (void) {
+  /* Exact protocol endpoints in both directions, including negative coordinates. */
+  for (int direction = -1; direction <= 1; direction += 2) {
+    clean(); p->x = (short)(direction*10); q->x = -100;
+    assert(mobs_spawn(MOB_ZOMBIE,0,201,0)); tick(); assert(mob_data[0].x == direction);
+    int sum = 0;
+    mobs_tick_movement(0); mobs_tick_movement(-1); assert(quiet());
+    for (int t = 1; t <= 20; t++) {
+      int next = direction*(4096-(20-t)*4096/20);
+      mobs_tick_movement(50000); movement(next-sum,0,0,true); assert(quiet()); sum = next; drain();
+    }
+    assert(sum == direction*4096);
+    mobs_tick_movement(INT64_MAX); assert(quiet());
+  }
+  /* View re-entry begins at the transmitted fractional position, not destination. */
+  clean(); assert(mobs_spawn(MOB_ZOMBIE,8,201,0)); tick();
+  mobs_tick_movement(500000); movement(-2048,0,0,true); drain();
+  mobs_forget_player(p); mobs_sync_player(p);
+  uint8_t b[256]; size_t n,at;
+  assert(frame(b,&n,&at) == 1 && var(b,n,&at) == UINT32_MAX-1); at += 16;
+  assert(var(b,n,&at) == MOB_ZOMBIE);
+  assert(number(b,&at) == 8.0 && number(b,&at) == 201.0 && number(b,&at) == 0.5); drain();
+  mobs_tick_movement(500000); movement(-2048,0,0,true); drain();
+  /* Upward steps lift first, downward steps leave the ledge before lowering. */
+  clean(); block(7,201,0,B_stone); assert(mobs_spawn(MOB_ZOMBIE,8,201,0)); tick();
+  assert(mob_data[0].x == 7 && mob_data[0].y == 202);
+  mobs_tick_movement(500000); movement(0,4096,0,false); drain();
+  mobs_tick_movement(500000); movement(-4096,0,0,true); drain();
+  tick(); assert(mob_data[0].x == 6 && mob_data[0].y == 201);
+  mobs_tick_movement(500000); movement(-4096,0,0,false); drain();
+  mobs_tick_movement(500000); movement(0,-4096,0,true); drain();
+  block(7,201,0,B_air);
+  /* Blocked movement produces no positional update. Death stops a pending step. */
+  clean(); block(7,201,0,B_stone); block(7,202,0,B_stone);
+  assert(mobs_spawn(MOB_ZOMBIE,8,201,0)); tick(); assert(mob_data[0].x == 8);
+  mobs_tick_movement(500000); assert(quiet()); block(7,201,0,B_air); block(7,202,0,B_air);
+  tick(); mobs_tick_movement(50000); drain(); hurtEntity(-2,-1,D_generic,20); drain();
+  mobs_tick_movement(50000); assert(quiet()); tick(); assert(!count());
+  /* Reused slots reset interpolation; large elapsed times emit one bounded step. */
+  assert(mobs_spawn(MOB_ZOMBIE,8,201,0)); drain(); mobs_tick_movement(50000); assert(quiet());
+  tick(); mobs_tick_movement(INT64_MAX); movement(-4096,0,0,true); drain();
+  mobs_tick_movement(INT64_MAX); assert(quiet()); clean();
+}
 static void string (const uint8_t *b, size_t n, size_t *at, const char *s) {
   uint32_t len = var(b,n,at); assert(len == strlen(s) && n-*at >= len); assert(!memcmp(b+*at,s,len)); *at += len;
 }
@@ -65,6 +123,7 @@ int main (void) {
   /* Fixed test platform avoids depending on any terrain seed. */
   for (int x = -20; x <= 35; x++) for (int z = -20; z <= 20; z++)
     block_changes[block_changes_count++] = (BlockChange){(short)x,(short)z,200,B_stone};
+  walking_tests();
   /* Grass drop vectors: shears preserve grass; bare hands roll wheat seeds. */
   assert(getMiningResult(I_shears,B_short_grass) == I_short_grass);
   unsigned seeds = 0;
@@ -192,6 +251,6 @@ int main (void) {
   mobs_spawn_exploration(-2048,-2048,-32768,-32768,0,0); assert(count() == MAX_MOBS);
   p->x = q->x = 1000; tick(); assert(!count());
   mobs_clear(); items_clear(); drain(); close(fd[0]); close(fd[1]); close(watch[0]); close(watch[1]); remove("world.bin"); assert(chdir("../..") == 0);
-  puts("plants/mobs: grass seeds and recipe, instant flowers, spawning, arrows/walls, neutral retaliation, harmless firecrackers, protocol frames, limits and admin permissions passed");
+  puts("plants/mobs: smooth movement, exact relative frames, view re-entry, steps, death/reset, grass seeds and recipe, instant flowers, spawning, arrows/walls, neutral retaliation, harmless firecrackers, protocol frames, limits and admin permissions passed");
   return 0;
 }
