@@ -17,4 +17,5 @@ void doors_block_changed (int x, int y, int z);
 void doors_send_chunk (int fd, int cx, int cz);
 bool doors_load (const char *path);
 bool doors_save (void);
+void doors_refresh_power (void);
 #endif

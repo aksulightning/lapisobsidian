@@ -4,6 +4,7 @@
 #include "commands.h"
 #include "world_border.h"
 #include "mobs.h"
+#include "musicbox.h"
 #include "packets.h"
 #include "procedures.h"
 #include "worldgen.h"
@@ -37,7 +38,7 @@ bool commands_configure (const char *token) {
 void commands_reset_player (PlayerData *player) {
   int i = player_index(player); if (i < 0) return;
   memset(&sessions[i],0,sizeof(sessions[i]));
-  world_border_reset(player);
+  world_border_reset(player); musicbox_reset_player(player);
   sessions[i].mode = GAMEMODE; sessions[i].initialized = 1;
 }
 bool commands_is_admin (const PlayerData *player) {
@@ -112,9 +113,10 @@ CommandResult commands_execute (PlayerData *player, const char *input, size_t le
   }
   if (!argc) return reply(player,COMMAND_INVALID,"Empty command.");
   char output[256];
+  if (!strcmp(argv[0],"music")) return musicbox_command(player,(int)argc,argv);
   if (!strcmp(argv[0],"help")) {
     if (argc != 1) return reply(player,COMMAND_USAGE,"Usage: /help");
-    return reply(player,COMMAND_OK,"Commands: /help, /seed, /worldinfo, /spawn, /time query, /admin <token>. Admin: /tp <player|x y z>, /time set <day|night|0..23999>, /gamemode <mode> [player], /spawnmob <type> [x y z].");
+    return reply(player,COMMAND_OK,"Commands: /help, /seed, /worldinfo, /spawn, /music, /time query, /admin <token>. Admin: /tp <player|x y z>, /time set <day|night|0..23999>, /gamemode <mode> [player], /spawnmob <type> [x y z].");
   }
   if (!strcmp(argv[0],"admin")) {
     if (argc != 2) return reply(player,COMMAND_USAGE,"Usage: /admin <token>");

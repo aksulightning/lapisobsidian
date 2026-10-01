@@ -8,3 +8,8 @@ cc*.s
 
 .alpine-build.*/
 lapis-obsidian-alpine-*
+
+# Server-owned songs and the optional demo generator executable.
+songs/*.mid
+make-demo-song
+make-demo-song.exe

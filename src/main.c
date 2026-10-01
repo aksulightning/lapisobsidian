@@ -1,6 +1,8 @@
 #include "items.h"
 #include "mobs.h"
 #include "doors.h"
+#include "circuits.h"
+#include "musicbox.h"
 #include "signs.h"
 #include "commands.h"
 #include "world_border.h"
@@ -527,6 +529,17 @@ int main (int argc, char **argv) {
     signs_load(NULL);
   #endif
 
+  #ifdef SYNC_WORLD_TO_DISK
+    #ifdef ESP_PLATFORM
+    if (!circuits_load("/littlefs/circuits.bin") || !musicbox_init("/littlefs/songs")) exit(EXIT_FAILURE);
+    #else
+    if (!circuits_load("circuits.bin") || !musicbox_init("songs")) { fputs("Invalid circuits.bin or songs directory.\n",stderr); exit(EXIT_FAILURE); }
+    #endif
+  #else
+    circuits_load(NULL); musicbox_init("songs");
+  #endif
+  circuits_tick();
+
   // Create server TCP socket
   int server_fd, opt = 1;
   struct sockaddr_in server_addr, client_addr;
@@ -582,6 +595,7 @@ int main (int argc, char **argv) {
   // Track time of last server tick (in microseconds)
   int64_t last_tick_time = get_program_time();
   int64_t last_arrow_time = last_tick_time;
+  int64_t last_music_time = last_tick_time;
 
   /**
    * Cycles through all connected clients, handling one packet at a time
@@ -617,8 +631,10 @@ int main (int argc, char **argv) {
 
     // Only projectiles use the 100 ms cadence; world/AI ticks remain unchanged.
     int64_t arrow_now = get_program_time();
+    if (arrow_now-last_music_time >= 20000) { musicbox_tick(arrow_now-last_music_time); last_music_time = arrow_now; }
     if (arrow_now-last_arrow_time >= 100000) {
       mobs_tick_arrows(arrow_now-last_arrow_time);
+      circuits_tick();
       last_arrow_time = arrow_now;
     }
     // Handle periodic events (server ticks)

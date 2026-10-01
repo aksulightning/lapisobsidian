@@ -15,6 +15,8 @@ No plugin, scripting runtime, database or permission framework is involved.
 | `/time` or `/time query` | Everyone | Shows the current day time |
 | `/time set <day\|night\|ticks>` | Administrator | Sets day time; day=1000, night=13000, ticks=0..23999 |
 | `/gamemode <mode> [player]` | Administrator | Changes the caller's or named online player's mode |
+| `/music <number\|stop>` | Nearby players | Controls the jukebox selected by right-clicking |
+| `/music reload` | Administrator | Stops playback, rescans `songs/`, clears selections |
 | `/spawnmob <type> [x y z]` | Administrator | Spawns one supported mob on safe ground; see [mob details](mobs.md) |
 | `/admin <token>` | Everyone | Authenticates administrator access for this connection |
 
@@ -114,3 +116,5 @@ spawn, malformed-command disconnection and permission reset after reconnect.
 ASan/UBSan pass on the tested paths; LeakSanitizer is disabled in this sandbox.
 A graphical Minecraft client session remains untested. This work does not claim
 a complete adversarial audit of inherited inventory, networking or gameplay code.
+
+See [musicbox controls and limits](redstone-and-music.md) for `/music` setup.

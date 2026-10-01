@@ -13,15 +13,14 @@ in C, and separate from the low-level networking and world generator.
    arrows, neutral spiders, and creepers with a hiss and harmless firecracker
    burst. Admin spawning and grass/flower fixes are included. See
    [behavior, implementation and tests](mobs.md).
-4. **Basic redstone — planned.** Dust, power-providing/inverting torches and
-   switches for simple circuits, doors and note blocks. Bound update work and
-   document intentional differences from vanilla.
-5. **Note blocks — planned.** Tuning, instrument selection and hand/redstone
-   activation, providing the sound foundation for the musicbox.
-6. **MIDI musicbox — planned.** Server-owned `.mid` files in `songs/`, a
-   right-click chat selection menu and play/stop controls. One shared song
-   per box, audible nearby, through in-game instrument sounds. A bounded C
-   MIDI reader, no scripting runtime, arbitrary file paths or player uploads.
-   Distribute only original or explicitly redistribution-licensed songs.
+4. **Basic redstone — implemented.** Flat dust, floor torches and levers,
+   simple inversion and powered oak doors, with bounded updates and persistent
+   settings. Staircase wiring and full vanilla circuitry remain outside this subset.
+5. **Note blocks — implemented.** Tuning, five support-based instruments and
+   hand/redstone activation.
+6. **MIDI musicbox — implemented.** Server-owned `.mid` files in `songs/`,
+   a numbered chat menu and `/music` play/stop controls. Two concurrent boxes,
+   a bounded C format-0/1 reader and nearby note sounds; no player uploads or
+   bundled Minecraft music.
 
-The later entries are a plan, not a claim that those features are implemented.
+See [redstone and music behavior, limits and tests](redstone-and-music.md).

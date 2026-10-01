@@ -1,6 +1,8 @@
 #include "items.h"
 #include "mobs.h"
 #include "doors.h"
+#include "circuits.h"
+#include "musicbox.h"
 #include "signs.h"
 #include "commands.h"
 #include "world_border.h"
@@ -598,7 +600,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
       #ifndef DISK_SYNC_BLOCKS_ON_INTERVAL
       writeBlockChangesToDisk(i, i);
       #endif
-      signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); return 0;
+      signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); return 0;
     }
     #ifdef ALLOW_CHESTS
     if (block_changes[i].block == B_chest) i += 14;
@@ -606,7 +608,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
   }
 
   // Don't create a new entry if it contains the base terrain block
-  if (is_base_block) { signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); return 0; }
+  if (is_base_block) { signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); return 0; }
 
   #ifdef ALLOW_CHESTS
   if (block == B_chest) {
@@ -643,7 +645,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
       #ifndef DISK_SYNC_BLOCKS_ON_INTERVAL
       writeBlockChangesToDisk(last_real_entry + 1, last_real_entry + 15);
       #endif
-      signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); return 0;
+      signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); return 0;
     }
     // If we're here, no changes were made
     failBlockChange(x, y, z, block);
@@ -671,7 +673,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
     block_changes_count ++;
   }
 
-  signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); return 0;
+  signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); return 0;
 }
 
 // Returns the result of mining a block, taking into account the block type and tools
@@ -745,6 +747,7 @@ uint16_t getMiningResult (uint16_t held_item, uint8_t block) {
     default: break;
   }
 
+  if (block == B_redstone_ore) return I_redstone;
   return registry_block_item(block);
 
 }
@@ -803,6 +806,8 @@ uint8_t isInstantlyMined (PlayerData *player, uint8_t block) {
     block == B_dead_bush ||
     block == B_short_grass ||
     block == B_torch ||
+    block == B_redstone_torch ||
+    block == B_lever ||
     block == B_lily_pad ||
     block == B_oak_sapling
   );
@@ -820,6 +825,8 @@ uint8_t isColumnBlock (uint8_t block) {
     block == B_dead_bush ||
     block == B_sand ||
     block == B_torch ||
+    block == B_redstone_torch ||
+    block == B_lever ||
     block == B_oak_sapling
   );
 }
@@ -836,7 +843,7 @@ uint8_t isPassableBlock (uint8_t block) {
     block == B_moss_carpet ||
     block == B_short_grass ||
     block == B_dead_bush ||
-    block == B_torch
+    block == B_torch || block == B_redstone_torch || block == B_lever
   );
 }
 // Checks whether the given block is non-solid and spawnable
@@ -1192,10 +1199,11 @@ void handlePlayerAction (PlayerData *player, int action, short x, short y, short
   uint8_t block = getBlockAt(x, y, z);
 
   // If this is a "start mining" packet, the block must be instamine
+  if (action == 0 && block == B_note_block) circuits_strike(x,y,z);
   if (action == 0 && !isInstantlyMined(player, block)) return;
 
   uint16_t held_item = player->inventory_items[player->hotbar];
-  uint16_t item = getMiningResult(held_item, block);
+  uint16_t item = circuits_drop(x,y,z,getMiningResult(held_item, block));
   /* At capacity, leave the block and tool intact rather than destroy its loot. */
   if (item && !items_can_spawn(item,1,x,y,z)) {
     sc_blockUpdate(player->client_fd,x,y,z,block);
@@ -1238,6 +1246,8 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
 
   // Check interaction with containers when not sneaking
   if (!(player->flags & 0x04) && face != 255) {
+    if (target == B_jukebox) { musicbox_menu(player,x,y,z); return; }
+    if (target == B_lever || target == B_note_block) { circuits_interact(player,x,y,z); return; }
     if (target == B_oak_door) {
       doors_interact(player,x,y,z);
       return;
@@ -1348,6 +1358,16 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
 
   // Don't proceed with block placement if no coordinates were provided
   if (face == 255) return;
+
+  uint16_t circuit_item = player->inventory_items[player->hotbar];
+  if (circuit_item == I_redstone || circuit_item == I_redstone_torch || circuit_item == I_lever || circuit_item == I_note_block) {
+    if (circuits_place(player,x,y,z,face,circuit_item)) {
+      if (commands_gamemode(player) != 1) *count -= 1;
+      if (!*count) player->inventory_items[player->hotbar] = 0;
+    }
+    sc_setContainerSlot(player->client_fd,0,serverSlotToClientSlot(0,player->hotbar),*count,player->inventory_items[player->hotbar]);
+    return;
+  }
 
   if (player->inventory_items[player->hotbar] == I_oak_door) {
     if (doors_place(player,x,y,z,face)) {

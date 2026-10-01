@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "doors.h"
+#include "circuits.h"
 #include "commands.h"
 #include "packets.h"
 #include "procedures.h"
@@ -16,6 +17,7 @@
 _Static_assert(LAPIS_PROTOCOL_VERSION == 772, "Update oak door states for this protocol");
 static const uint16_t facing_base[4] = {4686,4702,4718,4734};
 static Door doors[DOOR_LIMIT];
+static bool powered[DOOR_LIMIT];
 static bool changing;
 static char save_path[256];
 static bool coords (int x, int y, int z) {
@@ -38,7 +40,7 @@ const Door *doors_at (int x, int y, int z) {
 bool doors_state_at (int x, int y, int z, uint16_t *state) {
   const Door *d = doors_at(x,y,z);
   if (!d || !state || d->facing > 3 || d->open > 1) return false;
-  *state = (uint16_t)(facing_base[d->facing]+(d->y == y ? 8u : 0u)+(d->open ? 0u : 2u)+1u);
+  *state = (uint16_t)(facing_base[d->facing]+(d->y == y ? 8u : 0u)+(d->open ? 0u : 2u)+(powered[d-doors] ? 0u : 1u));
   return true;
 }
 static bool support (int x, int y, int z) {
@@ -78,7 +80,7 @@ bool doors_place (PlayerData *p, int x, int y, int z, uint8_t face) {
   static const uint8_t yaw_facing[4] = {1,2,0,3};
   *d = (Door){(int16_t)x,(int16_t)z,(uint8_t)y,yaw_facing[(((unsigned)(uint8_t)p->yaw+32u)/64u)&3u],0,1};
   if (!doors_save()) {
-    d->used = 0;
+    powered[d-doors] = false; d->used = 0;
     makeBlockChange((short)x,(uint8_t)y,(short)z,lower);
     makeBlockChange((short)x,(uint8_t)(y+1),(short)z,upper);
     changing = false; return false;
@@ -91,6 +93,7 @@ bool doors_interact (PlayerData *p, int x, int y, int z) {
     Door *d = &doors[i];
     if (!d->used || d->x != x || d->z != z || (d->y != y && d->y+1 != y)) continue;
     if (!complete(d)) return false;
+    if (powered[i]) return true;
     d->open ^= 1u;
     if (!doors_save()) { d->open ^= 1u; broadcast(d); return false; }
     broadcast(d); return true;
@@ -127,7 +130,7 @@ bool doors_save (void) {
   bool ok = fwrite(magic,1,8,f) == 8;
   for (unsigned i = 0; ok && i < DOOR_LIMIT; i++) if (doors[i].used) {
     const Door *d = &doors[i]; uint16_t x = (uint16_t)d->x, z = (uint16_t)d->z;
-    uint8_t record[7] = {(uint8_t)(x>>8),(uint8_t)x,(uint8_t)(z>>8),(uint8_t)z,d->y,d->facing,d->open};
+    uint8_t record[7] = {(uint8_t)(x>>8),(uint8_t)x,(uint8_t)(z>>8),(uint8_t)z,d->y,d->facing,powered[i] ? 0 : d->open};
     ok = fwrite(record,1,7,f) == 7;
   }
   if (fclose(f)) ok = false;
@@ -135,6 +138,7 @@ bool doors_save (void) {
   perror("Saving doors"); remove(temporary); return false;
 }
 bool doors_load (const char *path) {
+  memset(powered,0,sizeof(powered));
   memset(doors,0,sizeof(doors)); changing = false; save_path[0] = 0;
   if (!path) return true;
   if (strlen(path) >= sizeof(save_path)) return false;
@@ -165,4 +169,13 @@ bool doors_load (const char *path) {
     if (b->block == B_oak_door && !doors_at(b->x,b->y,b->z)) { makeBlockChange(b->x,b->y,b->z,B_air); dirty = true; }
   }
   changing = false; return !dirty || doors_save();
+}
+
+void doors_refresh_power (void) {
+  for (unsigned i = 0; i < DOOR_LIMIT; i++) {
+    Door *d = &doors[i]; if (!d->used) { powered[i] = false; continue; }
+    bool on = circuits_powered(d->x,d->y,d->z) || circuits_powered(d->x,d->y+1,d->z);
+    if (on == powered[i]) continue;
+    powered[i] = on; d->open = on ? 1 : 0; broadcast(d);
+  }
 }

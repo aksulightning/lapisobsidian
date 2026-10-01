@@ -17,6 +17,8 @@ int sc_synchronizePlayerPosition (int fd, double x, double y, double z, float ya
 int sc_teleportEntity (int fd, int id, double x, double y, double z, float yaw, float pitch) { (void)fd;(void)id;(void)x;(void)y;(void)z;(void)yaw;(void)pitch;return 0; }
 int sc_updateTime (int fd, uint64_t t) { (void)fd;assert(t == world_time);return 0; }
 int sc_changeGameMode (PlayerData *player, uint8_t mode) { assert(mode == commands_gamemode(player));changes++;return 0; }
+void musicbox_reset_player (PlayerData *p) { (void)p; }
+CommandResult musicbox_command (PlayerData *p, int argc, char *const argv[]) { (void)p; (void)argc; (void)argv; return COMMAND_USAGE; }
 static unsigned mob_spawns;
 const MobType *mobs_by_name (const char *name) {
   static const MobType skeleton = {"skeleton",MOB_SKELETON,20};

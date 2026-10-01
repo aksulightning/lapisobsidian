@@ -80,3 +80,13 @@ and particle constants checked against the same versioned minecraft-data source:
 and [sounds](https://github.com/PrismarineJS/minecraft-data/blob/master/data/pc/1.21.8/sounds.json).
 Named sound holders avoid storing the full sound registry. Compile-time protocol
 assertions and independent packet-decoding tests guard this compatibility data.
+
+## Circuit and note compatibility
+
+The palette and saved block identifiers remain unchanged. `src/circuits.c` holds
+minimal protocol-772 state formulas for dust, floor levers, standing redstone
+torches and tuned note blocks, checked against the same pinned
+`pc/1.21.8/blocks.json` reference. Dust uses the torch carrier plus a persisted
+side-table kind; individual block updates supply its wire state after chunk
+transmission. `src/notes.c` sends named client note-block sounds, checked against
+`pc/1.21.8/sounds.json`. No complete sound registry or game assets are retained.

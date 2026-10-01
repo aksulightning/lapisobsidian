@@ -44,17 +44,17 @@ int cs_chatCommand (int fd, int length, bool signed_packet) {
   return 0;
 }
 int sc_commands (int fd) {
-  static const char *const names[] = {"help","seed","worldinfo","spawn","tp","time","gamemode","admin","spawnmob"};
+  static const char *const names[] = {"help","seed","worldinfo","spawn","tp","time","gamemode","admin","spawnmob","music"};
   uint8_t data[384]; size_t used = 0;
-  data[used++] = 19; /* root + nine literals + nine greedy argument nodes */
-  data[used++] = 0; data[used++] = 9;
-  for (unsigned i = 1; i <= 9; i ++) data[used++] = (uint8_t)i;
-  for (unsigned i = 0; i < 9; i ++) {
+  data[used++] = 21; /* root + ten literals + ten greedy argument nodes */
+  data[used++] = 0; data[used++] = 10;
+  for (unsigned i = 1; i <= 10; i ++) data[used++] = (uint8_t)i;
+  for (unsigned i = 0; i < 10; i ++) {
     size_t n = strlen(names[i]);
-    data[used++] = 5; data[used++] = 1; data[used++] = (uint8_t)(10+i);
+    data[used++] = 5; data[used++] = 1; data[used++] = (uint8_t)(11+i);
     data[used++] = (uint8_t)n; memcpy(data+used,names[i],n); used += n;
   }
-  for (unsigned i = 0; i < 9; i ++) {
+  for (unsigned i = 0; i < 10; i ++) {
     data[used++] = 6; data[used++] = 0; data[used++] = 9;
     memcpy(data+used,"arguments",9); used += 9;
     data[used++] = 5; /* brigadier:string parser ID for protocol 772 */

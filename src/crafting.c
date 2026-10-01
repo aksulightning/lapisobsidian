@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "globals.h"
 #include "registries.h"
@@ -64,6 +65,12 @@ void getCraftingOutput (PlayerData *player, uint8_t *count, uint16_t *item) {
             *count = 4;
             return;
           }
+          break;
+        case I_redstone:
+          if (first_row != 2 && player->craft_items[first+3] == I_stick) { *item = I_redstone_torch; *count = 1; return; }
+          break;
+        case I_stick:
+          if (first_row != 2 && player->craft_items[first+3] == I_cobblestone) { *item = I_lever; *count = 1; return; }
           break;
         case I_charcoal:
         case I_coal:
@@ -341,7 +348,13 @@ void getCraftingOutput (PlayerData *player, uint8_t *count, uint16_t *item) {
       }
       break;
 
-    case 9:
+    case 9: {
+      bool planks = true;
+      for (unsigned slot = 0; slot < 9; slot++) if (slot != 4 && player->craft_items[slot] != I_oak_planks) planks = false;
+      if (planks && (player->craft_items[4] == I_redstone || player->craft_items[4] == I_diamond)) {
+        *item = player->craft_items[4] == I_redstone ? I_note_block : I_jukebox; *count = 1; return;
+      }
+    }
       // Uniform 3x3 shaped recipes
       if (identical) switch (first_item) {
         case I_iron_ingot: *item = I_iron_block; *count = 1; return;

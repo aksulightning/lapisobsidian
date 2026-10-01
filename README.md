@@ -117,7 +117,7 @@ pass is still pending.
 
 Create a new world with `./lapis-obsidian --seed -12345`, using a signed 64-bit
 decimal seed. Later runs load the seed from `world.meta`. Supplying a different
-seed for the same world fails. Keep `world.meta`, `world.bin`, `signs.bin`, and `doors.bin` together. Run the
+seed for the same world fails. Keep `world.meta`, `world.bin`, `signs.bin`, `doors.bin`, and `circuits.bin` together. Run the
 binary from a fresh directory to start another world. Legacy saves without
 metadata are rejected rather than overlaid onto a different terrain generator.
 Generator version 3 upgrades version 2 metadata automatically, retaining seeds,
@@ -148,3 +148,13 @@ See [the milestone report](docs/milestones.md) for changes, validation and limit
 
 See [registry maintenance](docs/registries.md) for data provenance and protocol
 constraints, and [notices](NOTICE.md) for upstream attribution.
+
+## Redstone and music
+
+Basic flat redstone dust, floor torches/levers and powered oak doors are
+implemented. Note blocks support tuning, five classic instruments and rising-edge
+redstone playback. Jukeboxes act as MIDI musicboxes: put `.mid` files in `songs/`,
+right-click a box, then use `/music <number>` or `/music stop`. Administrators can
+rescan files with `/music reload`. An optional C tool generates an original demo.
+See [redstone and music behavior, limits and tests](docs/redstone-and-music.md)
+and [song setup](songs/README.md).
