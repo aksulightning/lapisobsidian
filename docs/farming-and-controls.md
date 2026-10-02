@@ -48,10 +48,13 @@ matching pre-update backup. No raw world-save migration is needed.
    one-grass-to-one-seed recipe provide starter seeds.
 4. Place water within four blocks in X/Z, at soil height or one block above.
    Source and flowing water count. Dry soil remains usable but growth pauses.
-5. Hydrated wheat advances through eight visible ages. Each stage needs five
-   hydrated plot visits, approximately 32 seconds; full growth takes roughly
-   four minutes. Farm processing runs while the server runs, including away
-   from players. There is no offline catch-up, light requirement, rain, trampling,
+5. Hydrated wheat advances through eight visible ages and matures in about
+   **30 seconds**, with a new age roughly every 4.3 seconds. Growth uses a small
+   timer per plot; water checks retain their bounded sweep (up to 6.4 seconds
+   to notice changed water). Existing farm saves remain readable; restarting
+   restores the last saved age and partial step. The sub-step timer is transient.
+   Farm processing runs while the server runs, including away from players.
+   There is no offline catch-up, light requirement, rain, trampling,
    bonemeal acceleration or automatic dry-soil decay in this subset.
 6. Break mature wheat for one wheat and two seeds. Immature crops return one seed.
    Replant and put three wheat horizontally in a crafting table to make bread.

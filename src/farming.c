@@ -12,9 +12,11 @@
 #include "worldgen.h"
 
 _Static_assert(LAPIS_PROTOCOL_VERSION == 772,"Review farmland and wheat states");
-/* y is the soil, age=8 means no crop. Four slots per 100 ms bounds water scans;
- * five hydrated visits per stage gives about 32 seconds between growth stages. */
-typedef struct { int16_t x,z; uint8_t y,used,age,wet,steps; } Plot;
+/* y is the soil, age=8 means no crop. Water scans remain four slots per 100 ms.
+ * Five 857 ms growth steps per age give 29.995 seconds from age zero to seven.
+ * steps retains its saved 0..4 meaning; only the sub-step timer is transient. */
+#define GROWTH_STEP_MS 857u
+typedef struct { int16_t x,z; uint16_t growth_ms; uint8_t y,used,age,wet,steps; } Plot;
 static Plot plots[FARM_LIMIT];
 static char save_path[256];
 static bool changing;
@@ -99,7 +101,7 @@ bool farming_harvest (PlayerData *p, int x, int y, int z) {
     if (p) sc_blockUpdate(p->client_fd,x,y,z,B_wheat);
     return true;
   }
-  Plot old = *plot; plot->age = 8; plot->steps = 0;
+  Plot old = *plot; plot->age = 8; plot->steps = 0; plot->growth_ms = 0;
   changing = true;
   if (makeBlockChange((short)x,(uint8_t)y,(short)z,B_air)) { *plot = old; changing = false; return true; }
   if (!farming_save()) {
@@ -122,7 +124,7 @@ void farming_block_changed (int x, int y, int z) {
       if (p->age < 8) return; /* Retry when the item pool or storage has room. */
     }
     p->used = 0; changed = true;
-  } else if (p->age < 8 && getBlockAt(p->x,p->y+1,p->z) != B_wheat) { p->age = 8; p->steps = 0; changed = true; }
+  } else if (p->age < 8 && getBlockAt(p->x,p->y+1,p->z) != B_wheat) { p->age = 8; p->steps = 0; p->growth_ms = 0; changed = true; }
   if (changed && !farming_save()) fputs("Could not save farm removal.\n",stderr);
 }
 void farming_tick (int64_t elapsed_us) {
@@ -135,11 +137,21 @@ void farming_tick (int64_t elapsed_us) {
       if (!p->used) continue;
       farming_block_changed(p->x,p->y,p->z); if (!p->used) continue;
       Plot old = *p; p->wet = water(p);
-      if (p->wet && p->age < 7 && getBlockAt(p->x,p->y,p->z) == B_farmland && getBlockAt(p->x,p->y+1,p->z) == B_wheat && ++p->steps == 5) {
+      if (p->wet != old.wet) broadcast(p);
+    }
+    /* Cheap counters for the bounded plot array; no extra water scans. */
+    for (unsigned i = 0; i < FARM_LIMIT; i++) {
+      Plot *p = &plots[i]; if (!p->used || !p->wet || p->age >= 7) continue;
+      p->growth_ms = (uint16_t)(p->growth_ms+100);
+      if (p->growth_ms < GROWTH_STEP_MS) continue;
+      p->growth_ms = (uint16_t)(p->growth_ms-GROWTH_STEP_MS);
+      if (getBlockAt(p->x,p->y,p->z) != B_farmland || getBlockAt(p->x,p->y+1,p->z) != B_wheat) continue;
+      Plot old = *p;
+      if (++p->steps == 5) {
         p->steps = 0; p->age++;
         if (!farming_save()) { *p = old; fputs("Could not save crop growth.\n",stderr); }
+        else broadcast(p);
       }
-      if (p->wet != old.wet || p->age != old.age) broadcast(p);
     }
   }
 }

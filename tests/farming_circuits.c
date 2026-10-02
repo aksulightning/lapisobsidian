@@ -123,11 +123,11 @@ int main (void) {
   assert(getBlockAt(0,200,0) == B_farmland); hold(I_wheat_seeds,3); use(0,200,0);
   assert(crop() == 4342 && p->inventory_count[0] == 2); grow(400); assert(crop() == 4342);
   block(5,200,0,B_water); grow(400); assert(crop() == 4342); block(4,200,0,B_water);
-  grow(400); assert(crop() > 4342 && crop() < 4349);
+  grow(100); assert(crop() > 4342 && crop() < 4349);
   assert(farming_state_at(0,200,0,B_farmland,&value) && value == 4357);
   value = crop(); assert(farming_load("farming.bin")); assert(crop() == value);
   block(4,200,0,B_air); grow(640); assert(crop() == value);
-  block(4,200,0,B_water); grow(2240); assert(crop() == 4349);
+  block(4,200,0,B_water); grow(300); assert(crop() == 4349);
   blocks = 0; farming_send_chunk(sockets[1],0,0); drain(); assert(blocks == 2);
   /* Two distinct loot stacks cannot share the last empty item slot. */
   for (unsigned i = 0; i < ITEM_ENTITY_LIMIT-1; i++) assert(items_spawn(I_stone,64,100+(int)i,200,0,500));
@@ -135,6 +135,10 @@ int main (void) {
   items_clear(); drain(); handlePlayerAction(p,0,0,201,0); drain();
   assert(getBlockAt(0,201,0) == B_air && drops(I_wheat) == 1 && drops(I_wheat_seeds) == 2);
   items_clear(); drain(); hold(I_wheat_seeds,2); use(0,200,0); assert(crop() == 4342);
+  /* Fresh irrigated wheat is still immature at 29.9 s and mature at 30 s. */
+  grow(299); assert(crop() < 4349); grow(1); assert(crop() == 4349);
+  handlePlayerAction(p,0,0,201,0); drain(); items_clear(); drain();
+  hold(I_wheat_seeds,1); use(0,200,0); assert(crop() == 4342);
   block(0,200,0,B_air); assert(getBlockAt(0,201,0) == B_air && drops(I_wheat_seeds) == 1);
   assert(!farming_state_at(0,200,0,B_farmland,&value));
   block(0,200,0,B_dirt); hold(I_iron_hoe,1); assert(!mkdir("farming.bin.tmp",0700)); use(0,200,0);
