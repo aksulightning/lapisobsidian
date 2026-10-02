@@ -28,4 +28,7 @@ in C, and separate from the low-level networking and world generator.
 8. **Mob voices — implemented.** Bounded ambient timers and hurt/death sounds
    from client resources.
 
+9. **Fluids — implemented.** Bounded water/lava flow, draining, bucket crafting
+   and use, cooling reactions and saved-world recovery. See [behavior and limits](fluids.md).
+
 See [redstone and music behavior, limits and tests](redstone-and-music.md).

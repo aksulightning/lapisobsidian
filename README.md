@@ -80,6 +80,13 @@ instantly. See [mobs, plant fixes and limits](docs/mobs.md).
 The [gameplay roadmap](docs/roadmap.md) tracks implemented features and the
 remaining scope. Basic redstone, note blocks, MIDI musicboxes and farming work.
 
+## Water and lava
+
+Water and lava flow downward and outward, drain when their source is removed,
+and cool into stone, cobblestone or obsidian when mixed. Craft buckets with three
+iron ingots to collect sources and pour fluids. See [fluid behavior, persistence
+and limits](docs/fluids.md).
+
 ## Commands
 
 `/help`, `/seed`, `/worldinfo`, `/spawn`, and `/time query` work for everyone.

@@ -1,3 +1,4 @@
+#include "fluids.h"
 #include "items.h"
 #include "inventory.h"
 #include "farming.h"
@@ -606,7 +607,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
       #ifndef DISK_SYNC_BLOCKS_ON_INTERVAL
       writeBlockChangesToDisk(i, i);
       #endif
-      signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); farming_block_changed(x,y,z); return 0;
+      signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); farming_block_changed(x,y,z); fluids_block_changed(x,y,z); return 0;
     }
     #ifdef ALLOW_CHESTS
     if (block_changes[i].block == B_chest) i += 14;
@@ -614,7 +615,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
   }
 
   // Don't create a new entry if it contains the base terrain block
-  if (is_base_block) { signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); farming_block_changed(x,y,z); return 0; }
+  if (is_base_block) { signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); farming_block_changed(x,y,z); fluids_block_changed(x,y,z); return 0; }
 
   #ifdef ALLOW_CHESTS
   if (block == B_chest) {
@@ -651,7 +652,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
       #ifndef DISK_SYNC_BLOCKS_ON_INTERVAL
       writeBlockChangesToDisk(last_real_entry + 1, last_real_entry + 15);
       #endif
-      signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); farming_block_changed(x,y,z); return 0;
+      signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); farming_block_changed(x,y,z); fluids_block_changed(x,y,z); return 0;
     }
     // If we're here, no changes were made
     failBlockChange(x, y, z, block);
@@ -679,7 +680,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
     block_changes_count ++;
   }
 
-  signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); farming_block_changed(x,y,z); return 0;
+  signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); farming_block_changed(x,y,z); fluids_block_changed(x,y,z); return 0;
 }
 
 // Returns the result of mining a block, taking into account the block type and tools
@@ -876,13 +877,6 @@ uint8_t isReplaceableBlock (uint8_t block) {
   );
 }
 
-uint8_t isReplaceableFluid (uint8_t block, uint8_t level, uint8_t fluid) {
-  if (block >= fluid && block - fluid < 8) {
-    return block - fluid > level;
-  }
-  return isReplaceableBlock(block);
-}
-
 // Checks whether the given item can be used in a composter
 // Returns the probability (out of 2^32) to return bone meal
 uint32_t isCompostItem (uint16_t item) {
@@ -913,6 +907,8 @@ uint32_t isCompostItem (uint16_t item) {
 
 // Returns the maximum stack size of an item
 uint8_t getItemStackSize (uint16_t item) {
+  if (item == I_water_bucket || item == I_lava_bucket) return 1;
+  if (item == I_bucket) return 16;
 
   if (
     // Pickaxes
@@ -1098,84 +1094,6 @@ uint8_t handlePlayerEating (PlayerData *player, uint8_t just_check) {
   return true;
 }
 
-void handleFluidMovement (short x, uint8_t y, short z, uint8_t fluid, uint8_t block) {
-
-  // Get fluid level (0-7)
-  // The terminology here is a bit different from vanilla:
-  // a higher fluid "level" means the fluid has traveled farther
-  uint8_t level = block - fluid;
-
-  // Query blocks adjacent to this fluid stream
-  uint8_t adjacent[4] = {
-    getBlockAt(x + 1, y, z),
-    getBlockAt(x - 1, y, z),
-    getBlockAt(x, y, z + 1),
-    getBlockAt(x, y, z - 1)
-  };
-
-  // Handle maintaining connections to a fluid source
-  if (level != 0) {
-    // Check if this fluid is connected to a block exactly one level lower
-    uint8_t connected = false;
-    for (int i = 0; i < 4; i ++) {
-      if (adjacent[i] == block - 1) {
-        connected = true;
-        break;
-      }
-    }
-    // If not connected, clear this block and recalculate surrounding flow
-    if (!connected) {
-      makeBlockChange(x, y, z, B_air);
-      checkFluidUpdate(x + 1, y, z, adjacent[0]);
-      checkFluidUpdate(x - 1, y, z, adjacent[1]);
-      checkFluidUpdate(x, y, z + 1, adjacent[2]);
-      checkFluidUpdate(x, y, z - 1, adjacent[3]);
-      return;
-    }
-  }
-
-  // Check if water should flow down, prioritize that over lateral flow
-  uint8_t block_below = getBlockAt(x, y - 1, z);
-  if (isReplaceableBlock(block_below)) {
-    makeBlockChange(x, y - 1, z, fluid);
-    return handleFluidMovement(x, y - 1, z, fluid, fluid);
-  }
-
-  // Stop flowing laterally at the maximum level
-  if (level == 3 && fluid == B_lava) return;
-  if (level == 7) return;
-
-  // Handle lateral water flow, increasing level by 1
-  if (isReplaceableFluid(adjacent[0], level, fluid)) {
-    makeBlockChange(x + 1, y, z, block + 1);
-    handleFluidMovement(x + 1, y, z, fluid, block + 1);
-  }
-  if (isReplaceableFluid(adjacent[1], level, fluid)) {
-    makeBlockChange(x - 1, y, z, block + 1);
-    handleFluidMovement(x - 1, y, z, fluid, block + 1);
-  }
-  if (isReplaceableFluid(adjacent[2], level, fluid)) {
-    makeBlockChange(x, y, z + 1, block + 1);
-    handleFluidMovement(x, y, z + 1, fluid, block + 1);
-  }
-  if (isReplaceableFluid(adjacent[3], level, fluid)) {
-    makeBlockChange(x, y, z - 1, block + 1);
-    handleFluidMovement(x, y, z - 1, fluid, block + 1);
-  }
-
-}
-
-void checkFluidUpdate (short x, uint8_t y, short z, uint8_t block) {
-
-  uint8_t fluid;
-  if (block >= B_water && block < B_water + 8) fluid = B_water;
-  else if (block >= B_lava && block < B_lava + 4) fluid = B_lava;
-  else return;
-
-  handleFluidMovement(x, y, z, fluid, block);
-
-}
-
 void handlePlayerAction (PlayerData *player, int action, short x, short y, short z) {
 
   if (!player || player->hotbar >= 41) return;
@@ -1225,15 +1143,7 @@ void handlePlayerAction (PlayerData *player, int action, short x, short y, short
   bumpToolDurability(player);
   if (item) items_spawn(item,1,x,y,z,500);
 
-  // Update nearby fluids
   uint8_t block_above = getBlockAt(x, y + 1, z);
-  #ifdef DO_FLUID_FLOW
-    checkFluidUpdate(x, y + 1, z, block_above);
-    checkFluidUpdate(x - 1, y, z, getBlockAt(x - 1, y, z));
-    checkFluidUpdate(x + 1, y, z, getBlockAt(x + 1, y, z));
-    checkFluidUpdate(x, y, z - 1, getBlockAt(x, y, z - 1));
-    checkFluidUpdate(x, y, z + 1, getBlockAt(x, y, z + 1));
-  #endif
 
   // Check if any blocks above this should break, and if so,
   // iterate upward over all blocks in the column and break them
@@ -1442,14 +1352,6 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
     if (commands_gamemode(player) != 1) *count -= 1;
     // Clear item id in slot if amount is zero
     if (*count == 0) player->inventory_items[player->hotbar] = 0;
-    // Calculate fluid flow
-    #ifdef DO_FLUID_FLOW
-      checkFluidUpdate(x, y + 1, z, getBlockAt(x, y + 1, z));
-      checkFluidUpdate(x - 1, y, z, getBlockAt(x - 1, y, z));
-      checkFluidUpdate(x + 1, y, z, getBlockAt(x + 1, y, z));
-      checkFluidUpdate(x, y, z - 1, getBlockAt(x, y, z - 1));
-      checkFluidUpdate(x, y, z + 1, getBlockAt(x, y, z + 1));
-    #endif
   }
 
   // Sync hotbar contents to player

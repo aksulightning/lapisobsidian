@@ -1,3 +1,4 @@
+#include "fluids.h"
 #include <math.h>
 #include <string.h>
 #include "signs.h"
@@ -133,5 +134,26 @@ int cs_playerAction (int fd, int length) {
   PlayerData *player; if (getPlayerData(fd,&player)) return 1;
   sc_acknowledgeBlockChange(fd,(int)sequence);
   if (!(player->flags&0x22) && player->health) handlePlayerAction(player,(int)action,(short)x,(short)y,(short)z);
+  return 0;
+}
+
+/* Use Item carries bucket ray direction. Validate all bytes before world edits. */
+int cs_useItem (int fd, int length) {
+  uint8_t payload[18];
+  if (length < 10 || (size_t)length > sizeof(payload) || recv_all(fd,payload,(size_t)length,false) != length) return 1;
+  Reader r = {payload,(size_t)length,0}; uint32_t hand, sequence;
+  if (!integer(&r,&hand) || hand > 1 || !integer(&r,&sequence) || r.size-r.cursor != 8) return 1;
+  float angles[2];
+  for (unsigned i = 0; i < 2; i++) {
+    uint32_t bits = 0;
+    for (unsigned j = 0; j < 4; j++) bits = (bits<<8)|payload[r.cursor++];
+    memcpy(&angles[i],&bits,4);
+    if (!isfinite(angles[i])) return 1;
+  }
+  if (angles[1] < -90 || angles[1] > 90) return 1;
+  PlayerData *player; if (getPlayerData(fd,&player)) return 1;
+  sc_acknowledgeBlockChange(fd,(int)sequence);
+  if (!hand && !(player->flags&0x22) && player->health && !fluids_use_bucket(player,angles[0],angles[1]))
+    handlePlayerUseItem(player,0,0,0,255);
   return 0;
 }

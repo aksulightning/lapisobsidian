@@ -124,9 +124,6 @@
 // on low tickrates, as that might drastically decrease the update rate.
 #define SCALE_MOVEMENT_UPDATES_TO_PLAYER_COUNT
 
-// If defined, calculates fluid flow when blocks are updated near fluids
-// Somewhat computationally expensive and potentially unstable
-#define DO_FLUID_FLOW
 
 // If defined, allows players to craft and use chests.
 // Chests take up 15 block change slots each, require additional checks,

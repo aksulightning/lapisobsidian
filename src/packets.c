@@ -545,23 +545,6 @@ int sc_openScreen (int client_fd, uint8_t window, const char *title, uint16_t le
   return 0;
 }
 
-// C->S Use Item
-int cs_useItem (int client_fd) {
-
-  readByte(client_fd); // hand (ignored)
-  readVarInt(client_fd); // sequence (ignored)
-
-  // Ignore yaw/pitch
-  recv_all(client_fd, recv_buffer, 8, false);
-
-  PlayerData *player;
-  if (getPlayerData(client_fd, &player)) return 1;
-
-  handlePlayerUseItem(player, 0, 0, 0, 255);
-
-  return 0;
-}
-
 // S->C Set Cursor Item
 int sc_setCursorItem (int client_fd, uint16_t item, uint8_t count) {
 

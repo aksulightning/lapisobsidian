@@ -8,7 +8,7 @@ int cs_clientInformation (int client_fd);
 int cs_pluginMessage (int client_fd);
 int cs_playerAction (int client_fd, int length);
 int cs_useItemOn (int client_fd, int length);
-int cs_useItem (int client_fd);
+int cs_useItem (int client_fd, int length);
 int cs_setPlayerPositionAndRotation (int client_fd, double *x, double *y, double *z, float *yaw, float *pitch, uint8_t *on_ground);
 int cs_setPlayerPosition (int client_fd, double *x, double *y, double *z, uint8_t *on_ground);
 int cs_setPlayerRotation (int client_fd, float *yaw, float *pitch, uint8_t *on_ground);

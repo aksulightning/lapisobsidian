@@ -101,3 +101,11 @@ pinned `pc/1.21.8/blocks.json`; bread against `items.json`, mob voices against
 `sounds.json`. Static protocol assertions require review on a version change.
 The 256-entry block palette and the raw world/player/mob record layouts remain
 unchanged. This adds no asset data or normal-build generation step.
+
+## Fluid compatibility
+
+The fluid extension adds only bucket=967, water_bucket=968 and lava_bucket=969
+to the item-name snapshot, from the same pinned `pc/1.21.8/items.json` reference.
+Water/lava source and flowing block states already exist in the compact palette;
+no IDs or saved record layouts change. Bucket and cooling sounds use named
+holders from `pc/1.21.8/sounds.json`. See `docs/fluids.md` for behavior and limits.

@@ -26,6 +26,8 @@ int main (void) {
   assert(registry_item_id_valid(I_diamond_sword));
   assert(registry_item_id_valid(I_wooden_pickaxe));
   assert(registry_item_id_valid(I_oak_sign));
+  assert(I_bucket == 967 && I_water_bucket == 968 && I_lava_bucket == 969);
+  assert(registry_item_id_valid(I_bucket) && registry_item_id_valid(I_water_bucket) && registry_item_id_valid(I_lava_bucket));
   assert(registry_item_id_valid(REGISTRY_ITEM_MAX_ID));
   assert(!registry_item_id_valid(REGISTRY_ITEM_MAX_ID + 1));
   assert(!registry_item_id_valid(UINT32_MAX));

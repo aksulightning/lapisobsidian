@@ -105,6 +105,10 @@ void getCraftingOutput (PlayerData *player, uint8_t *count, uint16_t *item) {
       break;
 
     case 3:
+      if (identical && first_item == I_iron_ingot && first_col == 0 && first_row < 2 &&
+          player->craft_items[first+2] == I_iron_ingot && player->craft_items[first+4] == I_iron_ingot) {
+        *item = I_bucket; *count = 1; return;
+      }
       if (identical && first_item == I_wheat && first_col == 0 && player->craft_items[first+1] == I_wheat && player->craft_items[first+2] == I_wheat) {
         *item = I_bread; *count = 1; return;
       }

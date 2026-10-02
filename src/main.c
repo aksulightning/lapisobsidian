@@ -1,3 +1,4 @@
+#include "fluids.h"
 #include "items.h"
 #include "server_config.h"
 #include "packet_input.h"
@@ -396,7 +397,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
       break;
 
     case 0x40:
-      if (state == STATE_PLAY) cs_useItem(client_fd);
+      if (state == STATE_PLAY && cs_useItem(client_fd,length)) { recv_count = 0; return; }
       break;
 
     default:
@@ -518,6 +519,7 @@ int main (int argc, char **argv) {
   #else
     farming_load(NULL); circuits_load(NULL); musicbox_init("songs");
   #endif
+  fluids_init();
   circuits_tick();
 
   // Create server TCP socket
@@ -622,6 +624,7 @@ int main (int argc, char **argv) {
     if (arrow_now-last_music_time >= 20000) { musicbox_tick(arrow_now-last_music_time); last_music_time = arrow_now; }
     if (arrow_now-last_arrow_time >= 100000) {
       mobs_tick_arrows(arrow_now-last_arrow_time);
+      fluids_tick(arrow_now-last_arrow_time);
       circuits_tick();
       farming_tick(arrow_now-last_arrow_time);
       last_arrow_time = arrow_now;

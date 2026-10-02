@@ -663,7 +663,10 @@
     "arrow": 859,
     "string": 907,
     "gunpowder": 909,
-    "bone": 1038
+    "bone": 1038,
+    "bucket": 967,
+    "water_bucket": 968,
+    "lava_bucket": 969
   },
   "mapping": [
     0,

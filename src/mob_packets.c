@@ -38,12 +38,12 @@ void sc_arrow_metadata (int fd, int id) {
   writeByte(fd,5); writeByte(fd,8); writeByte(fd,1); writeByte(fd,255);
 }
 void sc_mob_sound_category (int fd, const char *name, int x, int y, int z, uint8_t category) {
-  if (!name || (category != 5 && category != 6)) return;
+  if (!name || (category != 4 && category != 5 && category != 6)) return;
   size_t n = strlen(name); if (n > 96 || x < -32768 || x > 32767 || y < 0 || y > 255 || z < -32768 || z > 32767) return;
   /* Inline sound holder avoids adding the entire vanilla sound registry. */
   writeVarInt(fd,32u+(uint32_t)sizeVarInt((uint32_t)n)+(uint32_t)n); writeByte(fd,0x6e);
   writeByte(fd,0); writeVarInt(fd,(uint32_t)n); send_all(fd,name,(ssize_t)n); writeByte(fd,0);
-  writeByte(fd,category); /* hostile=5, neutral=6 */
+  writeByte(fd,category); /* blocks=4, hostile=5, neutral=6 */
   writeUint32(fd,(uint32_t)(x*8+4)); writeUint32(fd,(uint32_t)(y*8)); writeUint32(fd,(uint32_t)(z*8+4));
   writeFloat(fd,1.0f); writeFloat(fd,1.0f); writeUint64(fd,0);
 }
