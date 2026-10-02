@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "farming.h"
+#include "server_config.h"
 #include "commands.h"
 #include "items.h"
 #include "packets.h"
@@ -13,9 +14,8 @@
 
 _Static_assert(LAPIS_PROTOCOL_VERSION == 772,"Review farmland and wheat states");
 /* y is the soil, age=8 means no crop. Water scans remain four slots per 100 ms.
- * Five 857 ms growth steps per age give 29.995 seconds from age zero to seven.
+ * Five growth steps per age give about 30 seconds by default (seven ages).
  * steps retains its saved 0..4 meaning; only the sub-step timer is transient. */
-#define GROWTH_STEP_MS 857u
 typedef struct { int16_t x,z; uint16_t growth_ms; uint8_t y,used,age,wet,steps; } Plot;
 static Plot plots[FARM_LIMIT];
 static char save_path[256];
@@ -129,6 +129,7 @@ void farming_block_changed (int x, int y, int z) {
 }
 void farming_tick (int64_t elapsed_us) {
   if (elapsed_us <= 0) return;
+  unsigned growth_step_ms = (unsigned)server_config.wheat_growth_seconds*1000u/35u;
   elapsed_ms += elapsed_us/1000 > 1000 ? 1000u : (uint32_t)(elapsed_us/1000);
   while (elapsed_ms >= 100) {
     elapsed_ms -= 100;
@@ -143,13 +144,15 @@ void farming_tick (int64_t elapsed_us) {
     for (unsigned i = 0; i < FARM_LIMIT; i++) {
       Plot *p = &plots[i]; if (!p->used || !p->wet || p->age >= 7) continue;
       p->growth_ms = (uint16_t)(p->growth_ms+100);
-      if (p->growth_ms < GROWTH_STEP_MS) continue;
-      p->growth_ms = (uint16_t)(p->growth_ms-GROWTH_STEP_MS);
-      if (getBlockAt(p->x,p->y,p->z) != B_farmland || getBlockAt(p->x,p->y+1,p->z) != B_wheat) continue;
+      if (p->growth_ms < growth_step_ms) continue;
+      /* At fast rates more than one partial step can elapse in a 100 ms tick. */
+      if (getBlockAt(p->x,p->y,p->z) != B_farmland || getBlockAt(p->x,p->y+1,p->z) != B_wheat) { p->growth_ms = 0; continue; }
       Plot old = *p;
-      if (++p->steps == 5) {
+      while (p->growth_ms >= growth_step_ms && p->age < 7) {
+        p->growth_ms = (uint16_t)(p->growth_ms-growth_step_ms);
+        if (++p->steps < 5) continue;
         p->steps = 0; p->age++;
-        if (!farming_save()) { *p = old; fputs("Could not save crop growth.\n",stderr); }
+        if (!farming_save()) { *p = old; p->growth_ms = 0; fputs("Could not save crop growth.\n",stderr); break; }
         else broadcast(p);
       }
     }

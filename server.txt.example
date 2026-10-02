@@ -1,0 +1,8 @@
+# Lapis Obsidian - restart after editing.
+port=25565
+motd=Lapis Obsidian
+gamemode=survival
+# Leave empty to reuse an existing world's seed.
+seed=
+mirror-horizontal=false
+wheat-growth-seconds=30

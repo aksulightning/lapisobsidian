@@ -22,6 +22,13 @@ Set `CC` to select a compiler. `DEBUG=1 ./build.sh` enables ASan/UBSan and addit
 conversion/shadow diagnostics. The existing MinGW `--9x` build option is retained.
 Embedded ESP-IDF support is inherited and has not been validated by this fork.
 
+## Configuration
+
+The first startup creates `server.txt` in the working directory. Edit it and
+restart to change the port, server-list message, default game mode, world seed,
+horizontal mirroring or wheat growth time. You can also copy `server.txt.example`
+before starting. See [settings, limits and CLI precedence](docs/server-config.md).
+
 ## Alpine Linux (RISC-V 64, ARM64, x86-64)
 
 On the target Alpine machine, install the C toolchain as root, then build:

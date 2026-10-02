@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "commands.h"
+#include "server_config.h"
 #include "world_border.h"
 #include "mobs.h"
 #include "musicbox.h"
@@ -39,17 +40,17 @@ void commands_reset_player (PlayerData *player) {
   int i = player_index(player); if (i < 0) return;
   memset(&sessions[i],0,sizeof(sessions[i]));
   world_border_reset(player); musicbox_reset_player(player);
-  sessions[i].mode = GAMEMODE; sessions[i].initialized = 1;
+  sessions[i].mode = server_config.gamemode; sessions[i].initialized = 1;
 }
 bool commands_is_admin (const PlayerData *player) {
   int i = player_index(player); return i >= 0 && sessions[i].admin;
 }
 uint8_t commands_gamemode (const PlayerData *player) {
   int i = player_index(player);
-  return i >= 0 && sessions[i].initialized ? sessions[i].mode : GAMEMODE;
+  return i >= 0 && sessions[i].initialized ? sessions[i].mode : server_config.gamemode;
 }
 uint8_t commands_mode_for_fd (int fd) {
-  PlayerData *player; return getPlayerData(fd,&player) ? GAMEMODE : commands_gamemode(player);
+  PlayerData *player; return getPlayerData(fd,&player) ? server_config.gamemode : commands_gamemode(player);
 }
 uint8_t commands_abilities (const PlayerData *player) {
   uint8_t mode = commands_gamemode(player);

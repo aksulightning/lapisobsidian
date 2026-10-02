@@ -1,4 +1,5 @@
 #include "doors.h"
+#include "server_config.h"
 #include "inventory.h"
 #include "circuits.h"
 #include "farming.h"
@@ -40,14 +41,21 @@ int sc_statusResponse (int client_fd) {
     "\"description\":{\"text\":\"";
   char footer[] = "\"}}";
 
-  uint16_t string_len = sizeof(header) + sizeof(footer) + motd_len - 2;
+  /* Config text is validated UTF-8; escape JSON syntax without heap allocation. */
+  char escaped[CONFIG_MOTD_MAX*2]; size_t motd_len = 0;
+  for (size_t i = 0; i < CONFIG_MOTD_MAX && server_config.motd[i]; i++) {
+    char c = server_config.motd[i];
+    if (c == '"' || c == '\\') escaped[motd_len++] = '\\';
+    escaped[motd_len++] = c;
+  }
+  uint16_t string_len = (uint16_t)(sizeof(header)+sizeof(footer)+motd_len-2);
 
   writeVarInt(client_fd, 1 + string_len + sizeVarInt(string_len));
   writeByte(client_fd, 0x00);
 
   writeVarInt(client_fd, string_len);
   send_all(client_fd, header, sizeof(header) - 1);
-  send_all(client_fd, motd, motd_len);
+  send_all(client_fd, escaped, (ssize_t)motd_len);
   send_all(client_fd, footer, sizeof(footer) - 1);
 
   return 0;

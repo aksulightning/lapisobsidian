@@ -9,6 +9,7 @@
 #include "crafting.h"
 #include "doors.h"
 #include "farming.h"
+#include "server_config.h"
 #include "inventory.h"
 #include "items.h"
 #include "mobs.h"
@@ -138,6 +139,13 @@ int main (void) {
   /* Fresh irrigated wheat is still immature at 29.9 s and mature at 30 s. */
   grow(299); assert(crop() < 4349); grow(1); assert(crop() == 4349);
   handlePlayerAction(p,0,0,201,0); drain(); items_clear(); drain();
+  server_config.wheat_growth_seconds = 1;
+  hold(I_wheat_seeds,1); use(0,200,0); grow(9); assert(crop() < 4349); grow(1); assert(crop() == 4349);
+  handlePlayerAction(p,0,0,201,0); drain(); items_clear(); drain();
+  server_config.wheat_growth_seconds = 600;
+  hold(I_wheat_seeds,1); use(0,200,0); grow(5999); assert(crop() < 4349); grow(1); assert(crop() == 4349);
+  handlePlayerAction(p,0,0,201,0); drain(); items_clear(); drain();
+  server_config.wheat_growth_seconds = 30;
   hold(I_wheat_seeds,1); use(0,200,0); assert(crop() == 4342);
   block(0,200,0,B_air); assert(getBlockAt(0,201,0) == B_air && drops(I_wheat_seeds) == 1);
   assert(!farming_state_at(0,200,0,B_farmland,&value));

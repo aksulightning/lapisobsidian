@@ -49,7 +49,8 @@ matching pre-update backup. No raw world-save migration is needed.
 4. Place water within four blocks in X/Z, at soil height or one block above.
    Source and flowing water count. Dry soil remains usable but growth pauses.
 5. Hydrated wheat advances through eight visible ages and matures in about
-   **30 seconds**, with a new age roughly every 4.3 seconds. Growth uses a small
+   **30 seconds** by default, with a new age roughly every 4.3 seconds. Set
+   `wheat-growth-seconds=1..600` in [server.txt](server-config.md) to change it. Growth uses a small
    timer per plot; water checks retain their bounded sweep (up to 6.4 seconds
    to notice changed water). Existing farm saves remain readable; restarting
    restores the last saved age and partial step. The sub-step timer is transient.

@@ -1,4 +1,5 @@
 #include "items.h"
+#include "server_config.h"
 #include "packet_input.h"
 #include "mobs.h"
 #include "doors.h"
@@ -452,22 +453,20 @@ int main (int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  bool explicit_seed = false;
-  for (int i = 1; i < argc; i ++) {
-    if (strcmp(argv[i], "--seed") == 0 && !explicit_seed) {
-      if (i + 1 >= argc || !beta173_seed_parse(argv[i + 1], &world_seed)) {
-        fputs("Invalid seed: expected a signed 64-bit decimal integer\n", stderr);
-        return EXIT_FAILURE;
-      }
-      i ++;
-      explicit_seed = true;
-    } else if (strcmp(argv[i], "--mirror-horizontal") == 0 && !world_mirror_horizontal) {
-      world_mirror_horizontal = 1;
-    } else {
-      fputs("Usage: lapis-obsidian [--seed <signed-64-bit-integer>] [--mirror-horizontal]\n", stderr);
-      return EXIT_FAILURE;
-    }
+  char config_error[200];
+  #ifdef ESP_PLATFORM
+  /* LittleFS is mounted by the embedded serializer, after desktop startup. */
+  const char *config_path = NULL;
+  #else
+  const char *config_path = "server.txt";
+  #endif
+  if ((config_path && !server_config_load(config_path,&server_config,config_error,sizeof(config_error))) ||
+      !server_config_arguments(&server_config,argc,argv,config_error,sizeof(config_error))) {
+    fprintf(stderr,"Lapis Obsidian: %s\n",config_error); return EXIT_FAILURE;
   }
+  world_seed = server_config.seed;
+  world_mirror_horizontal = server_config.mirror_horizontal ? 1 : 0;
+  bool explicit_seed = server_config.seed_set;
   #if defined(SYNC_WORLD_TO_DISK) && !defined(ESP_PLATFORM)
   if (!world_metadata_open("world.meta", "world.bin", &world_seed, explicit_seed, world_mirror_horizontal != 0)) return EXIT_FAILURE;
   #else
@@ -544,7 +543,7 @@ int main (int argc, char **argv) {
   // Bind socket to IP/port
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = INADDR_ANY;
-  server_addr.sin_port = htons(PORT);
+  server_addr.sin_port = htons(server_config.port);
 
   if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
     perror("bind failed");
@@ -558,7 +557,7 @@ int main (int argc, char **argv) {
     close(server_fd);
     exit(EXIT_FAILURE);
   }
-  printf("Server listening on port %d...\n", PORT);
+  printf("Server listening on port %u...\n", (unsigned)server_config.port);
 
   // Make the socket non-blocking
   // This is necessary to not starve the idle task during slow connections

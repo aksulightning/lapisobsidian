@@ -170,9 +170,6 @@ extern uint32_t rng_seed;
 extern uint16_t world_time;
 extern uint32_t server_ticks;
 
-extern char motd[];
-extern uint8_t motd_len;
-
 #ifdef SEND_BRAND
   extern char brand[];
   extern uint8_t brand_len;

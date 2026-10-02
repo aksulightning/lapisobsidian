@@ -13,3 +13,6 @@ lapis-obsidian-alpine-*
 songs/*.mid
 make-demo-song
 make-demo-song.exe
+
+# Local server settings are created at first startup.
+/server.txt

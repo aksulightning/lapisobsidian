@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "globals.h"
+#include "server_config.h"
 
 #ifdef ESP_PLATFORM
   #include "esp_task_wdt.h"
@@ -38,8 +39,7 @@ uint32_t rng_seed = INITIAL_RNG_SEED;
 uint16_t world_time = 0;
 uint32_t server_ticks = 0;
 
-char motd[] = { "Lapis Obsidian" };
-uint8_t motd_len = sizeof(motd) - 1;
+ServerConfig server_config = SERVER_CONFIG_DEFAULTS;
 
 #ifdef SEND_BRAND
   char brand[] = { "Lapis Obsidian" };
