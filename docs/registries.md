@@ -109,3 +109,13 @@ to the item-name snapshot, from the same pinned `pc/1.21.8/items.json` reference
 Water/lava source and flowing block states already exist in the compact palette;
 no IDs or saved record layouts change. Bucket and cooling sounds use named
 holders from `pc/1.21.8/sounds.json`. See `docs/fluids.md` for behavior and limits.
+
+## Plates compatibility
+
+Plates retain dimension type 0 (overworld) and the existing block/biome snapshots.
+Login advertises catalog world keys, and Respawn supplies the selected
+`lapis_obsidian:<name>` key. Volcanic uses only existing block IDs. The protocol-772
+entity additions are ghast=55, zombified_piglin=148 and fireball=50, checked against
+the same pinned minecraft-data entity reference. Named ghast and zombified-piglin
+sounds require no asset distribution. PlayerData and BlockChange layouts remain
+unchanged; the experiment keeps its saves in a separate directory.

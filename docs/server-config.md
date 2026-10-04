@@ -12,6 +12,7 @@ gamemode=survival
 seed=
 mirror-horizontal=false
 wheat-growth-seconds=30
+experimental_enable_plates=false
 ```
 
 | Setting | Values | Default |
@@ -22,6 +23,7 @@ wheat-growth-seconds=30
 | `seed` | Empty, or a signed 64-bit decimal integer | Saved seed; otherwise the built-in seed |
 | `mirror-horizontal` | true or false | false |
 | `wheat-growth-seconds` | Full hydrated growth time, 1–600 seconds | 30 |
+| `experimental_enable_plates` | Independent experimental worlds; true or false | false |
 
 Use one `key=value` per line. Blank lines and lines starting with `#` are ignored.
 Spaces around keys and values are trimmed. Values are literal: do not add wrapping
@@ -75,3 +77,7 @@ SANITIZE=1 ./tests/run.sh
 Tests cover default-file creation, parsing limits, invalid UTF-8, numeric bounds,
 atomic rejection, CLI precedence, status-packet escaping/framing, default game-mode
 abilities and hydrated growth at 1, 30 and 600 seconds.
+
+When Plates is enabled, its saved catalog selects each Plate’s seed; the configured
+seed initializes a new default hub. `/plate <name> <seed> <type>` sets other seeds.
+See [Plates setup, travel, saves and limits](plates.md).

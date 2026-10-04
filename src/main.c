@@ -1,3 +1,4 @@
+#include "plates.h"
 #include "fluids.h"
 #include "items.h"
 #include "server_config.h"
@@ -127,7 +128,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
         sc_commands(client_fd);
 
         // Register all existing players and spawn their entities
-        for (int i = 0; i < MAX_PLAYERS; i ++) {
+        for (int i = 0; i < MAX_PLAYERS; i ++) if (plates_player_active(&player_data[i])) {
           if (player_data[i].client_fd == -1) continue;
           // Note that this will also filter out the joining player
           if (player_data[i].flags & 0x20) continue;
@@ -205,7 +206,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
         if (recv_count <= 0) { recv_count = 0; return; }
         if ((packet_id == 0x1D || packet_id == 0x1E) &&
             (!isfinite(x) || !isfinite(y) || !isfinite(z) ||
-             y < 0 || y >= 256)) {
+             ((!plates_enabled || (plates_type() != PLATE_HUB && plates_type() != PLATE_SKYBOX)) && y < 0) || y < -64 || y >= 256)) {
           recv_count = 0;
           return;
         }
@@ -216,6 +217,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
         PlayerData *player;
         if (getPlayerData(client_fd, &player)) break;
 
+        if ((packet_id == 0x1D || packet_id == 0x1E) && plates_movement_guard(player,x,y,z)) break;
         if ((packet_id == 0x1D || packet_id == 0x1E) && world_border_guard(player,x,z)) break;
 
         uint8_t block_feet = getBlockAt(player->x, player->y, player->z);
@@ -277,7 +279,7 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
             pitch = player->pitch * 90 / 127;
           }
           // Send current position data to all connected players
-          for (int i = 0; i < MAX_PLAYERS; i ++) {
+          for (int i = 0; i < MAX_PLAYERS; i ++) if (plates_player_active(&player_data[i])) {
             if (player_data[i].client_fd == -1) continue;
             if (player_data[i].flags & 0x20) continue;
             if (player_data[i].client_fd == client_fd) continue;
@@ -469,7 +471,7 @@ int main (int argc, char **argv) {
   world_mirror_horizontal = server_config.mirror_horizontal ? 1 : 0;
   bool explicit_seed = server_config.seed_set;
   #if defined(SYNC_WORLD_TO_DISK) && !defined(ESP_PLATFORM)
-  if (!world_metadata_open("world.meta", "world.bin", &world_seed, explicit_seed, world_mirror_horizontal != 0)) return EXIT_FAILURE;
+  if (!server_config.experimental_enable_plates && !world_metadata_open("world.meta", "world.bin", &world_seed, explicit_seed, world_mirror_horizontal != 0)) return EXIT_FAILURE;
   #else
   (void)explicit_seed;
   #endif
@@ -488,7 +490,9 @@ int main (int argc, char **argv) {
   }
 
   // Start the disk/flash serializer (if applicable)
-  if (initSerializer()) exit(EXIT_FAILURE);
+  if (server_config.experimental_enable_plates) {
+    if (!plates_start()) { fputs("Cannot initialize Plates; check plates/index.txt and world saves.\n",stderr); return EXIT_FAILURE; }
+  } else if (initSerializer()) exit(EXIT_FAILURE);
   // Initialize all file descriptor references to -1 (unallocated)
   int clients[MAX_PLAYERS], client_index = 0;
   for (int i = 0; i < MAX_PLAYERS; i ++) {
@@ -497,6 +501,7 @@ int main (int argc, char **argv) {
     player_data[i].client_fd = -1;
   }
 
+  if (!plates_enabled) {
   #ifdef SYNC_WORLD_TO_DISK
     #ifdef ESP_PLATFORM
     if (!doors_load("/littlefs/doors.bin")) exit(EXIT_FAILURE);
@@ -521,6 +526,8 @@ int main (int argc, char **argv) {
   #endif
   fluids_init();
   circuits_tick();
+
+  }
 
   // Create server TCP socket
   int server_fd, opt = 1;
@@ -617,29 +624,29 @@ int main (int argc, char **argv) {
 
     // Projectiles, circuits and the bounded farm sweep use a 100 ms cadence.
     int64_t arrow_now = get_program_time();
-    if (arrow_now-last_mob_move_time >= 50000) {
-      mobs_tick_movement(arrow_now-last_mob_move_time);
-      last_mob_move_time = arrow_now;
+    int64_t time_since_last_tick = arrow_now-last_tick_time;
+    for (unsigned plate = 0; plate < (plates_enabled ? PLATE_LIMIT : 1u); plate++) {
+      /* Only loaded worlds have active simulation. select() itself is cheap. */
+      if (plates_enabled && !plates_is_loaded(plate)) continue;
+      if (!plates_select(plate)) continue;
+      if (arrow_now-last_mob_move_time >= 50000) mobs_tick_movement(arrow_now-last_mob_move_time);
+      if (arrow_now-last_music_time >= 20000) musicbox_tick(arrow_now-last_music_time);
+      if (arrow_now-last_arrow_time >= 100000) {
+        mobs_tick_arrows(arrow_now-last_arrow_time); fluids_tick(arrow_now-last_arrow_time);
+        circuits_tick(); farming_tick(arrow_now-last_arrow_time);
+      }
+      if (time_since_last_tick > TIME_BETWEEN_TICKS) handleServerTick(time_since_last_tick);
     }
-    if (arrow_now-last_music_time >= 20000) { musicbox_tick(arrow_now-last_music_time); last_music_time = arrow_now; }
-    if (arrow_now-last_arrow_time >= 100000) {
-      mobs_tick_arrows(arrow_now-last_arrow_time);
-      fluids_tick(arrow_now-last_arrow_time);
-      circuits_tick();
-      farming_tick(arrow_now-last_arrow_time);
-      last_arrow_time = arrow_now;
-    }
-    // Handle periodic events (server ticks)
-    int64_t time_since_last_tick = get_program_time() - last_tick_time;
-    if (time_since_last_tick > TIME_BETWEEN_TICKS) {
-      handleServerTick(time_since_last_tick);
-      last_tick_time = get_program_time();
-    }
+    if (arrow_now-last_mob_move_time >= 50000) last_mob_move_time = arrow_now;
+    if (arrow_now-last_music_time >= 20000) last_music_time = arrow_now;
+    if (arrow_now-last_arrow_time >= 100000) last_arrow_time = arrow_now;
+    if (time_since_last_tick > TIME_BETWEEN_TICKS) last_tick_time = arrow_now;
 
     if (clients[client_index] == -1) continue;
 
     // Handle this individual client
     int client_fd = clients[client_index];
+    plates_select_for_fd(client_fd);
 
     int ready = packet_input_poll(&inputs[client_index],get_program_time());
     if (ready < 0) { disconnectClient(&clients[client_index],2); continue; }

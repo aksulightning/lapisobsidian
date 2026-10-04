@@ -1,6 +1,8 @@
+#include "plates.h"
 #include <math.h>
 #include <string.h>
 #include "fluids.h"
+#include "plate_contexts.h"
 #include "commands.h"
 #include "circuits.h"
 #include "farming.h"
@@ -19,14 +21,21 @@ typedef struct {
   uint8_t y,used;
   uint32_t due;
 } Update;
-static Update queue[FLUID_QUEUE_LIMIT];
-static int16_t buckets[FLUID_QUEUE_LIMIT];
-static int16_t free_head;
-static unsigned pending, cursor;
-static uint32_t clock_tick;
-static int64_t tick_remainder;
-static int recovery;
-static bool ready, recovering, repeat_scan, changing, storage_blocked;
+
+typedef struct {
+  Update queue[FLUID_QUEUE_LIMIT];
+  int16_t buckets[FLUID_QUEUE_LIMIT];
+  int16_t free_head;
+  unsigned pending, cursor;
+  uint32_t clock_tick;
+  int64_t tick_remainder;
+  int recovery;
+  bool ready, recovering, repeat_scan, changing, storage_blocked;
+} FluidsContext;
+static FluidsContext legacy_context, *ctx = &legacy_context;
+size_t fluids_context_size (void) { return sizeof(*ctx); }
+void fluids_context_select (void *memory) { ctx = memory ? memory : &legacy_context; }
+
 static const int step[6][3] = {{0,-1,0},{0,1,0},{0,0,-1},{0,0,1},{-1,0,0},{1,0,0}};
 static bool coords (int x, int y, int z) {
   return x >= -32768 && x <= 32767 && z >= -32768 && z <= 32767 && y >= 0 && y <= 255;
@@ -42,36 +51,36 @@ static unsigned hash (int x, int y, int z) {
 static void schedule (int x, int y, int z, unsigned delay) {
   if (!coords(x,y,z)) return;
   unsigned h = hash(x,y,z);
-  for (int i = buckets[h]; i >= 0; i = queue[i].next)
-    if (queue[i].x == x && queue[i].y == y && queue[i].z == z) return;
-  if (free_head < 0) { recovering = true; repeat_scan = true; return; }
-  int i = free_head; free_head = queue[i].next;
-  queue[i] = (Update){.x=(int16_t)x,.z=(int16_t)z,.y=(uint8_t)y,.used=delay >= 6 ? 2 : 1,
-    .due=clock_tick+delay,.next=buckets[h]};
-  buckets[h] = (int16_t)i; pending++;
+  for (int i = ctx->buckets[h]; i >= 0; i = ctx->queue[i].next)
+    if (ctx->queue[i].x == x && ctx->queue[i].y == y && ctx->queue[i].z == z) return;
+  if (ctx->free_head < 0) { ctx->recovering = true; ctx->repeat_scan = true; return; }
+  int i = ctx->free_head; ctx->free_head = ctx->queue[i].next;
+  ctx->queue[i] = (Update){.x=(int16_t)x,.z=(int16_t)z,.y=(uint8_t)y,.used=delay >= 6 ? 2 : 1,
+    .due=ctx->clock_tick+delay,.next=ctx->buckets[h]};
+  ctx->buckets[h] = (int16_t)i; ctx->pending++;
 }
 static void unschedule (unsigned i) {
-  unsigned h = hash(queue[i].x,queue[i].y,queue[i].z);
-  int16_t *link = &buckets[h];
-  while (*link != (int)i) link = &queue[*link].next;
-  *link = queue[i].next;
-  queue[i].used = 0; queue[i].next = free_head; free_head = (int16_t)i; pending--;
+  unsigned h = hash(ctx->queue[i].x,ctx->queue[i].y,ctx->queue[i].z);
+  int16_t *link = &ctx->buckets[h];
+  while (*link != (int)i) link = &ctx->queue[*link].next;
+  *link = ctx->queue[i].next;
+  ctx->queue[i].used = 0; ctx->queue[i].next = ctx->free_head; ctx->free_head = (int16_t)i; ctx->pending--;
 }
 void fluids_block_changed (int x, int y, int z) {
-  if (!ready || !coords(x,y,z)) return;
-  if (!changing) storage_blocked = false;
+  if (!ctx->ready || !coords(x,y,z)) return;
+  if (!ctx->changing) ctx->storage_blocked = false;
   unsigned delay = kind(getBlockAt(x,y,z)) == B_lava ? 6u : 2u;
   schedule(x,y,z,delay);
   for (unsigned i = 0; i < 6; i++) schedule(x+step[i][0],y+step[i][1],z+step[i][2],delay);
 }
 void fluids_init (void) {
-  memset(queue,0,sizeof(queue));
+  memset(ctx->queue,0,sizeof(ctx->queue));
   for (unsigned i = 0; i < FLUID_QUEUE_LIMIT; i++) {
-    buckets[i] = -1; queue[i].next = (int16_t)(i+1);
+    ctx->buckets[i] = -1; ctx->queue[i].next = (int16_t)(i+1);
   }
-  queue[FLUID_QUEUE_LIMIT-1].next = -1; free_head = 0;
-  pending = cursor = clock_tick = 0; tick_remainder = 0; recovery = 0;
-  ready = recovering = true; repeat_scan = changing = storage_blocked = false;
+  ctx->queue[FLUID_QUEUE_LIMIT-1].next = -1; ctx->free_head = 0;
+  ctx->pending = ctx->cursor = ctx->clock_tick = 0; ctx->tick_remainder = 0; ctx->recovery = 0;
+  ctx->ready = ctx->recovering = true; ctx->repeat_scan = ctx->changing = ctx->storage_blocked = false;
 }
 static bool fragile (uint8_t b) {
   return b == B_short_grass || b == B_fern || b == B_dead_bush || b == B_snow ||
@@ -85,7 +94,7 @@ static uint8_t at (int x, int y, int z) {
   return coords(x,y,z) ? getBlockAt(x,y,z) : B_bedrock;
 }
 static void sound (const char *name, int x, int y, int z) {
-  for (int i = 0; i < MAX_PLAYERS; i++) {
+  for (int i = 0; i < MAX_PLAYERS; i++) if (plates_player_active(&player_data[i])) {
     const PlayerData *p = &player_data[i];
     int dx = (int)p->x-x, dy = (int)p->y-y, dz = (int)p->z-z;
     if (p->client_fd < 0 || (p->flags&0x22) || dx < -32 || dx > 32 || dy < -32 || dy > 32 || dz < -32 || dz > 32 ||
@@ -105,11 +114,11 @@ static bool replace (int x, int y, int z, uint8_t old, uint8_t b) {
       if (drop && !items_can_spawn(drop,1,x,y,z)) return false;
     }
   }
-  changing = true;
+  ctx->changing = true;
   bool ok = !makeBlockChange((short)x,(uint8_t)y,(short)z,b);
-  changing = false;
-  if (!ok) { storage_blocked = true; return false; }
-  storage_blocked = false;
+  ctx->changing = false;
+  if (!ok) { ctx->storage_blocked = true; return false; }
+  ctx->storage_blocked = false;
   if (drop) items_spawn(drop,1,x,y,z,500);
   return true;
 }
@@ -143,39 +152,39 @@ static uint8_t desired (int x, int y, int z, uint8_t current) {
   return result == B_air && !f ? current : result;
 }
 void fluids_tick (int64_t elapsed_us) {
-  if (!ready || elapsed_us <= 0 || storage_blocked) return;
+  if (!ctx->ready || elapsed_us <= 0 || ctx->storage_blocked) return;
   /* No catch-up flood after a stalled tick. One call does at most 64 cells. */
-  tick_remainder += elapsed_us > 100000 ? 100000 : elapsed_us;
-  if (tick_remainder < 100000) return;
-  tick_remainder -= 100000; clock_tick++;
+  ctx->tick_remainder += elapsed_us > 100000 ? 100000 : elapsed_us;
+  if (ctx->tick_remainder < 100000) return;
+  ctx->tick_remainder -= 100000; ctx->clock_tick++;
   unsigned work = 0;
-  for (unsigned scanned = 0; scanned < FLUID_QUEUE_LIMIT && work < FLUID_TICK_BUDGET && pending; scanned++) {
-    unsigned i = cursor; cursor = (cursor+1u)%FLUID_QUEUE_LIMIT;
-    if (!queue[i].used || (uint32_t)(clock_tick-queue[i].due) >= UINT32_C(0x80000000)) continue;
-    int x = queue[i].x, y = queue[i].y, z = queue[i].z;
+  for (unsigned scanned = 0; scanned < FLUID_QUEUE_LIMIT && work < FLUID_TICK_BUDGET && ctx->pending; scanned++) {
+    unsigned i = ctx->cursor; ctx->cursor = (ctx->cursor+1u)%FLUID_QUEUE_LIMIT;
+    if (!ctx->queue[i].used || (uint32_t)(ctx->clock_tick-ctx->queue[i].due) >= UINT32_C(0x80000000)) continue;
+    int x = ctx->queue[i].x, y = ctx->queue[i].y, z = ctx->queue[i].z;
     uint8_t before = at(x,y,z), after = desired(x,y,z,before);
     work++;
     /* Water changes every 200 ms; lava changes on the slower 600 ms cadence. */
-    if ((kind(before) == B_lava || kind(after) == B_lava) && queue[i].used != 2) {
-      queue[i].used = 2; queue[i].due = clock_tick+4u; continue;
+    if ((kind(before) == B_lava || kind(after) == B_lava) && ctx->queue[i].used != 2) {
+      ctx->queue[i].used = 2; ctx->queue[i].due = ctx->clock_tick+4u; continue;
     }
     unschedule(i);
     if (after != before) {
       if (!replace(x,y,z,before,after)) schedule(x,y,z,6);
       else if (kind(before) && !kind(after) && after != B_air) sound("minecraft:block.lava.extinguish",x,y,z);
     }
-    if (storage_blocked) return;
+    if (ctx->storage_blocked) return;
   }
   /* Restore pending flow after restart without scanning generated chunks. */
-  if (recovering && pending < FLUID_QUEUE_LIMIT/2) {
-    for (unsigned n = 0; n < 16 && recovery < block_changes_count; n++, recovery++) {
-      const BlockChange *b = &block_changes[recovery];
+  if (ctx->recovering && ctx->pending < FLUID_QUEUE_LIMIT/2) {
+    for (unsigned n = 0; n < 16 && ctx->recovery < block_changes_count; n++, ctx->recovery++) {
+      const BlockChange *b = &block_changes[ctx->recovery];
       if (b->block == 255) continue;
-      if (b->block == B_chest) { recovery += 14; continue; }
+      if (b->block == B_chest) { ctx->recovery += 14; continue; }
       fluids_block_changed(b->x,b->y,b->z);
     }
-    if (recovery >= block_changes_count) {
-      recovering = repeat_scan; repeat_scan = false; recovery = 0;
+    if (ctx->recovery >= block_changes_count) {
+      ctx->recovering = ctx->repeat_scan; ctx->repeat_scan = false; ctx->recovery = 0;
     }
   }
 }

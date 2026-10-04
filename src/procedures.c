@@ -1,3 +1,4 @@
+#include "plates.h"
 #include "fluids.h"
 #include "items.h"
 #include "inventory.h"
@@ -91,6 +92,7 @@ int reservePlayerData (int client_fd, uint8_t *uuid, char *name) {
   for (int i = 0; i < MAX_PLAYERS; i ++) {
     // Found existing player entry (UUID match)
     if (memcmp(player_data[i].uuid, uuid, 16) == 0) {
+      plates_player_reset(&player_data[i]);
       inventory_reset(&player_data[i]);
       commands_reset_player(&player_data[i]);
       mobs_forget_player(&player_data[i]);
@@ -119,6 +121,7 @@ int reservePlayerData (int client_fd, uint8_t *uuid, char *name) {
     // Found free space for a player, initialize default parameters
     if (empty) {
       if (player_data_count >= MAX_PLAYERS) return 1;
+      plates_player_reset(&player_data[i]);
       inventory_reset(&player_data[i]);
       commands_reset_player(&player_data[i]);
       mobs_forget_player(&player_data[i]);
@@ -140,7 +143,7 @@ int reservePlayerData (int client_fd, uint8_t *uuid, char *name) {
 
 int getPlayerData (int client_fd, PlayerData **output) {
   for (int i = 0; i < MAX_PLAYERS; i ++) {
-    if (player_data[i].client_fd == client_fd) {
+    if (player_data[i].client_fd == client_fd && plates_player_active(&player_data[i])) {
       *output = &player_data[i];
       return 0;
     }
@@ -151,7 +154,7 @@ int getPlayerData (int client_fd, PlayerData **output) {
 // Returns the player with the given name, or NULL if not found
 PlayerData *getPlayerByName (int start_offset, int end_offset, uint8_t *buffer) {
   for (int i = 0; i < MAX_PLAYERS; i ++) {
-    if (player_data[i].client_fd == -1) continue;
+    if (!plates_player_active(&player_data[i]) || player_data[i].client_fd == -1) continue;
     int j;
     for (j = start_offset; j < end_offset && j < 256 && buffer[j] != ' '; j++) {
       if (player_data[i].name[j - start_offset] != buffer[j]) break;
@@ -209,7 +212,7 @@ void handlePlayerJoin (PlayerData* player) {
   strcpy((char *)recv_buffer + player_name_len, " joined the game");
 
   // Inform other clients (and the joining client) of the player's name and entity
-  for (int i = 0; i < MAX_PLAYERS; i ++) {
+  for (int i = 0; i < MAX_PLAYERS; i ++) if (plates_player_active(&player_data[i])) {
     sc_systemChat(player_data[i].client_fd, (char *)recv_buffer, 16 + player_name_len);
     sc_playerInfoUpdateAddPlayer(player_data[i].client_fd, *player);
     if (player_data[i].client_fd != player->client_fd) {
@@ -448,7 +451,7 @@ void broadcastPlayerMetadata (PlayerData *player) {
     }
   };
 
-  for (int i = 0; i < MAX_PLAYERS; i ++) {
+  for (int i = 0; i < MAX_PLAYERS; i ++) if (plates_player_active(&player_data[i])) {
     PlayerData* other_player = &player_data[i];
     int client_fd = other_player->client_fd;
 
@@ -491,7 +494,7 @@ void broadcastMobMetadata (int client_fd, int entity_id) {
   }
 
   if (client_fd == -1) {
-    for (int i = 0; i < MAX_PLAYERS; i ++) {
+    for (int i = 0; i < MAX_PLAYERS; i ++) if (plates_player_active(&player_data[i])) {
       PlayerData* player = &player_data[i];
       client_fd = player->client_fd;
 
@@ -531,7 +534,7 @@ void failBlockChange (short x, uint8_t y, short z, uint8_t block) {
   uint8_t before = getBlockAt(x, y, z);
 
   // Broadcast a new update to all players
-  for (int i = 0; i < MAX_PLAYERS; i ++) {
+  for (int i = 0; i < MAX_PLAYERS; i ++) if (plates_player_active(&player_data[i])) {
     if (player_data[i].client_fd == -1) continue;
     if (player_data[i].flags & 0x20) continue;
     // Reset the block they tried to change
@@ -545,7 +548,7 @@ void failBlockChange (short x, uint8_t y, short z, uint8_t block) {
 uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
 
   // Transmit block update to all in-game clients
-  for (int i = 0; i < MAX_PLAYERS; i ++) {
+  for (int i = 0; i < MAX_PLAYERS; i ++) if (plates_player_active(&player_data[i])) {
     if (player_data[i].client_fd == -1) continue;
     if (player_data[i].flags & 0x20) continue;
     sc_blockUpdate(player_data[i].client_fd, x, y, z, block);
@@ -1385,7 +1388,7 @@ void interactEntity (int entity_id, int interactor_id) {
       uint8_t item_count = 1 + (fast_rand() & 1); // 1-2
       items_spawn(I_white_wool,item_count,mob->x,mob->y,mob->z,500);
 
-      for (int i = 0; i < MAX_PLAYERS; i ++) {
+      for (int i = 0; i < MAX_PLAYERS; i ++) if (plates_player_active(&player_data[i])) {
         PlayerData* player = &player_data[i];
         int client_fd = player->client_fd;
 
@@ -1545,7 +1548,7 @@ void hurtEntity (int entity_id, int attacker_id, uint8_t damage_type, uint8_t da
   }
 
   // Broadcast damage event to all players
-  for (int i = 0; i < MAX_PLAYERS; i ++) {
+  for (int i = 0; i < MAX_PLAYERS; i ++) if (plates_player_active(&player_data[i])) {
     int client_fd = player_data[i].client_fd;
     if (client_fd == -1) continue;
     sc_damageEvent(client_fd, entity_id, damage_type);
@@ -1571,7 +1574,7 @@ void handleServerTick (int64_t time_since_last_tick) {
   items_tick(time_since_last_tick);
 
   // Update player events
-  for (int i = 0; i < MAX_PLAYERS; i ++) {
+  for (int i = 0; i < MAX_PLAYERS; i ++) if (plates_player_active(&player_data[i])) {
     PlayerData *player = &player_data[i];
     if (player->client_fd == -1) continue; // Skip offline players
     if (player->flags & 0x20) { // Check "client loading" flag
@@ -1655,7 +1658,7 @@ void handleServerTick (int64_t time_since_last_tick) {
 void broadcastChestUpdate (int origin_fd, uint8_t *storage_ptr, uint16_t item, uint8_t count, uint8_t slot) {
   (void)origin_fd;
 
-  for (int i = 0; i < MAX_PLAYERS; i ++) {
+  for (int i = 0; i < MAX_PLAYERS; i ++) if (plates_player_active(&player_data[i])) {
     if (player_data[i].client_fd == -1) continue;
     if (player_data[i].flags & 0x20) continue;
     // Filter for players that have this chest open

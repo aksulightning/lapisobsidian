@@ -1,3 +1,4 @@
+#include "plates.h"
 #include <math.h>
 #include <string.h>
 #include "notes.h"
@@ -25,7 +26,7 @@ void notes_play (int x, int y, int z, uint8_t instrument, uint8_t note, uint8_t 
       instrument >= NOTE_INSTRUMENTS || note > 24 || !velocity || velocity > 127) return;
   const char *name = sounds[instrument]; size_t n = strlen(name);
   float pitch = (float)pow(2.0,((double)note-12.0)/12.0);
-  for (int i = 0; i < MAX_PLAYERS; i++) {
+  for (int i = 0; i < MAX_PLAYERS; i++) if (plates_player_active(&player_data[i])) {
     const PlayerData *p = &player_data[i];
     int dx = (int)p->x-x, dy = (int)p->y-y, dz = (int)p->z-z;
     if (p->client_fd < 0 || (p->flags&0x22) || dx < -32 || dx > 32 || dz < -32 || dz > 32 || dy < -32 || dy > 32 ||

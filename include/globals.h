@@ -159,13 +159,9 @@
 extern ssize_t recv_count;
 extern uint8_t recv_buffer[MAX_RECV_BUF_LEN];
 
-extern uint64_t world_seed;
 // Startup option selected by --mirror-horizontal; persisted in world metadata.
 extern uint8_t world_mirror_horizontal;
-extern uint32_t rng_seed;
 
-extern uint16_t world_time;
-extern uint32_t server_ticks;
 
 #ifdef SEND_BRAND
   extern char brand[];
@@ -251,12 +247,28 @@ typedef struct {
   union EntityDataValue value;
 } EntityData;
 
-extern BlockChange block_changes[MAX_BLOCK_CHANGES];
-extern int block_changes_count;
+typedef struct {
+  uint64_t seed;
+  uint32_t random, ticks;
+  uint16_t time;
+  int changes_count;
+  int64_t disk_sync_time;
+  BlockChange changes[MAX_BLOCK_CHANGES];
+  MobData mobs[MAX_MOBS];
+} WorldState;
+extern WorldState legacy_world, *active_world;
+/* Array-valued aliases retain sizeof() and the inherited save layout. */
+#define world_seed (active_world->seed)
+#define rng_seed (active_world->random)
+#define world_time (active_world->time)
+#define server_ticks (active_world->ticks)
+#define block_changes (active_world->changes)
+#define block_changes_count (active_world->changes_count)
+#define mob_data (active_world->mobs)
 
 extern PlayerData player_data[MAX_PLAYERS];
 extern int player_data_count;
 
-extern MobData mob_data[MAX_MOBS];
+
 
 #endif

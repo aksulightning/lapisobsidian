@@ -14,6 +14,7 @@
 #include <unistd.h>
 #endif
 #include "musicbox.h"
+#include "plate_contexts.h"
 #include "midi.h"
 #include "notes.h"
 #include "packets.h"
@@ -23,11 +24,20 @@
 
 static char directory[200], songs[MUSICBOX_SONG_LIMIT][64];
 static unsigned song_count;
-static uint64_t clock_us;
+
 typedef struct { int16_t x,z; uint8_t y,selected; uint64_t expires,next_menu,next_play; } Selection;
-static Selection selections[MAX_PLAYERS];
+
 typedef struct { MidiSong *song; uint64_t elapsed_us; uint32_t cursor; int16_t x,z; uint8_t y; } Playback;
-static Playback playing[MUSICBOX_PLAYER_LIMIT];
+
+typedef struct {
+  uint64_t clock_us;
+  Selection selections[MAX_PLAYERS];
+  Playback playing[MUSICBOX_PLAYER_LIMIT];
+} MusicboxContext;
+static MusicboxContext legacy_context, *ctx = &legacy_context;
+size_t musicbox_context_size (void) { return sizeof(*ctx); }
+void musicbox_context_select (void *memory) { ctx = memory ? memory : &legacy_context; }
+
 static int player_index (const PlayerData *p) { for (int i = 0; i < MAX_PLAYERS; i++) if (p == &player_data[i]) return i; return -1; }
 static bool near (const PlayerData *p, int x, int y, int z) {
   if (!p || p->client_fd < 0 || !p->health || (p->flags&0x22) || commands_gamemode(p) == 3) return false;
@@ -56,11 +66,11 @@ static void add_song (const char *name) {
   strcpy(songs[at],name);
 }
 void musicbox_shutdown (void) {
-  for (unsigned i = 0; i < MUSICBOX_PLAYER_LIMIT; i++) { free(playing[i].song); memset(&playing[i],0,sizeof(playing[i])); }
+  for (unsigned i = 0; i < MUSICBOX_PLAYER_LIMIT; i++) { free(ctx->playing[i].song); memset(&ctx->playing[i],0,sizeof(ctx->playing[i])); }
 }
 bool musicbox_init (const char *folder) {
   if (!folder || strlen(folder) >= sizeof(directory)) return false;
-  musicbox_shutdown(); memset(selections,0,sizeof(selections)); song_count = 0;
+  musicbox_shutdown(); memset(ctx->selections,0,sizeof(ctx->selections)); song_count = 0;
   memmove(directory,folder,strlen(folder)+1);
 #ifdef _WIN32
   char pattern[208]; snprintf(pattern,sizeof(pattern),"%s/*.mid",directory);
@@ -81,11 +91,11 @@ bool musicbox_init (const char *folder) {
   bool ok = errno == 0; if (closedir(dir)) ok = false; return ok;
 #endif
 }
-void musicbox_reset_player (PlayerData *p) { int slot = player_index(p); if (slot >= 0) memset(&selections[slot],0,sizeof(selections[slot])); }
+void musicbox_reset_player (PlayerData *p) { int slot = player_index(p); if (slot >= 0) memset(&ctx->selections[slot],0,sizeof(ctx->selections[slot])); }
 void musicbox_menu (PlayerData *p, int x, int y, int z) {
   int slot = player_index(p); if (slot < 0 || !near(p,x,y,z)) return;
-  Selection *s = &selections[slot]; if (clock_us < s->next_menu) return;
-  *s = (Selection){(int16_t)x,(int16_t)z,(uint8_t)y,1,clock_us+60000000,clock_us+1000000,s->next_play};
+  Selection *s = &ctx->selections[slot]; if (ctx->clock_us < s->next_menu) return;
+  *s = (Selection){(int16_t)x,(int16_t)z,(uint8_t)y,1,ctx->clock_us+60000000,ctx->clock_us+1000000,s->next_play};
   reply(p,COMMAND_OK,"Musicbox: /music <number> to play, /music stop to stop. Selection lasts 60 seconds.");
   if (!song_count) reply(p,COMMAND_OK,"No songs. Add .mid files to songs/ and ask an admin to run /music reload.");
   for (unsigned i = 0; i < song_count; i++) { char line[96]; snprintf(line,sizeof(line),"/music %u - %s",i+1,songs[i]); reply(p,COMMAND_OK,line); }
@@ -120,11 +130,11 @@ CommandResult musicbox_command (PlayerData *p, int argc, char *const argv[]) {
     if (!musicbox_init(directory[0] ? directory : "songs")) return reply(p,COMMAND_DENIED,"Could not read the songs directory.");
     return reply(p,COMMAND_OK,"Song list reloaded; playback stopped. Right-click the musicbox again.");
   }
-  Selection *s = &selections[slot];
-  if (!s->selected || clock_us > s->expires || !near(p,s->x,s->y,s->z)) return reply(p,COMMAND_DENIED,"Right-click a nearby musicbox first.");
+  Selection *s = &ctx->selections[slot];
+  if (!s->selected || ctx->clock_us > s->expires || !near(p,s->x,s->y,s->z)) return reply(p,COMMAND_DENIED,"Right-click a nearby musicbox first.");
   Playback *box = NULL, *available = NULL;
   for (unsigned i = 0; i < MUSICBOX_PLAYER_LIMIT; i++) {
-    Playback *b = &playing[i];
+    Playback *b = &ctx->playing[i];
     if (!b->song) available = b;
     else if (b->x == s->x && b->y == s->y && b->z == s->z) box = b;
   }
@@ -136,8 +146,8 @@ CommandResult musicbox_command (PlayerData *p, int argc, char *const argv[]) {
   unsigned number = 0;
   for (const char *c = argv[1]; *c; c++) { if (*c < '0' || *c > '9') return reply(p,COMMAND_USAGE,"Invalid song number."); number = number*10u+(unsigned)(*c-'0'); }
   if (!number || number > song_count) return reply(p,COMMAND_USAGE,"Song number is not in the menu.");
-  if (clock_us < s->next_play) return reply(p,COMMAND_DENIED,"Wait one second between musicbox actions.");
-  s->next_play = clock_us+1000000;
+  if (ctx->clock_us < s->next_play) return reply(p,COMMAND_DENIED,"Wait one second between musicbox actions.");
+  s->next_play = ctx->clock_us+1000000;
   if (!box) box = available;
   if (!box) return reply(p,COMMAND_DENIED,"Both musicbox playback slots are busy.");
   MidiSong *song = load_song(number-1);
@@ -148,24 +158,24 @@ CommandResult musicbox_command (PlayerData *p, int argc, char *const argv[]) {
 void musicbox_block_changed (int x, int y, int z) {
   bool affected = false;
   for (unsigned i = 0; i < MUSICBOX_PLAYER_LIMIT; i++)
-    if (playing[i].song && playing[i].x == x && playing[i].y == y && playing[i].z == z) affected = true;
+    if (ctx->playing[i].song && ctx->playing[i].x == x && ctx->playing[i].y == y && ctx->playing[i].z == z) affected = true;
   for (unsigned i = 0; i < MAX_PLAYERS; i++)
-    if (selections[i].selected && selections[i].x == x && selections[i].y == y && selections[i].z == z) affected = true;
+    if (ctx->selections[i].selected && ctx->selections[i].x == x && ctx->selections[i].y == y && ctx->selections[i].z == z) affected = true;
   if (!affected) return;
   if (getBlockAt(x,y,z) == B_jukebox) return;
   for (unsigned i = 0; i < MUSICBOX_PLAYER_LIMIT; i++) {
-    Playback *b = &playing[i];
+    Playback *b = &ctx->playing[i];
     if (b->song && b->x == x && b->y == y && b->z == z) { free(b->song); memset(b,0,sizeof(*b)); }
   }
-  for (unsigned i = 0; i < MAX_PLAYERS; i++) if (selections[i].selected && selections[i].x == x && selections[i].y == y && selections[i].z == z) selections[i].selected = 0;
+  for (unsigned i = 0; i < MAX_PLAYERS; i++) if (ctx->selections[i].selected && ctx->selections[i].x == x && ctx->selections[i].y == y && ctx->selections[i].z == z) ctx->selections[i].selected = 0;
 }
 void musicbox_tick (int64_t elapsed_us) {
   if (elapsed_us <= 0) return;
   uint64_t dt = (uint64_t)elapsed_us;
   if (dt > UINT64_C(3600000000)) dt = UINT64_C(3600000000);
-  clock_us += dt;
+  ctx->clock_us += dt;
   for (unsigned i = 0; i < MUSICBOX_PLAYER_LIMIT; i++) {
-    Playback *b = &playing[i]; if (!b->song) continue;
+    Playback *b = &ctx->playing[i]; if (!b->song) continue;
     if (getBlockAt(b->x,b->y,b->z) != B_jukebox) { free(b->song); memset(b,0,sizeof(*b)); continue; }
     b->elapsed_us += dt; uint64_t ms = b->elapsed_us/1000; unsigned sent = 0;
     while (b->cursor < b->song->count && b->song->notes[b->cursor].ms <= ms) {

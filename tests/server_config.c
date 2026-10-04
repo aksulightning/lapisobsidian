@@ -18,14 +18,14 @@ int main (void) {
   remove(path); ServerConfig c;
   assert(server_config_load(path,&c,error,sizeof(error)));
   assert(c.port == PORT && c.gamemode == GAMEMODE && !c.seed_set && c.seed == INITIAL_WORLD_SEED);
-  assert(!c.mirror_horizontal && c.wheat_growth_seconds == 30 && !strcmp(c.motd,"Lapis Obsidian"));
+  assert(!c.experimental_enable_plates && !c.mirror_horizontal && c.wheat_growth_seconds == 30 && !strcmp(c.motd,"Lapis Obsidian"));
   assert(server_config_load(path,&c,error,sizeof(error))); /* generated file round-trip */
   const char valid[] = " # comment\r\n port = 65535 \r\nmotd=My \"world\" \\ #1 = hyvä\n"
-    "gamemode = creative\nseed=-9223372036854775808\nmirror-horizontal=true\nwheat-growth-seconds=600";
+    "gamemode = creative\nseed=-9223372036854775808\nmirror-horizontal=true\nwheat-growth-seconds=600\nexperimental_enable_plates=true";
   write_bytes(valid,sizeof(valid)-1); assert(server_config_load(path,&c,error,sizeof(error)));
   assert(c.port == 65535 && c.gamemode == 1 && c.seed == UINT64_C(0x8000000000000000) && c.seed_set);
-  assert(c.mirror_horizontal && c.wheat_growth_seconds == 600 && !strcmp(c.motd,"My \"world\" \\ #1 = hyvä"));
-  const char *bad[] = {"port=0","port=-1","port=65536","port=9999999999999999999999","port=2x","port=1\nport=2",
+  assert(c.experimental_enable_plates && c.mirror_horizontal && c.wheat_growth_seconds == 600 && !strcmp(c.motd,"My \"world\" \\ #1 = hyvä"));
+  const char *bad[] = {"experimental_enable_plates=yes","experimental_enable_plates=true\nexperimental_enable_plates=false","port=0","port=-1","port=65536","port=9999999999999999999999","port=2x","port=1\nport=2",
     "gamemode=4","gamemode=builder","mirror-horizontal=1","seed=9223372036854775808","seed=-9223372036854775809",
     "wheat-growth-seconds=0","wheat-growth-seconds=601","unknown=true","port 25565","motd=a\tb", "motd=\xc0\xaf",
     "motd=\xed\xa0\x80","motd=\xf4\x90\x80\x80","motd=\xe2\x82"};

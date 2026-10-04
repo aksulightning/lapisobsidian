@@ -6,7 +6,7 @@
 #include "globals.h"
 
 enum { MOB_CHICKEN=25, MOB_COW=28, MOB_CREEPER=30, MOB_PIG=95,
-  MOB_SHEEP=106, MOB_SKELETON=110, MOB_SPIDER=119, MOB_ZOMBIE=145 };
+  MOB_GHAST=55, MOB_ZOMBIE_PIGMAN=148, MOB_SHEEP=106, MOB_SKELETON=110, MOB_SPIDER=119, MOB_ZOMBIE=145 };
 #define MOB_ARROW_LIMIT 32
 #define MOB_ARROW_BASE (-2048)
 typedef struct { const char *name; uint8_t type, health; } MobType;

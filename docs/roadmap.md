@@ -32,3 +32,7 @@ in C, and separate from the low-level networking and world generator.
    and use, cooling reactions and saved-world recovery. See [behavior and limits](fluids.md).
 
 See [redstone and music behavior, limits and tests](redstone-and-music.md).
+
+10. **Plates — experimental.** Independent worlds, hub/flat/skybox/volcanic
+    templates, per-world simulation and saves, admin creation and confirmed removal.
+    Volcanic adds neutral zombie pigmen and non-griefing ghasts. See [Plates](plates.md).

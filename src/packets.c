@@ -1,3 +1,4 @@
+#include "plates.h"
 #include "doors.h"
 #include "server_config.h"
 #include "inventory.h"
@@ -228,18 +229,17 @@ int sc_finishConfiguration (int client_fd) {
 
 // S->C Login (play)
 int sc_loginPlay (int client_fd) {
-
-  writeVarInt(client_fd, 47 + sizeVarInt(MAX_PLAYERS) + sizeVarInt(VIEW_DISTANCE) * 2);
-  writeByte(client_fd, 0x2B);
-  // entity id
-  writeUint32(client_fd, client_fd);
-  // hardcore
-  writeByte(client_fd, false);
-  // dimensions
-  writeVarInt(client_fd, 1);
-  writeVarInt(client_fd, 9);
-  const char *dimension = "overworld";
-  send_all(client_fd, dimension, 9);
+  const char *dimension = plates_dimension(plate_current);
+  uint32_t n = (uint32_t)strlen(dimension), count = plates_dimension_count(), list_bytes = 0;
+  for (unsigned i = 0; i < count; i++) { uint32_t k = (uint32_t)strlen(plates_dimension_at(i)); list_bytes += (uint32_t)sizeVarInt(k)+k; }
+  writeVarInt(client_fd,26u+(uint32_t)sizeVarInt(count)+list_bytes+(uint32_t)sizeVarInt(n)+n+
+    (uint32_t)sizeVarInt(MAX_PLAYERS)+(uint32_t)sizeVarInt(VIEW_DISTANCE)*2u);
+  writeByte(client_fd,0x2B); writeUint32(client_fd,(uint32_t)client_fd); writeByte(client_fd,false);
+  writeVarInt(client_fd,count);
+  for (unsigned i = 0; i < count; i++) {
+    const char *key = plates_dimension_at(i); uint32_t k = (uint32_t)strlen(key);
+    writeVarInt(client_fd,k); send_all(client_fd,key,k);
+  }
   // maxplayers
   writeVarInt(client_fd, MAX_PLAYERS);
   // view distance
@@ -256,8 +256,8 @@ int sc_loginPlay (int client_fd) {
   // the server only sends "overworld"
   writeVarInt(client_fd, 0);
   // dimension name
-  writeVarInt(client_fd, 9);
-  send_all(client_fd, dimension, 9);
+  writeVarInt(client_fd,n);
+  send_all(client_fd,dimension,n);
   // hashed seed
   writeUint64(client_fd, 0x0123456789ABCDEF);
   // gamemode
@@ -876,15 +876,16 @@ int sc_setHealth (int client_fd, uint8_t health, uint8_t food, uint16_t saturati
 // S->C Respawn
 int sc_respawn (int client_fd) {
 
-  writeVarInt(client_fd, 28);
+  const char *dimension = plates_dimension(plate_current);
+  uint32_t n = (uint32_t)strlen(dimension);
+  writeVarInt(client_fd,18u+(uint32_t)sizeVarInt(n)+n);
   writeByte(client_fd, 0x4B);
 
   // dimension id (from server-sent registries)
   writeVarInt(client_fd, 0);
   // dimension name
-  const char *dimension = "overworld";
-  writeVarInt(client_fd, 9);
-  send_all(client_fd, dimension, 9);
+  writeVarInt(client_fd,n);
+  send_all(client_fd,dimension,n);
   // hashed seed
   writeUint64(client_fd, 0x0123456789ABCDEF);
   // gamemode

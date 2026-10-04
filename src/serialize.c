@@ -1,4 +1,5 @@
 #include "globals.h"
+#include "plates.h"
 
 #ifdef SYNC_WORLD_TO_DISK
 
@@ -7,7 +8,7 @@
   #define FILE_PATH "/littlefs/world.bin"
 #else
   #include <stdio.h>
-  #define FILE_PATH "world.bin"
+  #define FILE_PATH (plates_enabled ? plates_world_path() : "world.bin")
 #endif
 
 #include "tools.h"
@@ -15,7 +16,7 @@
 #include "serialize.h"
 #include "world_metadata.h"
 
-int64_t last_disk_sync_time = 0;
+#define last_disk_sync_time (active_world->disk_sync_time)
 
 // Restores world data from disk, or writes world file if it doesn't exist
 int initSerializer () {
@@ -59,6 +60,7 @@ int initSerializer () {
       if (block_changes[i].block == B_chest) i += 14;
       if (i >= block_changes_count) block_changes_count = i + 1;
     }
+    if (plates_enabled) { fclose(file); return 0; }
     // Seek past block changes to start reading player data
     if (fseek(file, sizeof(block_changes), SEEK_SET) != 0) {
       perror("Failed to seek to player data in \"world.bin\". Aborting.");
@@ -96,6 +98,7 @@ int initSerializer () {
       fclose(file);
       return 1;
     }
+    if (plates_enabled) { fclose(file); return 0; }
     // Seek past written block changes to start writing player data
     if (fseek(file, sizeof(block_changes), SEEK_SET) != 0) {
       perror(
@@ -123,6 +126,7 @@ int initSerializer () {
 
 // Writes a range of block change entries to disk
 void writeBlockChangesToDisk (int from, int to) {
+  if (from < 0 || to < from || to >= MAX_BLOCK_CHANGES) return;
 
   // Try to open the file in rw (without overwriting)
   FILE *file = fopen(FILE_PATH, "r+b");
@@ -151,6 +155,14 @@ void writeBlockChangesToDisk (int from, int to) {
 
 // Writes all player data to disk
 void writePlayerDataToDisk () {
+  if (plates_enabled) {
+    FILE *out = fopen("plates/players.bin.tmp","wb"); if (!out) return;
+    bool ok = fwrite(player_data,1,sizeof(player_data),out) == sizeof(player_data);
+    if (fclose(out)) ok = false;
+    if (ok) rename("plates/players.bin.tmp","plates/players.bin");
+    return;
+  }
+
 
   // Try to open the file in rw (without overwriting)
   FILE *file = fopen(FILE_PATH, "r+b");
@@ -185,7 +197,7 @@ void writeDataToDiskOnInterval () {
   // Write full player data and block changes buffers
   writePlayerDataToDisk();
   #ifdef DISK_SYNC_BLOCKS_ON_INTERVAL
-  writeBlockChangesToDisk(0, block_changes_count);
+  writeBlockChangesToDisk(0, block_changes_count-1);
   #endif
 
 }

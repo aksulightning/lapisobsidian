@@ -1,3 +1,4 @@
+#include "plates.h"
 #include <math.h>
 #include "world_border.h"
 #include "packets.h"
@@ -6,7 +7,7 @@
 /* Ignore queued pre-teleport positions until the client arrives at spawn. */
 static bool returning[MAX_PLAYERS];
 static int player_index (const PlayerData *player) {
-  for (int i = 0; i < MAX_PLAYERS; i++) if (player == &player_data[i]) return i;
+  for (int i = 0; i < MAX_PLAYERS; i++) if (plates_player_active(&player_data[i])) if (player == &player_data[i]) return i;
   return -1;
 }
 bool world_border_outside (double x, double z) {
@@ -43,7 +44,7 @@ void world_teleport (PlayerData *player, int x, int y, int z) {
   world_send_view(player->client_fd,cx,cz,cx,cz,true);
   float yaw = (float)player->yaw*180.0f/127.0f, pitch = (float)player->pitch*90.0f/127.0f;
   sc_synchronizePlayerPosition(player->client_fd,x+0.5,y,z+0.5,yaw,pitch);
-  for (int i = 0; i < MAX_PLAYERS; i++) {
+  for (int i = 0; i < MAX_PLAYERS; i++) if (plates_player_active(&player_data[i])) {
     PlayerData *other = &player_data[i];
     if (other->client_fd < 0 || other == player || (other->flags & 0x20)) continue;
     sc_teleportEntity(other->client_fd,player->client_fd,x+0.5,y,z+0.5,yaw,pitch);

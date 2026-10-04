@@ -80,6 +80,13 @@ instantly. See [mobs, plant fixes and limits](docs/mobs.md).
 The [gameplay roadmap](docs/roadmap.md) tracks implemented features and the
 remaining scope. Basic redstone, note blocks, MIDI musicboxes and farming work.
 
+## Experimental Plates
+
+Set `experimental_enable_plates=true` in `server.txt` and restart to enable
+independent worlds: hub, betanium, flatworld, skybox and volcanic. Use `/plate list`
+and `/plate go <name>` to travel. Admins can create worlds and remove them with
+confirmation. See [Plates commands, saves and limits](docs/plates.md).
+
 ## Water and lava
 
 Water and lava flow downward and outward, drain when their source is removed,

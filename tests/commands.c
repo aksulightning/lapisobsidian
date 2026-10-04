@@ -1,3 +1,4 @@
+#include "plates.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -109,3 +110,7 @@ int main (void) {
   puts("commands: parsing, bounds, permissions, session reset, modes, teleports, time and legacy whispers passed");
   return 0;
 }
+
+CommandResult plates_command(PlayerData *p,int argc,char *const argv[]) { (void)p;(void)argc;(void)argv; return COMMAND_DENIED; }
+const char *plates_name(unsigned id) { (void)id;return "hub"; }
+const char *plates_type_name(PlateType type) { (void)type;return "hub"; }

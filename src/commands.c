@@ -1,3 +1,4 @@
+#include "plates.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -69,6 +70,7 @@ static PlayerData *named_player (const char *name) {
   size_t n = strlen(name); if (!n || n > 16) return NULL;
   for (int i = 0; i < MAX_PLAYERS; i ++) {
     PlayerData *player = &player_data[i];
+    if (!plates_player_active(player)) continue;
     if (player->client_fd < 0 || (player->flags & 0x20)) continue;
     size_t len = 0; while (len < sizeof(player->name) && player->name[len]) len ++;
     if (len == n && memcmp(player->name,name,n) == 0) return player;
@@ -114,10 +116,11 @@ CommandResult commands_execute (PlayerData *player, const char *input, size_t le
   }
   if (!argc) return reply(player,COMMAND_INVALID,"Empty command.");
   char output[256];
+  if (!strcmp(argv[0],"plate")) return plates_command(player,(int)argc,argv);
   if (!strcmp(argv[0],"music")) return musicbox_command(player,(int)argc,argv);
   if (!strcmp(argv[0],"help")) {
     if (argc != 1) return reply(player,COMMAND_USAGE,"Usage: /help");
-    return reply(player,COMMAND_OK,"Commands: /help, /seed, /worldinfo, /spawn, /music, /time query, /admin <token>. Admin: /tp <player|x y z>, /time set <day|night|0..23999>, /gamemode <mode> [player], /spawnmob <type> [x y z].");
+    return reply(player,COMMAND_OK,"Commands: /plate list|go <name>, /help, /seed, /worldinfo, /spawn, /music, /time query, /admin <token>. Admin: /tp <player|x y z>, /time set <day|night|0..23999>, /gamemode <mode> [player], /spawnmob <type> [x y z].");
   }
   if (!strcmp(argv[0],"admin")) {
     if (argc != 2) return reply(player,COMMAND_USAGE,"Usage: /admin <token>");
@@ -137,6 +140,10 @@ CommandResult commands_execute (PlayerData *player, const char *input, size_t le
   }
   if (!strcmp(argv[0],"worldinfo")) {
     if (argc != 1) return reply(player,COMMAND_USAGE,"Usage: /worldinfo");
+    if (plates_enabled) {
+      snprintf(output,sizeof(output),"Plate: %.24s | type: %s | time: %u | edits: %d/%d",plates_name(plate_current),plates_type_name(plates_type()),world_time,block_changes_count,MAX_BLOCK_CHANGES);
+      return reply(player,COMMAND_OK,output);
+    }
     snprintf(output,sizeof(output),"Lapis Obsidian | generator %u | protocol %u | mirror X: %s | terrain Y: 0..127 | border: +/-4068 | Far Lands: +/-3940 | time: %u",BETA173_GENERATOR_VERSION,LAPIS_PROTOCOL_VERSION,world_mirror_horizontal ? "on" : "off",world_time);
     return reply(player,COMMAND_OK,output);
   }
@@ -176,9 +183,9 @@ CommandResult commands_execute (PlayerData *player, const char *input, size_t le
   }
   if (!strcmp(argv[0],"spawnmob")) {
     if (!commands_is_admin(player)) return reply(player,COMMAND_DENIED,"Administrator permission required.");
-    if (argc != 2 && argc != 5) return reply(player,COMMAND_USAGE,"Usage: /spawnmob <chicken|cow|pig|sheep|zombie|skeleton|spider|creeper> [x y z]");
+    if (argc != 2 && argc != 5) return reply(player,COMMAND_USAGE,"Usage: /spawnmob <chicken|cow|pig|sheep|zombie|skeleton|spider|creeper|zombie_pigman|ghast> [x y z]");
     const MobType *type = mobs_by_name(argv[1]);
-    if (!type) return reply(player,COMMAND_USAGE,"Unknown mob. Use chicken, cow, pig, sheep, zombie, skeleton, spider or creeper.");
+    if (!type) return reply(player,COMMAND_USAGE,"Unknown mob. Use chicken, cow, pig, sheep, zombie, skeleton, spider, creeper, zombie_pigman or ghast.");
     if (!player->health || (player->flags&0x22)) return reply(player,COMMAND_DENIED,"Spawn mobs after loading or respawning.");
     int x = player->x, y = player->y, z = (int)player->z+2;
     if (argc == 5 && (!number(argv[2],-32768,32767,&x) || !number(argv[3],1,253,&y) || !number(argv[4],-32768,32767,&z)))

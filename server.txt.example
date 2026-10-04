@@ -6,3 +6,6 @@ gamemode=survival
 seed=
 mirror-horizontal=false
 wheat-growth-seconds=30
+
+# Independent experimental worlds; existing single-world saves stay separate.
+experimental_enable_plates=false

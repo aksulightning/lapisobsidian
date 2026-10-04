@@ -6,7 +6,7 @@ flags=(-std=c11 -O2 -Wall -Wextra -Wconversion -Wshadow -Werror -ffp-contract=of
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   flags+=(-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie)
 fi
-for source in fluids circuits notes midi musicbox farming packet_input server_config; do
+for source in plates plate_state plate_terrain fluids circuits notes midi musicbox farming packet_input server_config; do
   "${CC:-gcc}" "${flags[@]}" -c "src/$source.c" -o ".tests/$source.o"
 done
 "${CC:-gcc}" "${flags[@]}" tests/server_config.c tests/sanitizer.c src/server_config.c src/beta173_rng.c -o .tests/server-config
@@ -26,9 +26,9 @@ rm -f .tests/demo/songs/lapis-demo.mid
 "${CC:-gcc}" "${flags[@]}" -c src/signs.c -o .tests/signs.o
 "${CC:-gcc}" "${flags[@]}" -c src/sign_packets.c -o .tests/sign-packets.o
 "${CC:-gcc}" "${flags[@]}" -c src/command_packets.c -o .tests/command-packets.o
-"${CC:-gcc}" "${flags[@]}" tests/commands.c tests/sanitizer.c src/commands.c src/world_border.c src/globals.c -o .tests/commands
+"${CC:-gcc}" "${flags[@]}" tests/commands.c tests/sanitizer.c src/commands.c src/world_border.c src/globals.c src/plate_state.c -o .tests/commands
 .tests/commands
-"${CC:-gcc}" "${flags[@]}" tests/world_border.c tests/sanitizer.c src/world_border.c src/globals.c -o .tests/world-border
+"${CC:-gcc}" "${flags[@]}" tests/world_border.c tests/sanitizer.c src/world_border.c src/globals.c src/plate_state.c -o .tests/world-border
 .tests/world-border
 "${CC:-gcc}" "${flags[@]}" tests/farlands.c tests/sanitizer.c src/beta173_*.c -lm -o .tests/farlands
 .tests/farlands
@@ -45,12 +45,14 @@ integration_flags=(-O2 -Wall -Wextra -ffp-contract=off -ffunction-sections -fdat
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   integration_flags+=(-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie)
 fi
-"${CC:-gcc}" "${integration_flags[@]}" tests/chunk_packet.c tests/sanitizer.c src/procedures.c src/fluids.c src/farming.c src/circuits.c src/notes.c src/doors.c src/signs.c src/sign_packets.c src/packets.c src/varnum.c src/worldgen.c src/globals.c src/registries.c src/registry.c src/beta173_*.c -Wl,--gc-sections -lm -o .tests/chunk_packet
+"${CC:-gcc}" "${integration_flags[@]}" tests/chunk_packet.c tests/sanitizer.c src/plate_state.c src/procedures.c src/fluids.c src/farming.c src/circuits.c src/notes.c src/doors.c src/signs.c src/sign_packets.c src/packets.c src/varnum.c src/worldgen.c src/globals.c src/registries.c src/registry.c src/beta173_*.c -Wl,--gc-sections -lm -o .tests/chunk_packet
 .tests/chunk_packet
 sources=()
 for source in src/*.c; do
   [[ "$source" == src/main.c ]] || sources+=("$source")
 done
+"${CC:-gcc}" "${integration_flags[@]}" tests/plates.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/plates
+.tests/plates
 "${CC:-gcc}" "${integration_flags[@]}" tests/fluids.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/fluids
 .tests/fluids
 "${CC:-gcc}" "${integration_flags[@]}" tests/config_packets.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/config-packets

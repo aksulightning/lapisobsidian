@@ -10,7 +10,7 @@ typedef struct {
   uint64_t seed;
   uint16_t port, wheat_growth_seconds;
   uint8_t gamemode;
-  bool seed_set, mirror_horizontal;
+  bool seed_set, mirror_horizontal, experimental_enable_plates;
   char motd[CONFIG_MOTD_MAX+1];
 } ServerConfig;
 extern ServerConfig server_config;

@@ -1,3 +1,4 @@
+#include "plates.h"
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -96,6 +97,8 @@ ssize_t recv_all (int client_fd, void *buf, size_t n, uint8_t require_first) {
 }
 
 ssize_t send_all (int client_fd, const void *buf, ssize_t len) {
+  /* Defence in depth for world-scoped broadcasts from inherited packet code. */
+  if (!plates_fd_active(client_fd)) return len;
   // Treat any input buffer as *uint8_t for simplicity
   const uint8_t *p = (const uint8_t *)buf;
   ssize_t sent = 0;

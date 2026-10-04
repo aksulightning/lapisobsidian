@@ -162,3 +162,7 @@ int main (void) {
   puts("production chunk packet: framing, 24 sections, palette, edit overlay, biomes, registries and horizontal mirroring passed");
   return 0;
 }
+
+/* This fixture checks the unchanged legacy world. Plates have a separate live
+ * transport/context fixture in tests/plates.c. */
+uint8_t plates_terrain(int x,int y,int z) { (void)x;(void)y;(void)z;assert(0);return 0; }
