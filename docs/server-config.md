@@ -79,5 +79,5 @@ atomic rejection, CLI precedence, status-packet escaping/framing, default game-m
 abilities and hydrated growth at 1, 30 and 600 seconds.
 
 When Plates is enabled, its saved catalog selects each Plate’s seed; the configured
-seed initializes a new default hub. `/plate <name> <seed> <type>` sets other seeds.
+seed initializes a new default hub. `/plate create <name> <seed> <type>` sets other seeds.
 See [Plates setup, travel, saves and limits](plates.md).

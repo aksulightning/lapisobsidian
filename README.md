@@ -84,8 +84,8 @@ remaining scope. Basic redstone, note blocks, MIDI musicboxes and farming work.
 
 Set `experimental_enable_plates=true` in `server.txt` and restart to enable
 independent worlds: hub, betanium, flatworld, skybox and volcanic. Use `/plate list`
-and `/plate go <name>` to travel. Admins can create worlds and remove them with
-confirmation. See [Plates commands, saves and limits](docs/plates.md).
+and `/plate go <name>` to travel. Admins use `/plate create <name> <seed> <type>` and
+`/plate remove <name>`, followed by `/plate confirm` for removal. See [Plates commands, saves and limits](docs/plates.md).
 
 ## Water and lava
 

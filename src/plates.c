@@ -315,18 +315,18 @@ CommandResult plates_command (PlayerData *p, int argc, char *const argv[]) {
     return reply(p,ok ? COMMAND_OK : COMMAND_DENIED,ok ? "Plate removed; its files were archived under plates/removed-*." : "No valid confirmation, plate occupied, or removal failed.");
   }
   sessions[who].remove[0] = 0;
-  if (argc == 2) {
-    int id = plates_find(argv[1]);
+  if (argc == 3 && !strcmp(argv[1],"remove")) {
+    int id = plates_find(argv[2]);
     if (id <= 0) return reply(p,COMMAND_DENIED,"Unknown plate, or protected default hub.");
-    snprintf(sessions[who].remove,sizeof(sessions[who].remove),"%s",argv[1]); sessions[who].expires = get_program_time()+30000000; sessions[who].generation = plates[id].generation;
-    char text[128]; snprintf(text,sizeof(text),"Remove plate '%s'? All players must leave it. Use /plate confirm within 30 seconds.",argv[1]);
+    snprintf(sessions[who].remove,sizeof(sessions[who].remove),"%s",argv[2]); sessions[who].expires = get_program_time()+30000000; sessions[who].generation = plates[id].generation;
+    char text[128]; snprintf(text,sizeof(text),"Remove plate '%s'? All players must leave it. Use /plate confirm within 30 seconds.",argv[2]);
     return reply(p,COMMAND_OK,text);
   }
-  if (argc == 4) {
+  if (argc == 5 && !strcmp(argv[1],"create")) {
     uint64_t seed; PlateType type;
-    if (!beta173_seed_parse(argv[2],&seed) || !type_parse(argv[3],&type) || !valid_name(argv[1])) return reply(p,COMMAND_USAGE,"Use a safe lowercase name, signed 64-bit seed, and hub|betanium|flatworld|skybox|volcanic.");
-    bool ok = plates_create(argv[1],seed,type);
+    if (!beta173_seed_parse(argv[3],&seed) || !type_parse(argv[4],&type) || !valid_name(argv[2])) return reply(p,COMMAND_USAGE,"Use a safe lowercase name, signed 64-bit seed, and hub|betanium|flatworld|skybox|volcanic.");
+    bool ok = plates_create(argv[2],seed,type);
     return reply(p,ok ? COMMAND_OK : COMMAND_DENIED,ok ? "Plate created. Use /plate go <name> to visit." : "Cannot create plate: existing name/directory, eight-plate limit, or storage error.");
   }
-  return reply(p,COMMAND_USAGE,"/plate list | /plate go <name> | /plate <name> <seed> <type> | /plate <name> | /plate confirm");
+  return reply(p,COMMAND_USAGE,"/plate list | /plate go <name> | /plate create <name> <seed> <type> | /plate remove <name> | /plate confirm");
 }

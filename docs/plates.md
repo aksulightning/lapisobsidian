@@ -25,14 +25,14 @@ Everyone can use:
 Administrators authenticated with the existing `/admin` command can use:
 
 ```text
-/plate survival 12345 betanium
-/plate building 0 flatworld
-/plate islands -17 skybox
-/plate furnace 987 volcanic
-/plate another_hub 123 hub
+/plate create survival 12345 betanium
+/plate create building 0 flatworld
+/plate create islands -17 skybox
+/plate create furnace 987 volcanic
+/plate create another_hub 123 hub
 ```
 
-Creation takes exactly `/plate <worldname> <seed> <worldtype>`. Seeds are signed
+Creation takes exactly `/plate create <worldname> <seed> <worldtype>`. Seeds are signed
 64-bit decimal integers. Names contain 1–24 lowercase ASCII letters, digits,
 underscores or hyphens; `list`, `go`, and `confirm` are reserved. Existing names
 and directories are rejected. There are at most **eight Plates**, including hub.
@@ -41,7 +41,7 @@ Creating a Plate does not move players; use `/plate go <name>` afterwards.
 To remove a Plate:
 
 ```text
-/plate islands
+/plate remove islands
 /plate confirm
 ```
 
