@@ -66,8 +66,8 @@ export class Input {
         this.lookY += e.movementY * settings.mouse;
       }
     });
-    canvas.addEventListener("pointerdown", (e) => {
-      if (!this.active || e.pointerType === "touch") return;
+    canvas.addEventListener("mousedown", (e) => {
+      if (!this.active) return;
       if (document.pointerLockElement !== canvas) {
         this.lock();
         return;
@@ -75,11 +75,9 @@ export class Input {
       if (e.button === 0) this.primary = true;
       if (e.button === 2) this.secondary = true;
     });
-    window.addEventListener("pointerup", (e) => {
-      if (e.pointerType !== "touch") {
-        if (e.button === 0) this.primary = false;
-        if (e.button === 2) this.secondary = false;
-      }
+    window.addEventListener("mouseup", (e) => {
+      if (e.button === 0) this.primary = false;
+      if (e.button === 2) this.secondary = false;
     });
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
     canvas.addEventListener(

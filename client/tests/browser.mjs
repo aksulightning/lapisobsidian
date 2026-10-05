@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { startBridge, startServer } from "./helpers.mjs";
 const server = await startServer(),
   bridge = await startBridge();
-let browser;
+let browser, activePage, activeErrors;
 const results = [];
 try {
   browser = await chromium.launch({
@@ -29,6 +29,7 @@ try {
     });
     const page = await context.newPage(),
       errors = [];
+    activePage=page;activeErrors=errors;
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("console", (m) => {
       if (m.type() === "error") errors.push(m.text());
@@ -219,6 +220,13 @@ try {
     "test-results/browser-results.json",
     JSON.stringify(results, null, 2),
   );
+} catch(error) {
+  if(activePage&&!activePage.isClosed()){
+    console.error('Browser diagnostics:',JSON.stringify(await activePage.evaluate(()=>window.lapisDiagnostics)));
+    console.error('Browser errors:',activeErrors);
+    await activePage.screenshot({path:'test-results/failure.png'}).catch(()=>{});
+  }
+  throw error;
 } finally {
   await browser?.close();
   await bridge.close();
