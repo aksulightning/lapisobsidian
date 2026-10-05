@@ -19,33 +19,15 @@
       <p class="intro">Your window into the world.</p>
       <div id="connection-status" role="status">Starting...</div>
       <form id="connect-form">
-        <label id="gateway-field" hidden>
-          Secure server gateway
-          <input id="gateway" name="gateway" type="url" autocomplete="off"
-            placeholder="wss://your-gateway.workers.dev/bridge" aria-describedby="gateway-help" />
-          <small id="gateway-help">Use the gateway URL supplied by your server owner. Your game connection still uses TCP.</small>
+        <label>Server WebSocket URL
+          <input id="endpoint" name="endpoint" type="url" value="ws://127.0.0.1:25566/lapisclient"
+            placeholder="wss://play.example.org/lapisclient" autocomplete="off" required />
+          <small>Direct lapisclient connection. HTTPS pages require wss://.</small>
         </label>
-        <label
-          >Server address<input
-            id="host"
-            name="host"
-            value="127.0.0.1"
-            autocomplete="off"
-            required
-            maxlength="253"
-            placeholder="play.example.org"
-        /></label>
-        <div class="row">
-          <label
-            >Port<input
-              id="port"
-              name="port"
-              type="number"
-              min="1"
-              max="65535"
-              value="25565"
-              required /></label
-          ><label
+        <label>Server access token (if required)
+          <input id="access-token" type="password" autocomplete="off" maxlength="128" />
+        </label>
+        <div class="row"><label
             >Player name<input
               id="username"
               name="username"
@@ -68,7 +50,7 @@
         <button id="settings-open">Settings</button
         ><button id="about-open">About</button><button id="quit">Quit</button>
       </nav>
-      <p class="compat">Lapis Obsidian server · Protocol 772 · Offline login</p>
+      <p class="compat">Lapis Obsidian server · lapisclient v1 · Offline identity</p>
     </main>
     <section id="settings" class="panel" hidden>
       <div class="eyebrow">MAKE IT YOURS</div>
@@ -138,12 +120,12 @@
       <div class="eyebrow">OPEN SOURCE</div>
       <h2>Lapis Obsidian Client</h2>
       <p>
-        An HTML5 game client with secure browser-to-TCP gateway support and an optional local launcher.
+        An HTML5 game client connected directly to the server using lapisclient.
         World data comes from your server. Textures are original procedural
         artwork.
       </p>
       <p>
-        Compatible with this repository’s protocol 772 offline server. Online
+        Compatible with this repository’s lapisclient v1 offline server. Online
         account authentication and other server implementations are unsupported.
       </p>
       <p>

@@ -43,9 +43,14 @@ for arg in "$@"; do
   esac
 done
 
+ws_flags=()
+# Native WebSocket support on POSIX desktop; legacy embedded/Windows builds remain available.
+if [[ "${LAPISCLIENT:-1}" == 1 && "$unameOut" != MINGW* ]]; then
+  ws_flags=(-DLAPISCLIENT -lcrypto)
+fi
 flags=(-O2 -Wall -Wextra)
 if [[ "${DEBUG:-0}" == 1 ]]; then
   flags=(-O1 -g -Wall -Wextra -Wconversion -Wshadow -fsanitize=address,undefined -fno-omit-frame-pointer)
 fi
 # Disable contraction so density vectors do not depend on FMA availability.
-"$compiler" src/*.c "${flags[@]}" -ffp-contract=off -Iinclude -o "lapis-obsidian$exe" $windows_linker -lm
+"$compiler" src/*.c "${flags[@]}" -ffp-contract=off -Iinclude -o "lapis-obsidian$exe" $windows_linker -lm "${ws_flags[@]}"

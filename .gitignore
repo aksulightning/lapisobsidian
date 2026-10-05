@@ -19,12 +19,8 @@ make-demo-song.exe
 
 /plates/
 
-# Standalone HTML5 client build outputs and local dependencies.
+# HTML5 build outputs, test worlds and development dependencies.
 /client/node_modules/
 /client/dist/
-/client/target/
 /client/test-results/
-/client/src-tauri/gen/
-/client/release-preview/
-
-/client/release/
+/client/*.log

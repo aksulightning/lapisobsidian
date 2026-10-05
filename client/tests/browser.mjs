@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { chromium, expect } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
-import { startBridge, startServer } from "./helpers.mjs";
-const server = await startServer(),
-  bridge = await startBridge();
+import { startWeb, startServer } from "./helpers.mjs";
+const web = await startWeb(),
+  server = await startServer("creative", web.origin);
 let browser, activePage, activeErrors;
 const results = [];
 try {
   browser = await chromium.launch({
     executablePath: process.env.LAPIS_TEST_BROWSER,
     args: [
+      ...(process.env.LAPIS_TEST_SINGLE_PROCESS ? ["--single-process", "--no-zygote"] : []),
       "--no-sandbox",
       "--enable-unsafe-swiftshader",
       "--use-gl=angle",
@@ -34,10 +35,10 @@ try {
     page.on("console", (m) => {
       if (m.type() === "error") errors.push(m.text());
     });
-    await page.goto(bridge.origin + "/#" + bridge.token);
+    await page.goto(web.origin);
     await expect(page).toHaveTitle("Lapis Obsidian Client");
-    await expect(page.locator("#connection-status")).toHaveText("Bridge ready");
-    await page.locator("#port").fill(String(server.port));
+    await expect(page.locator("#connection-status")).toHaveText("Disconnected");
+    await page.locator("#endpoint").fill(server.url);
     await page.locator("#username").fill(mobile ? "TouchTest" : "DesktopTest");
     await page.locator("#connect").click();
     await page.waitForFunction(
@@ -155,10 +156,10 @@ try {
       // A use action must still reach the protocol while movement/look remain held.
       const use = await center("#secondary");
       const sentBefore = await page.evaluate(
-        () => window.lapisDiagnostics.sent[63] || 0,
+        () => window.lapisDiagnostics.sent.interact || 0,
       );
       const useBefore = await page.evaluate(
-        () => window.lapisDiagnostics.sent[64] || 0,
+        () => window.lapisDiagnostics.sent.item_use || 0,
       );
       await send("touchStart", [
         { ...stick, id: 1 },
@@ -174,8 +175,8 @@ try {
       expect(
         await page.evaluate(
           () =>
-            (window.lapisDiagnostics.sent[63] || 0) +
-            (window.lapisDiagnostics.sent[64] || 0),
+            (window.lapisDiagnostics.sent.interact || 0) +
+            (window.lapisDiagnostics.sent.item_use || 0),
         ),
       ).toBeGreaterThan(sentBefore + useBefore);
       await send("touchEnd", []);
@@ -237,6 +238,6 @@ try {
   throw error;
 } finally {
   await browser?.close();
-  await bridge.close();
+  await web.close();
   await server.stop();
 }

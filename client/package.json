@@ -9,19 +9,15 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "dev": "node scripts/build.mjs --web-only && node runtime/launcher.mjs",
-    "start": "node runtime/launcher.mjs",
+    "dev": "node scripts/build.mjs && node scripts/serve.mjs",
+    "start": "node scripts/serve.mjs",
     "build": "node scripts/build.mjs",
-    "build:web": "node scripts/build.mjs --web-only",
-    "build:standalone": "npm run build",
-    "test": "node scripts/build.mjs --web-only && node scripts/test-server.mjs && node --test tests/*.test.mjs",
-    "test:web": "node scripts/build.mjs --web-only && node scripts/test-server.mjs && node tests/browser.mjs && node tests/hosted-browser.mjs",
-    "test:package": "node tests/packaged.mjs"
-  },
-  "dependencies": {
-    "ws": "8.22.0"
+    "build:web": "npm run build",
+    "test": "node scripts/build.mjs && node scripts/test-server.mjs && node --test tests/*.test.mjs",
+    "test:web": "node scripts/build.mjs && node scripts/test-server.mjs && node tests/browser.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "1.58.2"
+    "@playwright/test": "1.58.2",
+    "ws": "8.22.0"
   }
 }

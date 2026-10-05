@@ -1,137 +1,81 @@
 // SPDX-License-Identifier: GPL-3.0-only
-const errors = {
-  AUTH_FAILED: "Local authentication failed. Restart Lapis Obsidian Client.",
-  CLIENT_BUSY: "Another tab is using this client.",
-  CONNECT_FAILED:
-    "Could not reach the server. Check the address, port, and whether it is running.",
-  REMOTE_ERROR: "The server connection ended or timed out.",
-  INVALID_TARGET: "Enter a valid server hostname and port.",
-  TARGET_NOT_ALLOWED: "This gateway does not allow that server address and port. Use the server supplied by its owner.",
-  PROTOCOL_REQUIRED: "This bridge accepts only the supported game protocol.",
-  RATE_LIMIT: "The connection exceeded its traffic limit.",
-};
-export class BridgeTransport {
-  onData = () => {};
+export class LapisClientTransport {
+  onMessage = () => {};
+  onBinary = () => {};
   onClose = () => {};
   onError = () => {};
-  onReady = () => {};
-  onUnavailable = () => {};
-  constructor(status) {
-    this.status = status;
-    this.ready = false;
-    this.connected = false;
-  }
-  start(token, endpoint = `ws://${location.host}/bridge`) {
-    const socket = (this.socket = new WebSocket(
-      endpoint,
-    ));
-    socket.binaryType = "arraybuffer";
-    socket.onopen = () => {
-      if (this.socket !== socket) return;
-      socket.send(JSON.stringify({ type: "AUTH", token }));
-      token = "";
-    };
-    socket.onmessage = (e) => {
-      if (this.socket !== socket) return;
-      if (e.data instanceof ArrayBuffer) {
-        if (this.connected) this.onData(new Uint8Array(e.data));
-        return;
-      }
-      try {
-        const m = JSON.parse(e.data);
-        switch (m.type) {
-          case "AUTH_OK":
-            this.ready = true;
-            this.status("Bridge ready");
-            this.onReady();
-            this.heartbeat = setInterval(() => this.control("PING"), 10000);
-            break;
-          case "CONNECTED":
+  constructor(status = () => {}) { this.status = status; this.connected = false; }
+  connect(address) {
+    this.close();
+    const url = new URL(address);
+    if (!["ws:", "wss:"].includes(url.protocol) || url.username || url.password || url.hash)
+      throw Error("Enter a ws:// or wss:// server endpoint without credentials or a fragment.");
+    if (location.protocol === "https:" && url.protocol !== "wss:")
+      throw Error("This HTTPS page requires a secure wss:// server endpoint.");
+    this.status("Connecting");
+    return new Promise((resolve, reject) => {
+      const socket = this.socket = new WebSocket(url, "lapisclient");
+      socket.binaryType = "arraybuffer";
+      this.pending = { resolve, reject };
+      this.deadline = setTimeout(() => this.fail(Error("Connection or protocol negotiation timed out.")), 12000);
+      socket.onopen = () => {
+        if (this.socket !== socket) return;
+        if (socket.protocol !== "lapisclient") return this.fail(Error("Protocol mismatch"));
+        this.status("Negotiating lapisclient");
+        this.send({ type: "hello", protocol: "lapisclient", version: 1 });
+      };
+      socket.onmessage = ({ data }) => {
+        if (this.socket !== socket) return;
+        try {
+          if (data instanceof ArrayBuffer) {
+            if (!this.connected || data.byteLength > 256 * 1024) throw Error("Unexpected binary world data");
+            this.onBinary(new Uint8Array(data));
+            return;
+          }
+          if (data.length > 8192) throw Error("Server message exceeds limit");
+          const message = JSON.parse(data);
+          if (!message || typeof message !== "object" || typeof message.type !== "string") throw Error("Invalid server message");
+          if (message.type === "error" || message.type === "login_error") {
+            const error = Error(message.code === "protocol_mismatch" ? "Protocol mismatch" : message.message || "Server rejected the request");
+            return this.fail(error);
+          }
+          if (!this.connected) {
+            if (message.type !== "welcome" || message.protocol !== "lapisclient" || message.version !== 1) throw Error("Protocol mismatch");
             this.connected = true;
             clearTimeout(this.deadline);
-            this.pending?.resolve();
-            this.pending = null;
-            break;
-          case "DISCONNECTED":
-            this.connected = false;
-            clearTimeout(this.deadline);
-            this.pending?.reject(Error("Disconnected"));
-            this.pending = null;
-            this.onClose();
-            break;
-          case "ERROR": {
-            const message =
-              errors[m.code] || "The gateway rejected the connection.";
-            clearTimeout(this.deadline);
-            this.pending?.reject(Error(message));
-            this.pending = null;
-            this.onError(Error(message));
-            this.onUnavailable(Error(message));
-            break;
-          }
-          case "PONG":
-            break;
-          default:
-            throw Error("Invalid bridge message");
-        }
-      } catch (e) {
-        console.error(e);
-        this.onError(Error("Invalid local bridge response."));
-        socket.close();
-      }
-    };
-    socket.onclose = () => {
-      if (this.socket !== socket) return;
-      this.ready = false;
-      this.connected = false;
-      clearInterval(this.heartbeat);
-      clearTimeout(this.deadline);
-      this.pending?.reject(Error("Local bridge closed"));
-      this.pending = null;
-      this.onUnavailable(Error("Gateway connection closed."));
-      this.onClose();
-    };
-    socket.onerror = () => {
-      if (this.socket !== socket) return;
-      const error = Error("Cannot reach the gateway. Check its address and availability.");
-      this.onUnavailable(error);
-      this.onError(error);
-    };
-  }
-  control(type, fields = {}) {
-    if (this.socket?.readyState === WebSocket.OPEN)
-      this.socket.send(JSON.stringify({ type, ...fields }));
-  }
-  connect(host, port) {
-    if (!this.ready || this.connected || this.pending)
-      return Promise.reject(Error("Bridge is not ready."));
-    return new Promise((resolve, reject) => {
-      this.pending = { resolve, reject };
-      this.control("CONNECT", { host, port });
-      this.deadline = setTimeout(() => {
-        this.pending = null;
-        this.control("DISCONNECT");
-        reject(Error("Connection timed out."));
-      }, 12000);
+            this.pending.resolve(message); this.pending = null;
+            this.heartbeat = setInterval(() => {
+              try { this.send({ type: "ping" }); } catch (error) { this.fail(error); }
+            }, 10000);
+          } else if (message.type === "disconnect") this.close(true);
+          else if (message.type !== "pong") this.onMessage(message);
+        } catch (error) { this.fail(error); }
+      };
+      socket.onerror = () => { if (this.socket === socket) this.fail(Error("Connection failed. Check the endpoint, allowed origin and TLS configuration.")); };
+      socket.onclose = () => { if (this.socket === socket) this.close(true); };
     });
   }
-  send(data) {
-    if (!this.connected || this.socket.bufferedAmount > 256 * 1024)
-      throw Error("Game connection is not available.");
-    this.socket.send(data);
+  send(message) {
+    if (this.socket?.readyState !== WebSocket.OPEN || this.socket.bufferedAmount > 256 * 1024)
+      throw Error("Connection is unavailable or stalled");
+    this.socket.send(JSON.stringify(message));
+  }
+  // v1 intentionally defines no client-to-server binary messages.
+  sendBinary() { throw Error("lapisclient v1 accepts only named JSON client messages"); }
+  fail(error) {
+    this.onError(error);
+    this.pending?.reject(error); this.pending = null;
+    this.close(true);
   }
   disconnect() {
-    this.connected = false;
-    this.control("DISCONNECT");
+    if (this.connected && this.socket?.readyState === WebSocket.OPEN) this.send({ type: "disconnect" });
+    this.close(true);
   }
-  close() {
-    clearInterval(this.heartbeat);
-    clearTimeout(this.deadline);
-    const socket = this.socket;
-    this.socket = null;
-    this.ready = this.connected = false;
-    this.pending?.reject(Error("Connection closed."));
-    this.pending = null;
-    socket?.close();
+  close(notify = false) {
+    clearTimeout(this.deadline); clearInterval(this.heartbeat);
+    this.pending?.reject(Error("Connection closed")); this.pending = null;
+    const socket = this.socket; this.socket = null; this.connected = false;
+    socket?.close(1000);
+    if (notify) this.onClose();
   }
 }

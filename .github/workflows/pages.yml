@@ -3,9 +3,9 @@ name: Browser client
 on:
   push:
     branches: [testing-client]
-    paths: ['client/web/**', 'client/gateway/**', 'client/runtime/gate.mjs', 'client/tests/hosted.test.mjs', 'index.html', 'website/**', '.github/workflows/pages.yml', '.github/scripts/check-website.py']
+    paths: ['client/web/**', 'index.html', 'website/**', '.github/workflows/pages.yml', '.github/scripts/check-website.py']
   pull_request:
-    paths: ['client/web/**', 'client/gateway/**', 'client/runtime/gate.mjs', 'client/tests/hosted.test.mjs', 'index.html', 'website/**', '.github/workflows/pages.yml', '.github/scripts/check-website.py']
+    paths: ['client/web/**', 'index.html', 'website/**', '.github/workflows/pages.yml', '.github/scripts/check-website.py']
   workflow_dispatch:
 
 permissions:
@@ -32,10 +32,10 @@ jobs:
         run: |
           node --check website/main.js
           python3 .github/scripts/check-website.py
-      - name: Check browser client and TCP gateway
+      - name: Check browser client
         run: |
-          find client/web client/gateway -type f \( -name '*.js' -o -name '*.mjs' \) -exec node --check {} \;
-          node --test client/tests/hosted.test.mjs
+          find client/web -type f \( -name '*.js' -o -name '*.mjs' \) -exec node --check {} \;
+          cd client && npm ci && npm run build
       - name: Prepare playable Pages site
         run: |
           mkdir -p .pages/client

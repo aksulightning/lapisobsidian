@@ -1,50 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { Reader } from "../protocol/binary.js";
 import { material } from "./blocks.js";
 export const key = (x, z) => `${x},${z}`;
-// Protocol 772 removes the old long-array length field from paletted containers.
-function container(r, count) {
-  const bits = r.u8(),
-    out = new Uint16Array(count);
-  if (bits === 0) {
-    out.fill(r.varint());
-    return out;
-  }
-  const palette = [];
-  if (bits <= 8) {
-    const n = r.varint();
-    if (n < 1 || n > 256) throw Error("Invalid chunk palette");
-    for (let i = 0; i < n; i++) palette.push(r.varint());
-  }
-  if (bits > 15 || bits < 1) throw Error("Unsupported chunk bit width");
-  const perLong = Math.floor(64 / bits),
-    mask = (1n << BigInt(bits)) - 1n;
-  for (let base = 0; base < count; base += perLong) {
-    const packed = r.u64();
-    for (let j = 0; j < perLong && base + j < count; j++) {
-      const value = Number((packed >> BigInt(j * bits)) & mask);
-      if (palette.length && value >= palette.length)
-        throw Error("Invalid palette index");
-      out[base + j] = palette.length ? palette[value] : value;
-    }
-  }
-  return out;
-}
+// lapisclient v1 chunk: fixed little-endian header, u16 palette, u8 indices.
 export function decodeChunk(bytes) {
-  const r = new Reader(bytes);
-  if (r.varint() !== 0x27) throw Error("Not a chunk");
-  const x = r.i32(),
-    z = r.i32();
-  if (r.varint() !== 0) throw Error("Unsupported heightmap encoding");
-  const size = r.varint(),
-    section = new Reader(r.take(size)),
-    blocks = new Uint16Array(16 * 16 * 384);
-  for (let y = 0; y < 24; y++) {
-    section.u16();
-    blocks.set(container(section, 4096), y * 4096);
-    container(section, 64);
-  }
-  section.done();
+  if (!(bytes instanceof Uint8Array) || bytes.byteLength !== 98830)
+    throw Error("Invalid chunk length");
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (view.getUint8(0) !== 1 || view.getUint8(1) !== 1 ||
+      view.getInt16(10, true) !== -64 || view.getUint16(12, true) !== 384)
+    throw Error("Unsupported chunk format");
+  const x = view.getInt32(2, true), z = view.getInt32(6, true);
+  if (x < -2048 || x > 2047 || z < -2048 || z > 2047) throw Error("Invalid chunk coordinates");
+  const palette = new Uint16Array(256);
+  for (let i=0; i<256; i++) palette[i] = view.getUint16(14 + i*2, true);
+  const blocks = new Uint16Array(98304);
+  for (let i=0; i<blocks.length; i++) blocks[i] = palette[bytes[526+i]];
   return { x, z, blocks };
 }
 export class World {
