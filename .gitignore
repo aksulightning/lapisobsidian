@@ -18,3 +18,11 @@ make-demo-song.exe
 /server.txt
 
 /plates/
+
+# Standalone HTML5 client build outputs and local dependencies.
+/client/node_modules/
+/client/dist/
+/client/target/
+/client/test-results/
+/client/src-tauri/gen/
+/client/release-preview/

@@ -1,0 +1,23 @@
+[package]
+name = "lapis-bridge"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+# Only an internally created loopback echo target is allowed. Never enabled by the app.
+dev-echo = []
+
+[dependencies]
+axum = { version = "0.8", features = ["ws"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time", "sync", "signal", "io-util", "io-std"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rand = "0.8"
+subtle = "2"
+include_dir = "0.7"
+
+[dev-dependencies]
+tokio-tungstenite = "0.28"
+futures-util = "0.3"

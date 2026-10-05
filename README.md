@@ -1,3 +1,17 @@
+# Lapis Obsidian Client — HTML5 / Standalone
+
+The `testing-client` branch adds an experimental standalone client alongside the
+existing server. **Milestone 1 is a shell and transport-boundary preview, not yet
+a playable remote client.** It includes an original WebGL test scene, responsive
+desktop/touch UI, settings, and a bundled authenticated loopback bridge.
+
+See [client setup, builds and controls](client/README.md),
+[architecture and inspected source](docs/client-architecture.md), and
+[bridge protocol and security](docs/client-bridge.md).
+The client does not start or bundle the game server. No external proxy is needed.
+
+---
+
 # Lapis Obsidian
 
 A lightweight C Minecraft Java server, based on bareiron, targeting a Beta

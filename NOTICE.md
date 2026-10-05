@@ -22,3 +22,13 @@ or executed by Lapis Obsidian.
 
 Minecraft is a trademark of Mojang Studios. This project is independent of
 Mojang Studios and Microsoft.
+
+## Standalone client additions
+
+The `client/` application, procedural geometry, SVG mark and derived application
+icons are original additions for Lapis Obsidian Client, distributed under the
+repository's GNU GPL v3 license (GPL-3.0-only for the new client code). No
+proprietary textures, models, fonts or sounds are included. The system font stack
+uses fonts supplied by the host operating system. Tauri, Tokio, Axum and other
+third-party dependencies retain their own licenses; release distributors must
+retain applicable notices and provide the corresponding application source.

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Lapis Obsidian Client",
+  "version": "0.1.0",
+  "identifier": "org.lapisobsidian.client",
+  "build": {"beforeBuildCommand": "npm run build", "frontendDist": "../dist"},
+  "app": {
+    "windows": [],
+    "security": {"capabilities": [], "csp": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'"}
+  },
+  "bundle": {"active": true, "targets": "all", "shortDescription": "Lapis Obsidian Client standalone HTML5 shell", "category": "Game", "license": "GPL-3.0-only", "icon": ["icons/icon.png", "icons/icon.ico", "icons/icon.icns"]}
+}
