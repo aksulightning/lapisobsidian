@@ -25,10 +25,12 @@ Mojang Studios and Microsoft.
 
 ## Standalone client additions
 
-The `client/` application, procedural geometry, SVG mark and derived application
-icons are original additions for Lapis Obsidian Client, distributed under the
-repository's GNU GPL v3 license (GPL-3.0-only for the new client code). No
-proprietary textures, models, fonts or sounds are included. The system font stack
-uses fonts supplied by the host operating system. Tauri, Tokio, Axum and other
-third-party dependencies retain their own licenses; release distributors must
-retain applicable notices and provide the corresponding application source.
+The `client/` application and procedural textures/geometry are original additions
+for Lapis Obsidian Client, distributed under GPL-3.0-only. No proprietary textures,
+models, fonts or sounds are included. System fonts belong to the host OS.
+The semantic registry is generated from this repository's compatibility snapshot.
+Node.js and ws retain their own licenses. Portable builds include NODE-LICENSE,
+node_modules/ws/LICENSE and corresponding project source. Node.js source for the
+copied runtime version is available at https://github.com/nodejs/node; distributors
+must retain the applicable runtime and dependency notices. Playwright is a
+development/test dependency and is not included in portable builds.

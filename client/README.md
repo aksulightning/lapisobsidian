@@ -1,174 +1,201 @@
-# Lapis Obsidian Client — HTML5 / Standalone
+# Lapis Obsidian Client
 
-Milestone 1 development preview, based on `testing` commit
-`e96af88`. New code is GPL-3.0-only; the repository license and upstream notices
-are preserved. No proprietary game assets are used.
+An HTML5 game client for the offline Lapis Obsidian server in this repository’s
+`testing` branch, protocol **772**. The browser draws live server chunks and
+runs the player; a bundled local runtime handles the browser-to-TCP boundary.
+There is no external proxy, Electron, Java installation, or proprietary asset pack.
 
-## What works
+## Develop and run
 
-- Tauri 2 application shell with an embedded Rust bridge and frontend assets.
-- HTML5/TypeScript/CSS UI with desktop, phone, tablet and landscape layouts.
-- WebGL test island, fog, resize/DPR handling, frame limit and quality presets.
-- Keyboard/mouse free-camera exploration and independent multi-touch movement,
-  look and elevation controls. This is a test camera, not a simulated player.
-- Saved server/player preferences, graphics quality, frame limit, sensitivities,
-  UI scale, and a render-distance preference reserved for world integration.
-  The native shell reads a bounded, typed `preferences.json` in its application
-  configuration directory and saves it on clean exit, independent of the random
-  bridge port. Concurrent instances use last-clean-exit wins; crash recovery of
-  unsaved preferences is not implemented. Browser-development preferences last
-  for that launch/origin.
-- Automatic loopback binding on an OS-selected port, 256-bit per-launch token,
-  exact origin/Host checks, bounded control messages and managed shutdown.
-- Optional compile-time TCP echo harness; production builds cannot dial arbitrary
-  destinations. Remote Connect is visibly unavailable, rather than simulated.
-
-**No remote login, live world, chunk decoder, collision physics, entities,
-block actions, hotbar, inventory, chat, sound or gamepad support yet.**
-
-## Architecture
-
-The existing C code is a server, not a native client. It remains unchanged.
-The application consists of a small TypeScript frontend, `lapis-bridge` Rust
-library, and Tauri desktop launcher. The bridge runs inside the application's
-process; users never launch a helper or configure a WebSocket URL.
-
-The runtime first binds `127.0.0.1:0`, generates a fresh random token, and then
-loads the embedded frontend from that selected HTTP origin. It injects the
-bootstrap into that WebView before frontend code runs. The frontend deletes the
-bootstrap global, authenticates via WebSocket, and clears its token reference.
-Credentials do not appear in bundled files, URLs, logs or saved preferences.
-Closing the application cancels sessions and listeners and releases the port.
-
-The intended transport is frontend → local WebSocket → bundled bridge → remote
-TCP endpoint. **Milestone 1 only enables authenticated controls in normal builds.**
-The TCP echo feature tests both binary directions against one internally created
-loopback target. Milestone 2 will enable protocol-constrained remote transport.
-See [architecture](../docs/client-architecture.md) and
-[security/protocol specification](../docs/client-bridge.md).
-
-## Dependencies
-
-Install Node.js 22.12+ (or a supported newer LTS), npm, a current stable Rust
-compiler/Cargo, and the [Tauri 2 platform prerequisites](https://v2.tauri.app/start/prerequisites/).
-The lockfiles pin the resolved dependency graph. On Debian/Ubuntu, Tauri needs
-WebKitGTK 4.1 and GTK development packages, a C/C++ toolchain and pkg-config.
-Windows needs the MSVC build tools and WebView2. macOS needs Xcode command-line
-tools. Tauri uses system WebViews instead of bundling Chromium. No Java, game
-installation or external game assets are needed to build this preview.
+Requires Node.js 22.12 or later and an installed WebGL2 browser. Linux needs a
+working desktop browser association (`xdg-open`); macOS uses `open`; Windows uses
+the default browser association.
 
 ```sh
+git clone https://github.com/aksulightning/lapisobsidian.git
+cd lapisobsidian
+git checkout testing-client
 cd client
 npm ci
 npm run dev
 ```
 
-`dev` builds the frontend and starts the native shell with its own bridge.
-Restart after frontend edits: hot reload is intentionally not enabled, to keep
-the exact-origin policy and embedded-asset path identical to production.
+The launcher selects an unused **127.0.0.1** port, generates a 256-bit secret,
+starts its own bridge, and opens the HTML5 app in the system browser. Enter your
+server address, TCP port and a 1–15 character ASCII player name, then Play / Connect.
+Closing the client tab shuts down the runtime after a short reload grace period;
+Quit closes it immediately. Disconnect leaves the local runtime ready to reconnect.
+Do not start a second copy in the same tab. Each launch has a separate port/token.
 
-For a browser development window on the **same machine**:
-
-```sh
-npx playwright install chromium
-npm run dev:browser
-# Optional, after installing the corresponding Playwright browser:
-BROWSER_ENGINE=firefox npm run dev:browser
-BROWSER_ENGINE=webkit npm run dev:browser
-```
-
-This developer launcher also manages the bridge automatically. It uses a private
-pipe and pre-document injection rather than printing a credential-bearing URL.
-Playwright is a development dependency only, never a packaged runtime dependency.
-Firefox/WebKit are development options requiring separate validation. An ordinary
-static hosting preview can render the scene but cannot connect to a remote TCP
-server or authenticate itself with a standalone instance.
-
-## Builds and tests
-
-Run these from `client/`:
-
-```sh
-npm run build                     # TypeScript check + static HTML5 assets in dist/
-npm run build:bridge              # release headless verification executable
-npm test                          # normal boundary tests + restricted TCP echo
-npm run test:web                   # Chromium desktop/touch smoke checks
-npm run build:standalone           # native application and platform bundles
-```
-
-The frontend must be built before a direct Cargo command because the bridge
-embeds `dist/` at compile time. If rebuilding only assets, run Cargo again; the
-bridge build script tracks the embedded asset directory.
-
-`cargo build --locked -p lapis-obsidian-client --release` compiles the native
-application without creating installers. `npm run build:standalone` runs the
-frontend build and Tauri packaging. Build on each target OS; do not assume a
-Linux build produces Windows/macOS installers. Outputs are under
-`target/release/` and `target/release/bundle/`. Code signing and notarization
-require maintainer credentials; no signed release is claimed by this milestone.
-Use the `Client checks` workflow for platform checks and draft build artifacts.
-
-The `lapis-bridge --bootstrap-stdio` binary is a **developer harness**, not the
-user application. It requires a private stdout pipe, exits on stdin close or
-Ctrl-C, and refuses to write credentials to a terminal. Do not redirect its
-bootstrap output into logs. The normal app has no sidecar, process-spawning API,
-arbitrary filesystem API, or bridge command for running shell commands.
-
-Run the existing repository gates from the repository root:
+For a local supported server, in another terminal at the repository root:
 
 ```sh
 ./build.sh
-./tests/run.sh
-SANITIZE=1 ./tests/run.sh
-node build_registries.js --check
+./lapis-obsidian
 ```
+
+This is the game server, not a proxy. The client can also connect to a remote
+instance of that server. The client does not start or distribute a game server
+process. Server config, permissions, saves, game modes and gameplay rules remain
+owned by the unchanged server implementation.
+
+## Build a standalone distribution
+
+```sh
+npm run build
+```
+
+This builds the frontend, derives its semantic registry from the server snapshot,
+and produces `release/lapis-obsidian-client-<platform>-<arch>/` containing:
+
+- HTML/CSS/JavaScript modules and the worker;
+- the local bridge and launcher;
+- a copy of the build machine’s Node executable and the `ws` dependency;
+- shell/Windows launchers, licenses, and corresponding project source.
+
+Launch `Lapis-Obsidian-Client.sh` on Linux/macOS or
+`Lapis-Obsidian-Client.cmd` on Windows. Recipients need an installed WebGL2 browser,
+but **do not need Node/npm or a separate bridge installation**. Build separately
+on each target OS/architecture. Linux runtime compatibility follows the copied
+Node binary’s libc requirements. This is a portable directory, not a signed
+installer. `npm run build:standalone` is an alias for the complete build.
+`npm run build:web` builds only browser assets; these cannot connect if served
+without the bundled runtime. `npm start` runs previously built assets.
+
+## Architecture
+
+```text
+HTML5 UI + input → player/world logic → protocol codec → transport
+                                                          ↓ binary WebSocket
+                                           authenticated loopback bridge
+                                                          ↓ TCP
+                                             Lapis Obsidian server
+```
+
+`web/main.js` owns menus and connection presentation. `input.js` supplies input
+intentions independently of gameplay. `game.js` owns movement, collision,
+interaction and synchronization. `protocol/` owns packet framing, encoding and
+server packet decoding. `transport.js` owns WebSocket lifecycle only.
+`world/worker.js` decodes chunks and builds meshes off the UI thread.
+`renderer.js` uses WebGL2, depth testing, a procedural atlas, transparency,
+distance/frustum culling, fog, and bounded display resolution.
+
+No WASM is used: the inspected C implementation is a server whose serializers
+write directly to file descriptors. A WASM build would bring server simulation
+and sockets without providing a client decoder. The client instead reuses the
+checked-in semantic registry directly and traces packet layouts to the C sources.
+The actual C server is the interoperability test fixture, not a simulated server.
+See [protocol provenance](../docs/client-architecture.md).
+
+Tauri was evaluated from the previous implementation. Its native toolchain adds
+platform prerequisites and could not be built in the implementation environment.
+A bundled Node runtime with the installed browser provides a testable portable
+HTML5 launcher without bundling a browser engine. Node is used for transport and
+launching; the frontend has no Node APIs or Node-only execution requirement.
+
+## Local bridge security
+
+The listener binds only to `127.0.0.1:0`, never to a LAN or public interface.
+IPv6 **remote targets** are accepted; an IPv6 local listener is unnecessary.
+The bridge validates the HTTP Host, WebSocket Origin and loopback peer, requires
+a per-launch random token, admits only one authenticated client, bounds control
+and binary messages, applies traffic/backpressure limits and cleans up sessions.
+
+The launcher passes its token in a URL fragment, which is not sent in HTTP
+requests. The frontend immediately removes the fragment from visible history
+and keeps the token only in that tab’s session storage for reload. Browser
+extensions/history capture and other processes running as the same user are
+outside this boundary. Tokens are not logged or saved in configuration files.
+
+The bridge accepts a validated target only after authentication. Before any
+client bytes reach TCP, it requires a protocol-772 login handshake naming that
+same target. It frames subsequent client packets and permits only supported
+state-specific packet IDs. It is not a SOCKS/HTTP proxy or unrestricted raw TCP
+forwarder. It has no filesystem, shell or arbitrary process execution command.
+See [bridge contract](../docs/client-bridge.md).
 
 ## Controls
 
-| Context | Controls |
-| --- | --- |
-| Desktop test scene | Click Explore; WASD moves, mouse looks under pointer lock; Space raises camera, Shift lowers it; Escape or Menu returns to the menu. |
-| Touch test scene | Left joystick moves, right region looks, ↑ raises camera. Each region tracks its own pointer so they work simultaneously. Menu exits. |
-| Settings | Graphics quality, FPS cap, mouse/touch sensitivity, UI scale, fullscreen toggle. Antialiasing changes apply after restart. |
-| Endpoint settings | Save host, TCP port and a 1–15 character ASCII player name. This does not connect or authenticate a player. |
+| Action | Desktop | Touch |
+|---|---|---|
+| Move | WASD | Left joystick |
+| Look | Click world for pointer lock, move mouse | Drag right look region |
+| Jump / swim up | Space | Jump |
+| Sneak | Shift | Hold Sneak |
+| Mine / attack | Hold left mouse | Hold Mine / Hit |
+| Place / use | Right mouse | Use / Place |
+| Hotbar | 1–9, mouse wheel | Tap slot |
+| Drop item | Q | Inventory interactions |
+| Chat / commands | T or Enter | Chat |
+| Inventory | E | Inventory |
+| Pause UI / release pointer | Escape | Menu |
+| Fullscreen | F or Settings | Settings → Fullscreen |
 
-Touch controls respect display safe areas and phone/tablet layout changes.
-Rotate to landscape for more scene space; orientation is not forcibly locked.
-Keyboard/touch input feeds an abstract input frame, separate from the renderer.
-Gameplay bindings, jump/primary/use actions, hotbar, inventory and chat are later
-milestones. All current controls are labelled for their actual test-scene action.
+Movement, look and action touches have independent pointer capture. Hybrid
+hardware can force touch controls in Settings. Layout handles phone/tablet
+sizes, portrait and landscape, safe areas and fullscreen where the browser
+permits it. Inventory supports click/tap pickup and placement, right-click
+splitting and Shift-click quick movement; a creative palette is available when
+the server grants creative mode. The server remains authoritative for actions.
 
-## Compatibility and limitations
+## Tests
 
-The source-of-truth server is protocol **772 / Java 1.21.8**, from
-`include/protocol.h`. The build derives the frontend compatibility label from
-that header. This is a planned target, not a claim of client interoperability.
-The server currently uses unencrypted offline login. Its configuration exchange
-assumes a matching built-in core registry pack and omits some registry NBT;
-client integration must supply legally redistributable semantic data or an
-explicit compatible server extension, not pretend it owns that asset pack.
+A C compiler and Bash are needed to compile the unchanged reference server for
+integration checks. These are test tools, not client runtime dependencies.
 
-The test renderer uses WebGL 1 for broad compatibility. Recent Chromium,
-WebView2, WebKitGTK and WKWebView are intended environments. Pointer lock and
-fullscreen depend on runtime support and fail with understandable messages.
-A lost graphics context reports an error and requires restarting this preview.
-No production frame-rate or mobile battery claim has been established.
+```sh
+npm test                         # builds C fixture; codec, bridge, real-server and lifecycle tests
+npx playwright install chromium
+npm run test:web                 # actual live-server desktop/touch browser checks
+npm run build                    # complete portable package
+```
 
-Android/iOS packaging is **not implemented or validated**. Tauri's mobile support
-makes it a candidate, but SDK builds, local cleartext WebSocket policies, token
-injection behavior, lifecycle suspension, safe areas, WebView capabilities and
-on-device testing need separate work. iOS signing and distribution restrictions
-must be evaluated. Desktop bundles do not automatically work on phones.
-The same TypeScript frontend and input model are intended to remain shared.
+`LAPIS_TEST_BROWSER=/path/to/chromium` selects an existing Chromium executable.
+Tests create disposable worlds in `test-results/`; never use a production save.
+Browser checks exercise live world geometry, pointer lock, keyboard/mouse input,
+simultaneous touch movement/look/jump, chat, hotbar, inventory, resize and reconnect.
+The CI workflow runs the same suite. See [verification](../docs/client-verification.md)
+for actual results and environment limitations, rather than assuming a test’s
+presence means it has passed.
 
-## Contributing
+The original server gates remain available: `./tests/run.sh`,
+`SANITIZE=1 ./tests/run.sh`, and `node build_registries.js --check` from the root.
 
-Base client changes on `testing-client`; preserve the server's source-only build.
-Keep product labels as **Lapis Obsidian Client**. Avoid proprietary assets.
-Add protocol fixtures from the inspected C implementation before adding client
-packet handlers. Do not duplicate or replace the server packet implementation
-without a reviewed transport-neutral extraction plan. Keep bridge policy, wire
-codec, renderer and input separate. Run the existing C checks and client checks.
-Do not enable remote dialing without the Milestone 2 security gates described in
-`docs/client-bridge.md`. Include source and dependency notices with distributed
-binaries under [LICENSE](../LICENSE) and [NOTICE.md](../NOTICE.md).
+## Supported behavior and limitations
+
+- Supported target: this repository’s **unencrypted, uncompressed offline server**
+  at `testing` commit `e96af88797b0718851ae8422415467cb94253982`. This is not a
+  general-purpose client for arbitrary servers of the same protocol number.
+  Encrypted login/compression requests fail visibly; no online account login.
+- Login, streamed chunks, block updates, position corrections, basic player
+  physics, hotbar, chat/commands, container interactions, health/respawn and
+  basic entity movement are implemented. Server permission checks still apply.
+- Original block textures and simple entity boxes replace proprietary assets.
+  Specialized block models, animation, lighting, exact survival mining timing,
+  sounds, signs/text editing, advanced item components and full fluid physics
+  are not equivalent to a full commercial game client. Transparency is sorted
+  by chunk; intersecting transparent surfaces can have visual artifacts.
+- Render distance cannot exceed the data the server sends. Meshing runs in a
+  worker; no measured mid-range phone frame-rate or battery claim is made.
+- Settings are stored in the current browser origin. Because the port changes
+  per launch, preferences are not currently restored across new launches.
+  Offline player UUIDs are deterministically derived from the entered name;
+  names are not authenticated accounts.
+- The same frontend includes functional touch controls. Native Android/iOS
+  packaging is **not included**. A phone cannot connect to a desktop’s loopback
+  bridge; deploying a same-device mobile wrapper is required for native mobile
+  distribution. No public relay or LAN bridge workaround is provided.
+- Browser pointer lock/fullscreen depend on browser/OS support. Graphics context
+  loss displays an error and requires reloading. Windows/macOS packaging must
+  be built and tested on those systems; signing is not configured.
+
+## Contributing and license
+
+Work against `testing-client`. Keep protocol behavior tied to `testing` and add
+real-server tests when changing packets. Keep UI/input, protocol, transport and
+world processing separate. Run the checks above and include screenshots for UI
+changes. Keep the product name **Lapis Obsidian Client** and do not add proprietary
+assets. New client source is GPL-3.0-only; existing source retains its notices.
+See [LICENSE](../LICENSE) and [NOTICE.md](../NOTICE.md). Node and `ws` retain their
+own licenses, included in the portable distribution. Distributors should use
+the license/source correspondence of the Node version they package.

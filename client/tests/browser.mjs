@@ -1,138 +1,187 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { chromium, expect } from "@playwright/test";
-import { mkdir } from "node:fs/promises";
-import { startBridge } from "../scripts/harness.mjs";
-const bridge = await startBridge();
+import { mkdir, writeFile } from "node:fs/promises";
+import { startBridge, startServer } from "./helpers.mjs";
+const server = await startServer(),
+  bridge = await startBridge();
 let browser;
+const results = [];
 try {
   browser = await chromium.launch({
     executablePath: process.env.LAPIS_TEST_BROWSER,
-    args: ["--enable-unsafe-swiftshader"],
+    args: [
+      "--no-sandbox",
+      "--enable-unsafe-swiftshader",
+      "--use-gl=angle",
+      "--use-angle=swiftshader",
+      "--disable-dev-shm-usage",
+    ],
   });
   await mkdir("test-results", { recursive: true });
   for (const mobile of [false, true]) {
     const context = await browser.newContext({
       viewport: mobile
-        ? { width: 390, height: 844 }
-        : { width: 1440, height: 1000 },
-      isMobile: mobile,
+        ? { width: 844, height: 390 }
+        : { width: 1280, height: 800 },
       hasTouch: mobile,
+      isMobile: mobile,
       deviceScaleFactor: 1,
     });
-    await context.addInitScript((value) => {
-      if (location.origin === value.origin) window.__LAPIS_BOOTSTRAP__ = value;
-    }, bridge.bootstrap);
     const page = await context.newPage(),
       errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
-    await page.goto(bridge.bootstrap.origin);
-    await expect(page).toHaveTitle("Lapis Obsidian Client");
-    await expect(page.locator("#bridge-status")).toHaveText("Bridge ready");
-    await expect(page.locator("#scene")).toHaveAttribute(
-      "data-rendered",
-      "true",
-    );
-    await expect(page.locator("#scene-error")).toBeHidden();
-    await expect
-      .poll(() =>
-        page
-          .locator(".wordmark img")
-          .evaluate((img) => img.complete && img.naturalWidth > 0),
-      )
-      .toBe(true);
-    if (mobile) await expect(page.locator(".scene-caption")).toBeHidden();
-    await expect(page.locator("#connect-server")).toBeDisabled();
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth > innerWidth,
-    );
-    expect(overflow).toBe(false);
-    await page.locator("#host").fill("play.example.org");
-    await page
-      .getByRole("button", { name: "Save server", exact: false })
-      .click();
-    await expect(page.locator("#save-message")).toContainText("Server saved");
-    await page.screenshot({
-      path: `test-results/${mobile ? "mobile" : "desktop"}.png`,
-      fullPage: true,
+    page.on("console", (m) => {
+      if (m.type() === "error") errors.push(m.text());
     });
-    await page.getByRole("button", { name: "Settings", exact: true }).click();
-    await page.locator("#fps").selectOption("30");
-    await expect(page.locator("#settings-message")).toContainText(
-      "Settings saved",
+    await page.goto(bridge.origin + "/#" + bridge.token);
+    await expect(page).toHaveTitle("Lapis Obsidian Client");
+    await expect(page.locator("#connection-status")).toHaveText("Bridge ready");
+    await page.locator("#port").fill(String(server.port));
+    await page.locator("#username").fill(mobile ? "TouchTest" : "DesktopTest");
+    await page.locator("#connect").click();
+    await page.waitForFunction(
+      () =>
+        window.lapisDiagnostics?.connected &&
+        window.lapisDiagnostics.chunks >= 25 &&
+        window.lapisDiagnostics.vertices > 0,
+      {},
+      { timeout: 45000 },
     );
-    await page.getByRole("button", { name: "About", exact: true }).click();
-    await expect(page.locator("#protocol-label")).toContainText("772");
-    await page
-      .getByRole("button", { name: "Explore test scene", exact: false })
-      .click();
-    await expect(page.locator("#hud")).toBeVisible();
-    if (mobile) {
-      await page.setViewportSize({ width: 844, height: 390 });
-      await expect(page.locator("#joystick")).toBeVisible();
-      // Three simultaneous touch pointers on independent capture surfaces.
-      const session = await context.newCDPSession(page);
-      const joystick = await page.locator("#joystick").boundingBox(),
-        look = await page.locator("#look-area").boundingBox(),
-        rise = await page.locator("#rise").boundingBox();
-      const touches = [
-        { x: joystick.x + 56, y: joystick.y + 56, id: 1 },
-        { x: look.x + 30, y: look.y + 30, id: 2 },
-        { x: rise.x + 30, y: rise.y + 30, id: 3 },
-      ];
-      await session.send("Input.dispatchTouchEvent", {
-        type: "touchStart",
-        touchPoints: touches,
-      });
-      await session.send("Input.dispatchTouchEvent", {
-        type: "touchMove",
-        touchPoints: touches.map((p, i) => ({
-          ...p,
-          x: p.x + (i === 1 ? 20 : 0),
-          y: p.y - (i === 0 ? 25 : 0),
-        })),
-      });
-      await session.send("Input.dispatchTouchEvent", {
-        type: "touchEnd",
-        touchPoints: [],
-      });
-      await page.screenshot({ path: "test-results/mobile-landscape.png" });
-      await page.locator("#menu-toggle").click();
-    } else {
+    await expect(page.locator("#error")).toBeHidden();
+    const before = await page.evaluate(() => window.lapisDiagnostics);
+    await page.screenshot({
+      path: `test-results/${mobile ? "touch" : "desktop"}-world.png`,
+    });
+    if (!mobile) {
+      await page.locator("#world").click({ position: { x: 640, y: 350 } });
+      await page.waitForFunction(
+        () => document.pointerLockElement?.id === "world",
+      );
+      await page.keyboard.down("KeyW");
+      await page.waitForTimeout(450);
+      await page.keyboard.up("KeyW");
+      const moved = await page.evaluate(() => window.lapisDiagnostics.position);
+      expect(
+        Math.hypot(moved.x - before.position.x, moved.z - before.position.z),
+      ).toBeGreaterThan(0.15);
+      await page.mouse.move(700, 380);
+      await page.waitForTimeout(150);
+      expect(
+        (await page.evaluate(() => window.lapisDiagnostics.position)).yaw,
+      ).not.toBe(before.position.yaw);
+      await page.keyboard.press("Digit3");
+      expect(await page.evaluate(() => window.lapisDiagnostics.slot)).toBe(2);
+      await page.keyboard.press("Space");
+      await page.keyboard.press("KeyT");
+      await page.locator("#chat-input").fill("Browser desktop round-trip");
+      await page.locator("#chat-form button.accent").click();
+      await expect(page.locator("#chat-log")).toContainText(
+        "Browser desktop round-trip",
+      );
+      await page.keyboard.press("KeyE");
+      await expect(page.locator("#inventory")).toBeVisible();
+      await page.locator("#creative-items .slot").first().click();
+      await page.locator("#inventory-close").click();
+      await expect(page.locator("#hotbar .slot").nth(2)).toContainText("64");
       await page.keyboard.press("Escape");
+      await expect(page.locator("#menu")).toBeVisible();
+      await page.locator("#resume").click();
+    } else {
+      await expect(page.locator("#touch-controls")).toBeVisible();
+      const session = await context.newCDPSession(page);
+      const center = async (id) => {
+        const r = await page.locator(id).boundingBox();
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      };
+      const stick = await center("#joystick"),
+        look = { x: 550, y: 100 },
+        jump = await center("#jump");
+      const send = (type, points) =>
+        session.send("Input.dispatchTouchEvent", {
+          type,
+          touchPoints: points.map((p, i) => ({
+            id: p.id ?? i + 1,
+            x: p.x,
+            y: p.y,
+            radiusX: 5,
+            radiusY: 5,
+            force: 1,
+          })),
+        });
+      await send("touchStart", [
+        { ...stick, id: 1 },
+        { ...look, id: 2 },
+      ]);
+      await send("touchMove", [
+        { x: stick.x, y: stick.y - 38, id: 1 },
+        { x: look.x + 60, y: look.y + 20, id: 2 },
+      ]);
+      await page.waitForTimeout(400);
+      await send("touchStart", [
+        { x: stick.x, y: stick.y - 38, id: 1 },
+        { x: look.x + 60, y: look.y + 20, id: 2 },
+        { ...jump, id: 3 },
+      ]);
+      await page.waitForTimeout(150);
+      const during = await page.evaluate(
+        () => window.lapisDiagnostics.position,
+      );
+      expect(
+        Math.hypot(during.x - before.position.x, during.z - before.position.z),
+      ).toBeGreaterThan(0.1);
+      expect(during.yaw).not.toBe(before.position.yaw);
+      expect(during.y).toBeGreaterThan(before.position.y);
+      await send("touchEnd", []);
+      await page.locator("#hotbar .slot").nth(4).tap();
+      expect(await page.evaluate(() => window.lapisDiagnostics.slot)).toBe(4);
+      await page.locator("#chat-open").tap();
+      await page.locator("#chat-input").fill("Touch round-trip");
+      await page.locator("#chat-form button.accent").tap();
+      await expect(page.locator("#chat-log")).toContainText("Touch round-trip");
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.waitForTimeout(100);
+      await expect(page.locator("#joystick")).toBeVisible();
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(390);
+      await page.screenshot({ path: "test-results/touch-portrait.png" });
     }
-    await expect(page.locator("#menu")).toBeVisible();
+    await page.setViewportSize({ width: 1000, height: 600 });
+    await page.waitForTimeout(200);
+    const size = await page
+      .locator("#world")
+      .evaluate((c) => [c.width, c.height]);
+    expect(size[0]).toBeGreaterThanOrEqual(1000);
+    expect(size[1]).toBeGreaterThanOrEqual(600);
+    await page.locator("#menu-open").click();
+    await page.locator("#disconnect").click();
+    await expect(page.locator("#connection-status")).toHaveText("Disconnected");
+    await page.locator("#connect").click();
+    await page.waitForFunction(
+      () => window.lapisDiagnostics?.connected,
+      {},
+      { timeout: 30000 },
+    );
+    const after = await page.evaluate(() => window.lapisDiagnostics);
+    results.push({
+      layout: mobile ? "touch" : "desktop",
+      chunks: after.chunks,
+      renderedVertices: before.vertices,
+      errors,
+    });
     expect(errors).toEqual([]);
     await context.close();
-    // Wait for server-side authenticated session cleanup without fixed sleeps.
-    await expect
-      .poll(async () => {
-        const c = await browser.newContext();
-        const p = await c.newPage();
-        await p.goto(bridge.bootstrap.origin);
-        const response = await p.evaluate(
-          async (token) =>
-            await new Promise((resolve) => {
-              const ws = new WebSocket(
-                location.origin.replace("http:", "ws:") + "/bridge",
-              );
-              ws.onopen = () =>
-                ws.send(JSON.stringify({ type: "AUTH", token }));
-              ws.onmessage = (e) => {
-                resolve(JSON.parse(e.data).type);
-                ws.close();
-              };
-            }),
-          bridge.bootstrap.token,
-        );
-        await c.close();
-        return response;
-      })
-      .toBe("AUTH_OK");
+    await new Promise((r) => setTimeout(r, 150));
+    console.log(
+      `${mobile ? "Touch" : "Desktop"} world, controls, chat, resize and reconnect passed.`,
+    );
   }
-  console.log(
-    "Browser checks passed: authenticated startup, WebGL, desktop/mobile layout, settings and multi-touch.",
+  await writeFile(
+    "test-results/browser-results.json",
+    JSON.stringify(results, null, 2),
   );
 } finally {
   await browser?.close();
-  await bridge.stop();
+  await bridge.close();
+  await server.stop();
 }

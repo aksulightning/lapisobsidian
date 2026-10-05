@@ -26,3 +26,5 @@ make-demo-song.exe
 /client/test-results/
 /client/src-tauri/gen/
 /client/release-preview/
+
+/client/release/

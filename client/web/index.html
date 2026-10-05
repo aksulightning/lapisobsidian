@@ -1,223 +1,216 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
     />
-    <meta name="theme-color" content="#11151e" />
-    <meta
-      name="description"
-      content="Lapis Obsidian Client — an open-source standalone HTML5 client. Milestone 1 development preview."
-    />
+    <meta name="theme-color" content="#101423" />
     <title>Lapis Obsidian Client</title>
-    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="/layout.css" />
+<link rel="icon" type="image/svg+xml" href="./icon.svg">
+    <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <canvas
-      id="scene"
-      aria-label="Interactive WebGL test landscape"
-      tabindex="0"
-    ></canvas>
-    <div id="scene-error" role="alert" hidden></div>
-    <div class="vignette"></div>
-    <header>
-      <a class="wordmark" href="#" aria-label="Lapis Obsidian Client home"
-        ><img src="/icon.svg" alt="" width="32" height="32" /><span
-          >LAPIS <b>OBSIDIAN</b></span
-        ></a
-      ><span class="build-label">CLIENT / DEVELOPMENT PREVIEW</span
-      ><button id="menu-toggle" hidden aria-label="Open menu">Menu</button>
-    </header>
-    <main id="menu">
-      <section class="intro">
-        <div class="eyebrow">
-          <span class="dot"></span> OPEN SOURCE. NEW HORIZONS.
-        </div>
-        <h1>Lapis Obsidian<br /><em>Client</em></h1>
-        <p class="lede">A small window into a bigger world.</p>
-        <p class="scope">
-          Standalone HTML5 edition · Milestone 1<br />Explore the test scene.
-          Remote gameplay is still in development.
-        </p>
-        <button id="explore" class="explore">
-          Explore test scene <span>↗</span>
-        </button>
-        <div class="scene-caption">
-          <span>01 / THE LAPIS ISLES</span
-          ><span>Original procedural geometry</span>
-        </div>
-      </section>
-      <section class="panel" aria-label="Client menu">
-        <nav class="tabs" aria-label="Client sections">
-          <button aria-selected="true" data-tab="connect">Connect</button
-          ><button aria-selected="false" data-tab="settings">Settings</button
-          ><button aria-selected="false" data-tab="about">About</button>
-        </nav>
-        <div id="connect" class="tab-content">
-          <div class="panel-heading">
-            <h2>Your next world</h2>
-            <span class="tag">PREVIEW</span>
-          </div>
-          <p class="muted">
-            Save an endpoint for the upcoming protocol integration.
-          </p>
-          <form id="connection-form">
-            <label for="host">Server address</label
-            ><input
-              id="host"
-              name="host"
-              maxlength="253"
-              placeholder="play.example.org"
-              autocomplete="off"
-              spellcheck="false"
+    <canvas id="world" aria-label="Live server world"></canvas>
+    <main id="menu" class="panel">
+      <div class="eyebrow">STANDALONE · HTML5</div>
+      <h1>Lapis Obsidian <span>Client</span></h1>
+      <p class="intro">Your window into the world.</p>
+      <div id="connection-status" role="status">Starting...</div>
+      <form id="connect-form">
+        <label
+          >Server address<input
+            id="host"
+            name="host"
+            value="127.0.0.1"
+            autocomplete="off"
+            required
+            maxlength="253"
+            placeholder="play.example.org"
+        /></label>
+        <div class="row">
+          <label
+            >Port<input
+              id="port"
+              name="port"
+              type="number"
+              min="1"
+              max="65535"
+              value="25565"
+              required /></label
+          ><label
+            >Player name<input
+              id="username"
+              name="username"
+              value="Explorer"
+              pattern="[A-Za-z0-9_]{1,15}"
+              maxlength="15"
               required
-            />
-            <div class="form-row">
-              <div>
-                <label for="port">Port</label
-                ><input
-                  id="port"
-                  name="port"
-                  type="number"
-                  min="1"
-                  max="65535"
-                  value="25565"
-                  required
-                />
-              </div>
-              <div>
-                <label for="username">Player name</label
-                ><input
-                  id="username"
-                  name="username"
-                  maxlength="15"
-                  pattern="[A-Za-z0-9_]{1,15}"
-                  value="Explorer"
-                  required
-                />
-              </div>
-            </div>
-            <button class="primary" type="submit">
-              Save server <span>→</span>
-            </button>
-          </form>
-          <button id="connect-server" class="secondary" disabled>
-            Connect · available in a later milestone
-          </button>
-          <p id="save-message" class="muted" role="status"></p>
-          <div class="status-box">
-            <div>
-              <span class="status-light" id="bridge-light"></span
-              ><span id="bridge-status" role="status"
-                >Starting local bridge…</span
-              ><span class="local-label">LOCAL ONLY</span>
-            </div>
-            <p id="connection-status" role="status">Disconnected</p>
-          </div>
-          <p class="footnote">
-            Your bridge starts and stops with the application.<br />No external
-            service or proxy to configure.
-          </p>
+              autocomplete="off"
+          /></label>
         </div>
-        <div id="settings" class="tab-content" hidden>
-          <h2>Make it yours</h2>
-          <p class="muted">Settings stay on this device.</p>
-          <label for="quality">Graphics quality</label
-          ><select id="quality">
-            <option value="low">Low · battery friendly</option>
-            <option value="medium">Balanced</option>
-            <option value="high">High</option></select
-          ><label for="fps">Frame limit</label
-          ><select id="fps">
-            <option value="30">30 FPS</option>
-            <option value="60">60 FPS</option>
-            <option value="120">120 FPS</option></select
-          ><label for="mouse">Mouse sensitivity</label
-          ><input id="mouse" type="range" min="0.2" max="3" step="0.1" /><label
-            for="touch"
-            >Touch sensitivity</label
-          ><input id="touch" type="range" min="0.2" max="3" step="0.1" /><label
-            for="scale"
-            >UI scale</label
-          ><input
-            id="scale"
-            type="range"
-            min="0.85"
-            max="1.2"
-            step="0.05"
-          /><label for="distance"
-            >Render distance
-            <span class="muted">(saved for world integration)</span></label
-          ><select id="distance">
+        <button class="accent" id="connect" type="submit" disabled>
+          Play / Connect <span>→</span>
+        </button>
+      </form>
+      <div class="row">
+        <button id="resume" hidden>Return to world</button
+        ><button id="disconnect" hidden>Disconnect</button>
+      </div>
+      <nav>
+        <button id="settings-open">Settings</button
+        ><button id="about-open">About</button><button id="quit">Quit</button>
+      </nav>
+      <p class="compat">Lapis Obsidian server · Protocol 772 · Offline login</p>
+    </main>
+    <section id="settings" class="panel" hidden>
+      <div class="eyebrow">MAKE IT YOURS</div>
+      <h2>Settings</h2>
+      <form id="settings-form">
+        <label
+          >Render distance
+          <select name="distance">
             <option value="2">2 chunks</option>
             <option value="4">4 chunks</option>
-            <option value="8">8 chunks</option></select
-          ><button id="fullscreen" class="secondary">Toggle fullscreen</button>
-          <p id="settings-message" class="muted" role="status"></p>
-        </div>
-        <div id="about" class="tab-content" hidden>
-          <h2>Built in the open.</h2>
-          <p>
-            Lapis Obsidian Client is an independent, open-source HTML5 frontend
-            with a bundled local transport bridge.
-          </p>
-          <p>
-            This preview includes a real WebGL scene, responsive controls,
-            settings, and authenticated bridge lifecycle. Login, server worlds,
-            inventory, chat, and gameplay are not implemented yet.
-          </p>
-          <p id="protocol-label"></p>
-          <p>Original procedural artwork. No proprietary game assets.</p>
-          <p>
-            Licensed under GNU GPL v3. You may modify and redistribute under
-            that license. Provided without warranty.
-          </p>
-          <a
-            href="https://github.com/aksulightning/lapisobsidian"
-            target="_blank"
-            rel="noopener noreferrer"
-            >GitHub / source code ↗</a
-          >
-          <p class="footnote">
-            In the standalone preview, external navigation is blocked. Copy the
-            source address to your browser.
-          </p>
-          <button id="copy-source" class="secondary">Copy source address</button
-          ><button id="read-license" class="secondary">Read the license</button>
-          <p id="about-message" role="status"></p>
-        </div>
-      </section>
-    </main>
-    <div id="hud" hidden>
-      <div class="scene-badge">
-        TEST SCENE <span>· no server connected</span>
-      </div>
-      <div class="crosshair" aria-hidden="true">+</div>
-      <div id="look-area" aria-label="Touch camera area"></div>
-      <div id="joystick" aria-label="Movement joystick"><span></span></div>
-      <button id="rise" class="touch-action" aria-label="Move camera up">
-        ↑
-      </button>
-      <div class="controls-hint">
-        WASD move · Mouse look · Space rise · Shift descend · Esc menu
-      </div>
-    </div>
-    <footer>
-      <span
-        ><span class="dot"></span> A WORK IN PROGRESS, BUILT TO EXPLORE.</span
-      ><span id="input-mode">Detecting input…</span>
-    </footer>
-    <dialog id="license-dialog">
-      <form method="dialog">
-        <button aria-label="Close license">Close</button>
+            <option value="6">6 chunks</option>
+            <option value="8">8 chunks</option>
+          </select></label
+        >
+        <label
+          >Graphics quality<select name="quality">
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select></label
+        >
+        <label
+          >Frame rate<select name="fps">
+            <option value="30">30 FPS</option>
+            <option value="60">60 FPS</option>
+            <option value="120">120 FPS</option>
+          </select></label
+        >
+        <label
+          >UI size<select name="scale">
+            <option value="small">Small</option>
+            <option value="normal">Normal</option>
+            <option value="large">Large</option>
+          </select></label
+        >
+        <label
+          >Mouse sensitivity<input
+            type="range"
+            name="mouse"
+            min="0.03"
+            max="0.5"
+            step="0.01"
+        /></label>
+        <label
+          >Touch sensitivity<input
+            type="range"
+            name="touch"
+            min="0.05"
+            max="0.7"
+            step="0.01"
+        /></label>
+        <label
+          >Touch controls<select name="controls">
+            <option value="auto">Automatic</option>
+            <option value="touch">Always show</option>
+            <option value="desktop">Keyboard and mouse</option>
+          </select></label
+        >
       </form>
-      <h2>GNU General Public License v3</h2>
-      <pre id="license-text"></pre>
-    </dialog>
-    <script type="module" src="/main.ts"></script>
+      <div class="row">
+        <button id="fullscreen">Fullscreen</button
+        ><button id="settings-close" class="accent">Done</button>
+      </div>
+      <p class="compat">The server limits how many chunks it sends.</p>
+    </section>
+    <section id="about" class="panel" hidden>
+      <div class="eyebrow">OPEN SOURCE</div>
+      <h2>Lapis Obsidian Client</h2>
+      <p>
+        An HTML5 game client with a bundled, authenticated loopback TCP bridge.
+        World data comes from your server. Textures are original procedural
+        artwork.
+      </p>
+      <p>
+        Compatible with this repository’s protocol 772 offline server. Online
+        account authentication and other server implementations are unsupported.
+      </p>
+      <p>
+        <a
+          href="https://github.com/aksulightning/lapisobsidian"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Source repository ↗</a
+        >
+        · <a href="/LICENSE" target="_blank" rel="noopener">GPL-3.0 license</a>
+      </p>
+      <button id="about-close">Back</button>
+    </section>
+    <div id="hud" hidden>
+      <header>
+        <span id="hud-status">Connected</span>
+        <div>
+          <button id="chat-open">Chat</button
+          ><button id="inventory-open">Inventory</button
+          ><button id="menu-open">Menu</button>
+        </div>
+      </header>
+      <div id="crosshair">+</div>
+      <div id="target-label"></div>
+      <div id="health"></div>
+      <div id="hotbar" aria-label="Hotbar"></div>
+      <div id="coordinates"></div>
+    </div>
+    <div id="touch-controls" hidden>
+      <div id="look-area" aria-label="Touch look area"></div>
+      <div id="joystick" aria-label="Movement joystick"><span>MOVE</span></div>
+      <button id="jump">Jump</button><button id="primary">Mine / Hit</button
+      ><button id="secondary">Use / Place</button
+      ><button id="sneak">Sneak</button
+      ><span id="landscape-hint">Rotate to landscape for more space</span>
+    </div>
+    <div id="chat-log" aria-live="polite"></div>
+    <form id="chat-form" class="overlay" hidden>
+      <label
+        >Chat or command<input
+          id="chat-input"
+          maxlength="224"
+          autocomplete="off"
+          placeholder="Message or /help"
+      /></label>
+      <div class="row">
+        <button class="accent">Send</button
+        ><button id="chat-close" type="button">Close</button>
+      </div>
+    </form>
+    <section id="inventory" class="overlay" hidden>
+      <div class="row">
+        <h2 id="inventory-title">Inventory</h2>
+        <button id="inventory-close">Close</button>
+      </div>
+      <p id="cursor-item">
+        Click to pick up or place. Right-click splits; Shift-click moves stacks.
+      </p>
+      <div id="inventory-slots"></div>
+      <div id="creative" hidden>
+        <h3>Creative palette</h3>
+        <div id="creative-items"></div>
+      </div>
+    </section>
+    <section id="death" class="overlay" hidden>
+      <h2>You died</h2>
+      <button id="respawn" class="accent">Respawn</button
+      ><button id="death-menu">Menu</button>
+    </section>
+    <div id="error" role="alert" hidden>
+      <span></span
+      ><button id="error-close" aria-label="Dismiss error">×</button>
+    </div>
+    <script type="module" src="./main.js"></script>
   </body>
 </html>

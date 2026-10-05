@@ -1,65 +1,58 @@
-# Lapis Obsidian Client architecture decision
+# Lapis Obsidian Client architecture and protocol provenance
 
-Inspection baseline: `testing`, `e96af88` (Use explicit plate create and remove
-subcommands). The requested client is additive; the inspected project is a C
-server. No existing client renderer or device-input implementation was found.
+The single replacement implementation lives in `client/`. The previous Tauri /
+Rust preview, TypeScript free camera, static island, echo-only bridge, placeholder
+Connect control, and their tests/build configs have been removed. The C server
+under `src/` and `include/` is unchanged and remains the authoritative reference.
 
-## Inspection and reuse map
+Inspected reference: `testing` commit
+`e96af88797b0718851ae8422415467cb94253982`. `testing-client` had identical server
+sources, but explicitly returned `PROTOCOL_NOT_READY` for every remote CONNECT.
+It contained no client-side login, world decoder or gameplay. Enabling that one
+control alone could not make it a game client.
 
-| Concern | Existing implementation | Client decision |
-| --- | --- | --- |
-| Build | `build.sh`, `build-alpine.sh`, `tests/run.sh`; C compiler and libm. `src/CMakeLists.txt` is ESP-IDF-specific. Optional Node registry generator. | Preserve all server build paths. Add isolated npm/Cargo workspace. |
-| TCP | `src/main.c` nonblocking POSIX/Winsock accept loop; `src/tools.c` socket reads/writes; `src/packet_input.c` 8 KiB bounded serverbound frame buffer and 15-second partial-frame deadline. | Native bridge is independent. Browser uses only WebSocket. Do not link server listeners into the application. |
-| Protocol | `include/protocol.h`: 772 / 1.21.8. `src/packets.c`, `src/main.c` dispatch; VarInt framing and endian codecs in `src/varnum.c`, `src/tools.c`. | Generate shared constants now. Evaluate memory-buffer codec extraction and WASM/native adapters in M3; socket-bound server handlers cannot be imported directly into TypeScript. |
-| Session/auth | `cs_handshake`, `cs_loginStart`, `sc_loginSuccess`, configuration, play; caller-supplied UUID/name and no encryption/authentication. | Local bridge authentication is independent of future remote player authentication. No online account login invented. |
-| Registry | `generated/registry_snapshot.json`, generated C arrays, `build_registries.js`, `docs/registries.md`; 256 compact block IDs and network mappings. Exact core-pack negotiation. | Reuse snapshot and fixtures; add client-side semantics only when needed. Never import proprietary assets. |
-| World/chunks | `worldgen.c`, `beta173_*`, plates and edit storage; `sc_chunkDataAndUpdateLight` emits 24 sections, -64 minimum Y, palettes and lighting. `tests/chunk_packet.c` validates wire output. | Future incoming chunk decoder and mesher consume actual packets. Server generation/storage is not browser world state. M1 scene is explicitly procedural test geometry. |
-| Rendering/audio | No client renderer, textures or playback engine. Server emits named sound packets and has MIDI/musicbox logic. | WebGL and original procedural geometry now; independent legal sound assets later. |
-| Entities/player | `PlayerData`, `MobData`, `WorldState` in `globals.h`; `procedures.c`, `mobs.c`, `mob_packets.c`, `items.c`. | Wire fixtures and state semantics are references; packed server persistence structs are not client state models. |
-| Inventory | `inventory_packets.c`, `crafting.c`, server-owned slots and predictions; security tests. | Future UI displays authoritative remote inventory and emits compatible requests; no inventory simulation in M1. |
-| Input | Server interprets movement/action packets in `main.c` and `packets.c`; no keyboard/mouse/touch collection. | Shared abstract input frames from browser devices; renderer consumes free-camera movement in M1. |
-| License | GNU GPL v3, upstream bareiron and compatibility/terrain notices. | Preserve LICENSE/NOTICE. New client source and original assets GPL-3.0-only. No asset scraping. |
+| Reference source | Reused behavior / client location |
+|---|---|
+| `include/protocol.h`, `generated/registry_snapshot.json` | Build-checked protocol number, core-pack version, block-state/item identities; `web/protocol/registry.js` is generated automatically. |
+| `src/main.c` | Login/configuration/play transition order and serverbound packet IDs; `protocol/client.js`. |
+| `src/packets.c` | Login, client information, known packs, position sync, slots, keepalive, chunks, entity spawning, health and chat. |
+| `src/worldgen.c` | Section indexing and packed long byte order (`index ^ 7` in the 8-bit server palette); decoded in `world/world.js`. The client renders transmitted terrain instead of generating its own world. |
+| `src/sign_packets.c` | Fully framed action/use packets, sequence counters, position and cursor fields. |
+| `src/inventory_packets.c` | Hashed-slot click framing, container IDs and authoritative inventory replies. The client submits zero prediction changes and uses server corrections. |
+| `src/command_packets.c` | Unsigned chat/commands and creative slot format. |
+| `src/mob_packets.c`, `src/packets.c` | Relative/absolute entity movement and removal; simple geometry represents received entities. |
+| `src/doors.c`, `src/farming.c`, `src/circuits.c` | State variants for basic material selection; specialized rendering remains limited. |
 
-## Runtime evaluation
+The server serializer is not a reusable client codec. Compiling the entire C
+server to WASM would retain server world generation and socket dependencies,
+while still needing inverse decoders and browser gameplay. JavaScript typed
+buffers are used for the inverse codec. The semantic registry is reused without
+copying proprietary textures or a game installation. The known-pack reply means
+compatibility with this server’s minimal semantic snapshot, not an asset pack.
 
-| Candidate | Size / WebView | Bridge and platforms | Decision |
-| --- | --- | --- | --- |
-| Tauri 2 + Rust | System WebView; avoids shipping a browser engine. Actual package size must be measured per platform. | Memory-safe embedded bridge; Windows/Linux/macOS and a separately validated Android/iOS path. Requires Rust and native SDK/WebKit dependencies. | Chosen. Small explicit API surface; frontend has no native IPC permissions. |
-| Electron + Node | Ships Chromium and Node; larger runtime, consistent browser behavior. | Mature desktop sockets and packaging; no direct mobile application path. | Not selected; size and future mobile strategy favor system WebViews. |
-| C/C++ + thin WebView | Potentially small and close to repository language. | Requires maintained WebSocket/TLS/HTTP dependencies, native lifecycle integration and platform-specific packaging. | More hand-maintained security and platform code than justified by reusable server code. |
-| Neutralino + extension | System WebView and lightweight core. | Separate bridge extension lifecycle and IPC; mobile strategy needs additional work. | Fewer benefits than an in-process Rust bridge for this task. |
+The packet framer handles arbitrary TCP splits/coalescing with bounded buffering.
+Malformed lengths, unsupported login modes and invalid palettes abort the session.
+Chunks use 24 sections starting at Y=-64; protocol 772 containers do not carry
+the old long-array-length VarInt. The actual server emits a zero heightmap count.
+The world worker rejects other heightmap layouts instead of guessing.
 
-No frontend framework or rendering library was added. Native dependencies are
-MIT/Apache-style permissive Rust libraries; maintain their license notices in
-release distributions. npm packages are build/test tools, not runtime services.
+The main thread owns the player, protocol, input and UI. A generation counter
+invalidates worker messages on disconnect/reconnect or dimension change. The
+worker owns a second chunk cache and coalesced dirty-mesh queue. Transferable
+buffers carry meshes and collision arrays. Neighbor arrival/block changes mark
+adjacent meshes dirty. Distance-based cache eviction releases both CPU and GPU
+resources. Client loading pauses physics until the spawn chunk and position
+arrive; server corrections replace player position and are acknowledged.
 
-## Directory boundaries
+WebGL2 renders only meshes decoded from server packets. It uses a deterministic
+original texture atlas, depth testing, per-face shading, fog, frustum/distance
+culling and a separate transparent pass. Entity boxes reflect received positions;
+they do not pretend to be full models. Collision and jump/swim/sneak behavior are
+client-side approximations synchronized to server movement packets at 20 Hz.
 
-- `client/web/`: static UI, settings, WebGL, abstract input and browser transport.
-- `client/scripts/`: source-of-truth constant generation, private-pipe developer launcher.
-- `client/bridge/`: embedded static assets, authenticated local WS session, cancellation.
-- `client/src-tauri/`: native window, secure bootstrap injection, ownership and exit.
-- `client/tests/`, `client/bridge/tests/`: browser and security/lifecycle checks.
-- `client/dist/`, `client/target/`: ignored build outputs; no copied server or game assets.
-
-Protocol codecs will sit above the `Transport` interface (connect/send/close and
-callbacks). A future native transport can implement the same contract. The
-bridge is concerned with bounded transport and protocol admission, never
-rendering, world simulation or inventory logic. TCP framing does not align with
-WebSocket frames; later codecs must incrementally assemble split/coalesced bytes.
-
-## Milestone progression
-
-M1 provides the standalone shell, real WebGL scene and authenticated local bridge.
-M2 adds remote TCP lifecycle, bounded backpressure, DNS/connect deadlines, target
-policy and a protocol-specific admission gate before forwarding bytes. M3
-integrates handshake/login/configuration codecs using inspected packet fixtures.
-M4 expands the unified input to gameplay actions and HUD. M5 integrates remote
-chunks, meshing, camera/player movement and unloading. M6 adds supported gameplay.
-M7 validates installers, signing/distribution, performance and mobile feasibility.
-No milestone beyond M1 is represented as complete by this change.
-
-Sources: [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/),
-[Tauri WebViews](https://v2.tauri.app/reference/webview-versions/),
-[capabilities](https://v2.tauri.app/security/capabilities/),
-[Neutralino architecture](https://neutralino.js.org/docs/contributing/architecture/).
+The standalone build copies Node’s runtime rather than compiling a second
+native stack. It hosts assets, starts its restricted loopback bridge and opens
+the system browser. A tab close triggers remote socket cleanup, listener close
+and process exit; a short grace allows reload. Development and portable packages
+use exactly the same runtime/frontend implementation. No external service is
+needed. Native mobile wrappers and signed desktop installers are not supplied.

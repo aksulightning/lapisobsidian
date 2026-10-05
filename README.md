@@ -1,14 +1,24 @@
-# Lapis Obsidian Client — HTML5 / Standalone
+# Lapis Obsidian Client
 
-The `testing-client` branch adds an experimental standalone client alongside the
-existing server. **Milestone 1 is a shell and transport-boundary preview, not yet
-a playable remote client.** It includes an original WebGL test scene, responsive
-desktop/touch UI, settings, and a bundled authenticated loopback bridge.
+The `testing-client` branch contains a standalone HTML5 client for the working
+Lapis Obsidian protocol-772 server. The previous nonconnecting preview has been
+replaced with live login, streamed-world rendering, player controls, gameplay
+packets and an automatically managed authenticated loopback bridge.
 
-See [client setup, builds and controls](client/README.md),
-[architecture and inspected source](docs/client-architecture.md), and
-[bridge protocol and security](docs/client-bridge.md).
-The client does not start or bundle the game server. No external proxy is needed.
+```sh
+cd client
+npm ci
+npm run dev
+# Portable client with bundled runtime:
+npm run build
+```
+
+See [setup, packaging, controls and limitations](client/README.md),
+[architecture and protocol provenance](docs/client-architecture.md),
+[bridge security](docs/client-bridge.md), and
+[actual verification results](docs/client-verification.md).
+The frontend is shared by desktop and touch layouts. Native mobile packaging
+is not included. No external proxy is needed.
 
 ---
 

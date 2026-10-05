@@ -1,25 +1,26 @@
 {
   "name": "lapis-obsidian-client",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "Lapis Obsidian Client standalone HTML5 shell",
+  "description": "Standalone HTML5 Lapis Obsidian Client",
   "license": "GPL-3.0-only",
   "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
-    "build": "node scripts/protocol.mjs && tsc --noEmit && vite build",
-    "check": "tsc --noEmit",
-    "dev": "npm run build && tauri dev",
-    "build:bridge": "npm run build && cargo build --locked -p lapis-bridge --release",
-    "build:standalone": "tauri build",
-    "test": "cargo test --locked -p lapis-bridge && cargo test --locked -p lapis-bridge --features dev-echo",
-    "test:web": "npm run build && node tests/browser.mjs",
-    "tauri": "tauri",
-    "dev:browser": "npm run build && node scripts/browser-dev.mjs"
+    "dev": "node scripts/build.mjs --web-only && node runtime/launcher.mjs",
+    "start": "node runtime/launcher.mjs",
+    "build": "node scripts/build.mjs",
+    "build:web": "node scripts/build.mjs --web-only",
+    "build:standalone": "npm run build",
+    "test": "node scripts/build.mjs --web-only && node scripts/test-server.mjs && node --test tests/*.test.mjs",
+    "test:web": "node scripts/build.mjs --web-only && node scripts/test-server.mjs && node tests/browser.mjs"
+  },
+  "dependencies": {
+    "ws": "8.22.0"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "2.8.4",
-    "typescript": "5.9.3",
-    "vite": "7.1.9",
-    "@playwright/test": "1.56.0"
+    "@playwright/test": "1.58.2"
   }
 }
