@@ -2,11 +2,27 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "lapis-obsidian-gateway",
   "main": "worker.mjs",
-  "compatibility_date": "2026-10-05",
+  "compatibility_date": "2026-08-06",
   "workers_dev": true,
   "vars": {
     "ALLOWED_ORIGIN": "https://aksulightning.github.io",
     "SERVER_HOST": "",
     "SERVER_PORT": "25565"
-  }
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TCP_SESSIONS",
+        "class_name": "TCPSession"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "TCPSession"
+      ]
+    }
+  ]
 }

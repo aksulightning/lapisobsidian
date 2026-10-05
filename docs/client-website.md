@@ -10,11 +10,13 @@ an immediate relative redirect from the repository-root `index.html`.
 ## TCP multiplayer
 
 The browser mode has no local-launch token requirement. It accepts a secure
-WebSocket gateway, server host/port, and player name. The protocol, renderer,
+HTTPS translator, server host/port, and player name. The protocol, renderer,
 world processing, and TCP game server are retained.
 
-A deployable Cloudflare Worker gateway is in `client/gateway/`. It forwards
-only protocol-772 traffic to its operator-configured TCP destination. It must
+A deployable Cloudflare Worker and Durable Object translator is in
+`client/gateway/`. Each browser session owns one connection to the configured
+TCP destination. Binary HTTPS POSTs and long-poll reads carry raw bytes; the
+hosted client opens no WebSockets and requires no installation. It must
 be deployed to a hosting account and pointed at a running game server before
 players can connect. No public gateway/server is configured by default. Follow
 [the gateway instructions](../client/gateway/README.md), then set public defaults
@@ -37,6 +39,8 @@ Its deployment job intentionally skips while branch publishing is selected.
 ## Verification
 
 Run `node --test client/tests/hosted.test.mjs` from the repository root. These
-checks cover secure gateway URLs, the fixed destination, protocol admission,
-real TCP byte forwarding, reconnects, and the hosted browser transport.
+checks cover HTTPS URLs, CORS, the fixed destination, raw TCP bytes, ordered
+writes, session isolation, cleanup, reconnects, and real game-server interaction.
+`npm test` also checks the actual Workers runtime; `npm run test:web` verifies
+the hosted browser connection.
 They do not replace a live deployed-worker/game-server test.
