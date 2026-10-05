@@ -5,8 +5,12 @@ from pathlib import Path
 import socket
 import subprocess
 import time
+import tempfile
 
-process = subprocess.Popen(["target/release/lapis-obsidian-client", "--smoke-test"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+# WebView child processes can inherit output descriptors. A temporary file avoids
+# communicate() waiting on an inherited pipe after the application exits.
+logs = tempfile.TemporaryFile(mode="w+t")
+process = subprocess.Popen(["target/release/lapis-obsidian-client", "--smoke-test"], stdout=logs, stderr=logs, text=True)
 ports = set()
 deadline = time.monotonic() + 25
 try:
@@ -23,9 +27,15 @@ try:
         except FileNotFoundError:
             pass
         time.sleep(.02)
-    stdout, stderr = process.communicate(timeout=3)
-    assert process.returncode == 0, stderr
-    assert "local WebView authenticated" in stdout, stdout + stderr
+    if process.poll() is None:
+        process.kill()
+        process.wait(timeout=3)
+        logs.seek(0)
+        raise AssertionError("Native startup timed out:\n" + logs.read())
+    logs.seek(0)
+    output = logs.read()
+    assert process.returncode == 0, output
+    assert "local WebView authenticated" in output, output
     assert ports, "No native bridge listener observed"
     for port in ports:
         with socket.socket() as probe:
@@ -38,3 +48,5 @@ finally:
     if process.poll() is None:
         process.kill()
         process.wait()
+
+    logs.close()

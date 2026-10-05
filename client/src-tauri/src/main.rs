@@ -30,6 +30,7 @@ fn main() {
                     }
                 }
             }
+            if smoke_test { println!("Startup check: creating native window."); }
             let allowed = origin.clone();
             tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::External(origin.parse()?))
                 .title("Lapis Obsidian Client")
@@ -39,6 +40,7 @@ fn main() {
                 .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
                 .build()?;
             if smoke_test {
+                println!("Startup check: native window created; awaiting local authentication.");
                 let handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
                     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(15);
@@ -64,6 +66,9 @@ fn main() {
         .expect("Cannot create Lapis Obsidian Client window");
     app.run(move |handle, event| {
         if matches!(event, tauri::RunEvent::Exit) {
+            if smoke_test {
+                println!("Startup check: shutting down local bridge.");
+            }
             if let Some(bridge) = handle
                 .state::<Mutex<Option<lapis_bridge::Bridge>>>()
                 .lock()
@@ -102,6 +107,9 @@ fn main() {
                     }
                 }
                 runtime.block_on(bridge.shutdown());
+                if smoke_test {
+                    println!("Startup check: local bridge stopped.");
+                }
             }
         }
     });

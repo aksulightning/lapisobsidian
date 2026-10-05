@@ -58,7 +58,10 @@ jobs:
         run: cargo build --locked -p lapis-obsidian-client --release
       - name: Linux window startup and clean exit
         if: runner.os == 'Linux'
-        run: xvfb-run -a python3 tests/native-startup.py
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          WEBKIT_DISABLE_DMABUF_RENDERER: '1'
+        run: dbus-run-session -- xvfb-run -a python3 tests/native-startup.py
       - name: Include license and matching source
         shell: bash
         run: |
