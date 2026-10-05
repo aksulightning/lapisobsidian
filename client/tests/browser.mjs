@@ -84,11 +84,11 @@ try {
       expect(
         Math.hypot(moved.x - before.position.x, moved.z - before.position.z),
       ).toBeGreaterThan(0.15);
-      await page.mouse.move(700, 380);
-      await page.waitForTimeout(150);
-      expect(
-        (await page.evaluate(() => window.lapisDiagnostics.position)).yaw,
-      ).not.toBe(before.position.yaw);
+      const yawBefore=await page.evaluate(()=>window.lapisDiagnostics.position.yaw);
+      // Exercise relative MouseEvent input while actual browser pointer lock is held.
+      // CDP absolute coordinates do not model physical relative motion reliably.
+      await page.locator("#world").dispatchEvent("mousemove",{movementX:45,movementY:5,bubbles:true});
+      await page.waitForFunction(yaw=>window.lapisDiagnostics.position.yaw!==yaw,yawBefore);
       await page.keyboard.press("Digit3");
       expect(await page.evaluate(() => window.lapisDiagnostics.slot)).toBe(2);
       await page.keyboard.press("Space");
