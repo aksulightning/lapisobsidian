@@ -20,7 +20,7 @@ export const materials = names.map((name, index) => {
         ? 0.65
         : 1;
   let color = [0.5, 0.52, 0.55];
-  if (/grass_block|leaves|moss|sapling|fern|bush|wheat|cactus/.test(name))
+  if (/grass|leaves|moss|sapling|fern|bush|wheat|cactus/.test(name))
     color = [0.3, 0.55, 0.22];
   else if (/dirt|mud|podzol|farmland/.test(name)) color = [0.46, 0.31, 0.19];
   else if (/planks|wood|log|chest|crafting|door|composter/.test(name))

@@ -57,6 +57,7 @@ export class Game {
     this.mine = null;
     this.inputFlags = -1;
     this.pendingChunks = 0;
+    this.blockUpdates = 0;
     this.center = { x: 0, z: 0 };
     this.entityId = 0;
   }
@@ -98,6 +99,7 @@ export class Game {
         this.post("chunk", { bytes: value }, [value.buffer]);
         break;
       case "block":
+        this.blockUpdates++;
         this.world.set(value);
         this.post("block", { block: value });
         break;
@@ -165,6 +167,7 @@ export class Game {
         this.post("reset");
         this.loaded = this.playing = this.positioned = false;
         this.pendingChunks = 0;
+        this.blockUpdates = 0;
         break;
       }
     }

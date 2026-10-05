@@ -354,7 +354,7 @@ $("quit").onclick = () => {
   notice("Lapis Obsidian Client has shut down. You can close this tab.");
 };
 for (const [name, id] of Object.entries(registry.items)
-  .filter(([n,id]) => id > 0 && registry.palette[n] !== undefined)
+  .filter(([n, id]) => id > 0 && registry.palette[n] !== undefined)
   .slice(0, 100)) {
   const b = slotButton({ item: id, count: 64 }, id, () =>
     game.protocol.creative(36 + game.slot, id),
@@ -415,6 +415,8 @@ Object.defineProperty(window, "lapisDiagnostics", {
           slot: game.slot,
           pendingChunks: game.pendingChunks,
           target: game.target,
+          blockUpdates: game.blockUpdates,
+          sent: { ...game.protocol?.sent },
         }
       : null,
 });

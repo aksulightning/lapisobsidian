@@ -77,7 +77,7 @@ const fragment = `#version 300 es
 precision mediump float;
 in vec2 vUV; in float vLight; in float vAlpha; in float vDistance;
 uniform sampler2D uAtlas; uniform float uFog; out vec4 color;
-void main(){vec3 base=texture(uAtlas,vUV).rgb*vLight;float fog=smoothstep(uFog*.5,uFog,vDistance);color=vec4(mix(base,vec3(.49,.70,.85),fog),vAlpha);}`;
+void main(){vec4 texel=texture(uAtlas,vUV);if(texel.a<.5)discard;vec3 base=texel.rgb*vLight;float fog=smoothstep(uFog*.5,uFog,vDistance);color=vec4(mix(base,vec3(.49,.70,.85),fog),vAlpha);}`;
 export class Renderer {
   constructor(canvas, settings, onError) {
     this.canvas = canvas;
@@ -133,7 +133,10 @@ export class Renderer {
               4;
           for (let i = 0; i < 3; i++)
             pixels[at + i] = Math.min(255, m.color[i] * 255 * shade);
-          pixels[at + 3] = 255;
+          const stem = Math.abs(x - 7.5) < 1.2;
+          const blade =
+            y > 3 && Math.abs(Math.abs(x - 7.5) - (15 - y) * 0.45) < 1.6;
+          pixels[at + 3] = !m.plant || stem || blade ? 255 : 0;
         }
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);

@@ -57,6 +57,17 @@ try {
       await page.waitForFunction(
         () => document.pointerLockElement?.id === "world",
       );
+      await page.waitForFunction(() => window.lapisDiagnostics.target !== null);
+      const blockUpdates = await page.evaluate(
+        () => window.lapisDiagnostics.blockUpdates,
+      );
+      await page.mouse.down({ button: "left" });
+      await page.waitForTimeout(800);
+      await page.mouse.up({ button: "left" });
+      await page.waitForFunction(
+        (n) => window.lapisDiagnostics.blockUpdates > n,
+        blockUpdates,
+      );
       await page.keyboard.down("KeyW");
       await page.waitForTimeout(450);
       await page.keyboard.up("KeyW");
@@ -132,6 +143,33 @@ try {
       expect(during.yaw).not.toBe(before.position.yaw);
       expect(during.y).toBeGreaterThan(before.position.y);
       await send("touchEnd", []);
+      // A use action must still reach the protocol while movement/look remain held.
+      const use = await center("#secondary");
+      const sentBefore = await page.evaluate(
+        () => window.lapisDiagnostics.sent[63] || 0,
+      );
+      const useBefore = await page.evaluate(
+        () => window.lapisDiagnostics.sent[64] || 0,
+      );
+      await send("touchStart", [
+        { ...stick, id: 1 },
+        { ...look, id: 2 },
+        { ...use, id: 3 },
+      ]);
+      await send("touchMove", [
+        { x: stick.x, y: stick.y - 30, id: 1 },
+        { x: look.x + 15, y: look.y + 5, id: 2 },
+        { ...use, id: 3 },
+      ]);
+      await page.waitForTimeout(350);
+      expect(
+        await page.evaluate(
+          () =>
+            (window.lapisDiagnostics.sent[63] || 0) +
+            (window.lapisDiagnostics.sent[64] || 0),
+        ),
+      ).toBeGreaterThan(sentBefore + useBefore);
+      await send("touchEnd", []);
       await page.locator("#hotbar .slot").nth(4).tap();
       expect(await page.evaluate(() => window.lapisDiagnostics.slot)).toBe(4);
       await page.locator("#chat-open").tap();
@@ -153,7 +191,7 @@ try {
       .evaluate((c) => [c.width, c.height]);
     expect(size[0]).toBeGreaterThanOrEqual(1000);
     expect(size[1]).toBeGreaterThanOrEqual(600);
-    if(mobile) await page.locator("#menu-open").click();
+    if (mobile) await page.locator("#menu-open").click();
     else await page.keyboard.press("Escape");
     await page.locator("#disconnect").click();
     await expect(page.locator("#connection-status")).toHaveText("Disconnected");

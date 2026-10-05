@@ -20,10 +20,15 @@ Checks performed during replacement:
 
 Local browser execution was attempted with Playwright and two Chromium builds.
 The standard browser download failed and locally extracted binaries exited
-with SIGTRAP before a page could open. This environment therefore did not verify
-WebGL, pointer lock, desktop input or actual multitouch. The repository includes
-`npm run test:web` and CI to run those checks; do not treat their presence as a
-passing result. No physical phone, Android/iOS package or signed installer was
+with SIGTRAP before a page could open. Local execution therefore could not verify
+WebGL, pointer lock, desktop input or multitouch. The same checks subsequently **passed in GitHub Actions** on Ubuntu with
+Chromium, against the actual C server: live chunk rendering, pointer lock,
+keyboard movement, mouse look, hotbar/inventory, chat, simultaneous touch
+movement/look/jump, portrait layout, resize and reconnect.
+
+[Verified client CI run](https://github.com/aksulightning/lapisobsidian/actions/runs/37301710117)
+also passed packaged runtime startup/authentication/shutdown on Linux, Windows
+and macOS. Screenshots and browser-result JSON are attached to that run. No physical phone, Android/iOS package or signed installer was
 validated here.
 
 Additional build/CI results are recorded in the replacement commit’s checks.

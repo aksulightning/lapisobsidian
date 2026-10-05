@@ -9,6 +9,7 @@ export class ProtocolClient {
     this.emit = emit;
     this.state = "login";
     this.sequence = 0;
+    this.sent = Object.create(null);
     this.framer = new Framer((b) => this.receive(b));
     transport.onData = (b) => {
       try {
@@ -25,6 +26,7 @@ export class ProtocolClient {
   }
   send(id, write) {
     this.transport.send(packet(id, write));
+    this.sent[id] = (this.sent[id] || 0) + 1;
   }
   login(host, port, name, uuid, view) {
     this.send(0, (w) =>

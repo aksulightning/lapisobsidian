@@ -77,6 +77,44 @@ export function meshChunk(world, c) {
         const wx = c.x * 16 + x,
           wz = c.z * 16 + z,
           y = sy - 64;
+        if (m.plant) {
+          const uv = [
+            [0.02, 0.98],
+            [0.98, 0.98],
+            [0.98, 0.02],
+            [0.02, 0.02],
+          ];
+          const tx = m.index % 16,
+            ty = Math.floor(m.index / 16);
+          for (const quad of [
+            [
+              [0, 0, 0],
+              [1, 0, 1],
+              [1, m.height, 1],
+              [0, m.height, 0],
+            ],
+            [
+              [1, 0, 0],
+              [0, 0, 1],
+              [0, m.height, 1],
+              [1, m.height, 0],
+            ],
+          ]) {
+            for (const i of [0, 1, 2, 0, 2, 3])
+              opaque.push(
+                wx + quad[i][0],
+                y + quad[i][1],
+                wz + quad[i][2],
+                (tx + uv[i][0]) / 16,
+                (ty + uv[i][1]) / 16,
+                1,
+                1,
+              );
+          }
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y + 1);
+          continue;
+        }
         // Completely buried sections are culled by neighbors, including across chunks.
         for (const f of faces) {
           const neighbor = material(
