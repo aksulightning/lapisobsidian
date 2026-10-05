@@ -283,7 +283,7 @@ export class Renderer {
     gl.bindVertexArray(this.entityMesh.vao);
     for (const e of entities.values()) {
       if (Math.hypot(e.x - p.x, e.z - p.z) > far) continue;
-      const item = e.type === 55;
+      const item = e.type === 69;
       gl.uniform3f(
         this.u.Offset,
         e.x - (item ? 0.13 : 0.3),

@@ -15,7 +15,8 @@
     "build:web": "node scripts/build.mjs --web-only",
     "build:standalone": "npm run build",
     "test": "node scripts/build.mjs --web-only && node scripts/test-server.mjs && node --test tests/*.test.mjs",
-    "test:web": "node scripts/build.mjs --web-only && node scripts/test-server.mjs && node tests/browser.mjs"
+    "test:web": "node scripts/build.mjs --web-only && node scripts/test-server.mjs && node tests/browser.mjs",
+    "test:package": "node tests/packaged.mjs"
   },
   "dependencies": {
     "ws": "8.22.0"

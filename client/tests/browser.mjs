@@ -153,7 +153,8 @@ try {
       .evaluate((c) => [c.width, c.height]);
     expect(size[0]).toBeGreaterThanOrEqual(1000);
     expect(size[1]).toBeGreaterThanOrEqual(600);
-    await page.locator("#menu-open").click();
+    if(mobile) await page.locator("#menu-open").click();
+    else await page.keyboard.press("Escape");
     await page.locator("#disconnect").click();
     await expect(page.locator("#connection-status")).toHaveText("Disconnected");
     await page.locator("#connect").click();
