@@ -14,11 +14,17 @@
   <body>
     <canvas id="world" aria-label="Live server world"></canvas>
     <main id="menu" class="panel">
-      <div class="eyebrow">STANDALONE · HTML5</div>
+      <div class="eyebrow">PLAY · HTML5</div>
       <h1>Lapis Obsidian <span>Client</span></h1>
       <p class="intro">Your window into the world.</p>
       <div id="connection-status" role="status">Starting...</div>
       <form id="connect-form">
+        <label id="gateway-field" hidden>
+          Secure server gateway
+          <input id="gateway" name="gateway" type="url" autocomplete="off"
+            placeholder="wss://your-gateway.workers.dev/bridge" aria-describedby="gateway-help" />
+          <small id="gateway-help">Use the gateway URL supplied by your server owner. Your game connection still uses TCP.</small>
+        </label>
         <label
           >Server address<input
             id="host"
@@ -132,7 +138,7 @@
       <div class="eyebrow">OPEN SOURCE</div>
       <h2>Lapis Obsidian Client</h2>
       <p>
-        An HTML5 game client with a bundled, authenticated loopback TCP bridge.
+        An HTML5 game client with secure browser-to-TCP gateway support and an optional local launcher.
         World data comes from your server. Textures are original procedural
         artwork.
       </p>
@@ -147,7 +153,7 @@
           rel="noopener noreferrer"
           >Source repository ↗</a
         >
-        · <a href="/LICENSE" target="_blank" rel="noopener">GPL-3.0 license</a>
+        · <a href="https://github.com/aksulightning/lapisobsidian/blob/testing-client/LICENSE" target="_blank" rel="noopener">GPL-3.0 license</a>
       </p>
       <button id="about-close">Back</button>
     </section>

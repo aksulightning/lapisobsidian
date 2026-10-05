@@ -3,7 +3,20 @@
 An HTML5 game client for the offline Lapis Obsidian server in this repository’s
 `testing` branch, protocol **772**. The browser draws live server chunks and
 runs the player; a bundled local runtime handles the browser-to-TCP boundary.
-There is no external proxy, Electron, Java installation, or proprietary asset pack.
+The local launcher needs no external proxy, Electron, Java installation, or proprietary asset pack.
+
+## Play in a browser
+
+Open https://aksulightning.github.io/lapisobsidian/ to load the actual game client.
+Enter the secure gateway URL supplied by your server owner, the matching TCP
+server address/port, and your player name, then choose **Play / Connect**.
+No local Node installation is needed for this mode.
+
+The hosted gateway still needs to be deployed and configured before live play
+is possible. See [gateway deployment](gateway/README.md). Set public defaults
+in `web/config.js` after deploying it. The gateway translates WebSocket traffic
+to the existing TCP protocol; it does not replace or host the game server.
+An empty configuration does not imply that a public game server is available.
 
 ## Develop and run
 
@@ -59,8 +72,7 @@ but **do not need Node/npm or a separate bridge installation**. Build separately
 on each target OS/architecture. Linux runtime compatibility follows the copied
 Node binary’s libc requirements. This is a portable directory, not a signed
 installer. `npm run build:standalone` is an alias for the complete build.
-`npm run build:web` builds only browser assets; these cannot connect if served
-without the bundled runtime. `npm start` runs previously built assets.
+`npm run build:web` builds only browser assets; these connect through a configured hosted gateway or the bundled local runtime. `npm start` runs previously built assets.
 
 ## Architecture
 
@@ -184,7 +196,7 @@ The original server gates remain available: `./tests/run.sh`,
 - The same frontend includes functional touch controls. Native Android/iOS
   packaging is **not included**. A phone cannot connect to a desktop’s loopback
   bridge; deploying a same-device mobile wrapper is required for native mobile
-  distribution. No public relay or LAN bridge workaround is provided.
+  distribution. Browser mode can use the hosted gateway to reach its configured public server; the loopback bridge remains private.
 - Browser pointer lock/fullscreen depend on browser/OS support. Graphics context
   loss displays an error and requires reloading. Windows/macOS packaging must
   be built and tested on those systems; signing is not configured.
@@ -199,3 +211,4 @@ assets. New client source is GPL-3.0-only; existing source retains its notices.
 See [LICENSE](../LICENSE) and [NOTICE.md](../NOTICE.md). Node and `ws` retain their
 own licenses, included in the portable distribution. Distributors should use
 the license/source correspondence of the Node version they package.
+

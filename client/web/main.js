@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { BridgeTransport } from "./transport.js";
+import { HostedTransport } from "./hosted-transport.js";
+import { connectionDefaults } from "./config.js";
 import { Renderer } from "./renderer.js";
 import { Input } from "./input.js";
 import { Game } from "./game.js";
@@ -7,6 +9,8 @@ import { material, itemName } from "./world/blocks.js";
 import { registry } from "./protocol/registry.js";
 const $ = (id) => document.getElementById(id),
   touch = matchMedia("(any-pointer:coarse)").matches;
+// Only the loopback launcher may consume its per-launch authentication token.
+const localMode = location.protocol === "http:" && location.hostname === "127.0.0.1";
 const settings = {
   distance: touch ? 2 : 4,
   quality: touch ? "low" : "medium",
@@ -35,9 +39,9 @@ let game,
 function status(message) {
   $("connection-status").textContent = message;
   $("hud-status").textContent = message;
-  $("connect").disabled = !transport.ready || connected || connecting;
+  $("connect").disabled = !game || (localMode && !transport.ready) || connected || connecting;
 }
-const transport = new BridgeTransport(status);
+const transport = localMode ? new BridgeTransport(status) : new HostedTransport(status);
 transport.onError = (e) => {
   lastError = true;
   notice(e.message);
@@ -241,6 +245,7 @@ try {
   console.error(e);
   notice(e.message);
 }
+if (localMode) {
 let token = location.hash.slice(1);
 if (token) {
   sessionStorage.setItem("lapis-token", token);
@@ -249,10 +254,16 @@ if (token) {
 if (/^[a-f0-9]{64}$/.test(token || "")) {
   transport.start(token);
   token = "";
-} else
-  notice(
-    "Launch Lapis Obsidian Client using its bundled launcher. A static webpage cannot open the local bridge.",
-  );
+} else notice("The local launch token is missing. Restart the client launcher.");
+} else {
+  $("gateway-field").hidden = false;
+  $("gateway").required = true;
+  $("gateway").value = connectionDefaults.gateway;
+  $("host").value = connectionDefaults.host;
+  $("port").value = connectionDefaults.port;
+  $("quit").textContent = "Leave game";
+  status(connectionDefaults.gateway ? "Ready to connect" : "Enter your server address and its secure gateway to play.");
+}
 $("connect-form").onsubmit = async (e) => {
   e.preventDefault();
   if (!game) return;
@@ -261,6 +272,7 @@ $("connect-form").onsubmit = async (e) => {
   connecting = true;
   status("Connecting...");
   try {
+    if (!localMode) await transport.prepare($("gateway").value.trim());
     const name = $("username").value;
     if (!/^\w{1,15}$/.test(name))
       throw Error(
@@ -349,7 +361,8 @@ async function fullscreen() {
 }
 $("fullscreen").onclick = fullscreen;
 $("quit").onclick = () => {
-  transport.control("SHUTDOWN");
+  if (localMode) transport.control("SHUTDOWN");
+  else game?.disconnect();
   input?.stop();
   notice("Lapis Obsidian Client has shut down. You can close this tab.");
 };

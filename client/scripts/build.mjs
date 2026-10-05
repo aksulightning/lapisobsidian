@@ -68,7 +68,7 @@ if (!process.argv.includes("--web-only")) {
   );
   // Include corresponding project source, excluding dependencies, outputs, and test worlds.
   await mkdir(path.join(out, "source/client"), { recursive: true });
-  for (const d of ["web", "runtime", "scripts", "tests"])
+  for (const d of ["web", "runtime", "scripts", "tests", "gateway"])
     await cp(d, path.join(out, "source/client", d), { recursive: true });
   for (const f of ["package.json", "package-lock.json", "README.md"])
     await cp(f, path.join(out, "source/client", f));
@@ -78,3 +78,4 @@ if (!process.argv.includes("--web-only")) {
     await cp("../" + f, path.join(out, "source", f));
   console.log(`Standalone runtime and launcher: ${out}`);
 }
+

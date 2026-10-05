@@ -1,71 +1,42 @@
-# Lapis Obsidian Client website
+# Browser client on GitHub Pages
 
-The project landing page is in `website/` on `testing-client`. It is plain
-HTML/CSS/JavaScript, with no build dependencies, external fonts, analytics,
-backend, or third-party asset requests. Images are unmodified captures of the
-working client from the verified browser run at commit `890da398dd15da4bc7172cc8962c6a57539147e5`.
-They depict the project's original replacement textures.
+The main Pages URL now opens `client/web/`, the actual HTML5 game client, using
+an immediate relative redirect from the repository-root `index.html`.
 
-The page includes setup commands, keyboard/touch controls, documentation and CI
-artifact links, compatibility information, and known limitations. It does not
-attempt to run the TCP-dependent game from a public webpage or expose the local
-bridge to a remote Origin.
+- Play: https://aksulightning.github.io/lapisobsidian/
+- Direct client: https://aksulightning.github.io/lapisobsidian/client/web/
+- Optional project information: https://aksulightning.github.io/lapisobsidian/website/
 
-## GitHub Pages
+## TCP multiplayer
 
-### Current branch-based deployment
+The browser mode has no local-launch token requirement. It accepts a secure
+WebSocket gateway, server host/port, and player name. The protocol, renderer,
+world processing, and TCP game server are retained.
 
-Pages publishes the root of `testing-client`. The repository-root `index.html`
-redirects visitors to `website/`, so the main project URL opens the client
-landing page instead of the repository README. The redirect uses a relative URL
-and includes a normal link as a fallback; it does not require JavaScript.
+A deployable Cloudflare Worker gateway is in `client/gateway/`. It forwards
+only protocol-772 traffic to its operator-configured TCP destination. It must
+be deployed to a hosting account and pointed at a running game server before
+players can connect. No public gateway/server is configured by default. Follow
+[the gateway instructions](../client/gateway/README.md), then set public defaults
+in `client/web/config.js`. Do not put secrets in browser files.
 
-- Main URL: https://aksulightning.github.io/lapisobsidian/
-- Direct client website: https://aksulightning.github.io/lapisobsidian/website/
+The original authenticated loopback launcher continues to work for local and
+LAN servers. The hosted gateway does not expose or weaken that listener.
 
-Keep **Settings → Pages → Source → Deploy from a branch**, with
-**testing-client / (root)**, to continue using this configuration. GitHub's
-`pages build and deployment` workflow publishes updates automatically.
-The separate `Project website` workflow validates and packages the website,
-but intentionally skips its deployment job in branch-based mode.
+## Publishing
 
-### Optional deployment with GitHub Actions
+The current configuration is **Deploy from a branch → testing-client / (root)**.
+GitHub's `pages build and deployment` workflow publishes changes automatically.
+The root redirect and all client modules use relative URLs under `/lapisobsidian/`.
 
-To publish `website/` directly at the main URL instead, switch to the Actions
-configuration below. The root redirect is not part of that deployment artifact.
+The `Browser client` workflow also validates the client/gateway and packages
+`.pages/` with the same root redirect and directory structure. If Pages is later
+switched to **GitHub Actions**, this workflow deploys that artifact directly.
+Its deployment job intentionally skips while branch publishing is selected.
 
-The `Project website` workflow validates and packages `website/` when relevant
-files change on `testing-client`. Publishing uses GitHub's official Pages actions.
+## Verification
 
-One-time repository setup (requires repository settings permission):
-
-1. Open **Settings → Pages → Build and deployment**.
-2. Set **Source** to **GitHub Actions**.
-3. If the `github-pages` environment restricts deployment branches, allow
-   `testing-client` under **Settings → Environments → github-pages**.
-4. Open **Actions → Project website**, choose the latest `testing-client` run,
-   and **Re-run all jobs**. Future website pushes deploy automatically.
-
-The expected project URL is `https://aksulightning.github.io/lapisobsidian/`.
-Use the deployment job's returned URL as the authoritative publishing result.
-Until Pages is enabled, validation and artifact upload succeed and deployment
-is explicitly skipped with a configuration warning. This does not mean the
-website is live. Pull requests validate/package only; they do not deploy.
-
-## Edit and check
-
-Edit `website/index.html`, `website/style.css`, and `website/main.js` directly.
-Keep asset URLs relative so the site works under the repository URL prefix.
-
-```sh
-node --check website/main.js
-python3 .github/scripts/check-website.py
-# Optional local preview on a developer machine:
-python3 -m http.server 8080 --bind 127.0.0.1 --directory website
-```
-
-The page works without JavaScript except for control-tab switching and the copy
-button. The commands remain selectable. Tabs include keyboard navigation and
-ARIA state; disclosures use native HTML. Layouts adapt to phones/tablets and
-respect reduced-motion preferences. The website can also be served by any
-static host without changing the game client.
+Run `node --test client/tests/hosted.test.mjs` from the repository root. These
+checks cover secure gateway URLs, the fixed destination, protocol admission,
+real TCP byte forwarding, reconnects, and the hosted browser transport.
+They do not replace a live deployed-worker/game-server test.

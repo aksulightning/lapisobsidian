@@ -6,6 +6,7 @@ const errors = {
     "Could not reach the server. Check the address, port, and whether it is running.",
   REMOTE_ERROR: "The server connection ended or timed out.",
   INVALID_TARGET: "Enter a valid server hostname and port.",
+  TARGET_NOT_ALLOWED: "This gateway does not allow that server address and port. Use the server supplied by its owner.",
   PROTOCOL_REQUIRED: "This bridge accepts only the supported game protocol.",
   RATE_LIMIT: "The connection exceeded its traffic limit.",
 };
@@ -13,21 +14,25 @@ export class BridgeTransport {
   onData = () => {};
   onClose = () => {};
   onError = () => {};
+  onReady = () => {};
+  onUnavailable = () => {};
   constructor(status) {
     this.status = status;
     this.ready = false;
     this.connected = false;
   }
-  start(token) {
+  start(token, endpoint = `ws://${location.host}/bridge`) {
     const socket = (this.socket = new WebSocket(
-      `ws://${location.host}/bridge`,
+      endpoint,
     ));
     socket.binaryType = "arraybuffer";
     socket.onopen = () => {
+      if (this.socket !== socket) return;
       socket.send(JSON.stringify({ type: "AUTH", token }));
       token = "";
     };
     socket.onmessage = (e) => {
+      if (this.socket !== socket) return;
       if (e.data instanceof ArrayBuffer) {
         if (this.connected) this.onData(new Uint8Array(e.data));
         return;
@@ -38,6 +43,7 @@ export class BridgeTransport {
           case "AUTH_OK":
             this.ready = true;
             this.status("Bridge ready");
+            this.onReady();
             this.heartbeat = setInterval(() => this.control("PING"), 10000);
             break;
           case "CONNECTED":
@@ -55,11 +61,12 @@ export class BridgeTransport {
             break;
           case "ERROR": {
             const message =
-              errors[m.code] || "The local bridge rejected the connection.";
+              errors[m.code] || "The gateway rejected the connection.";
             clearTimeout(this.deadline);
             this.pending?.reject(Error(message));
             this.pending = null;
             this.onError(Error(message));
+            this.onUnavailable(Error(message));
             break;
           }
           case "PONG":
@@ -74,18 +81,22 @@ export class BridgeTransport {
       }
     };
     socket.onclose = () => {
+      if (this.socket !== socket) return;
       this.ready = false;
       this.connected = false;
       clearInterval(this.heartbeat);
       clearTimeout(this.deadline);
       this.pending?.reject(Error("Local bridge closed"));
       this.pending = null;
+      this.onUnavailable(Error("Gateway connection closed."));
       this.onClose();
     };
-    socket.onerror = () =>
-      this.onError(
-        Error("Cannot reach the local bridge. Restart the application."),
-      );
+    socket.onerror = () => {
+      if (this.socket !== socket) return;
+      const error = Error("Cannot reach the gateway. Check its address and availability.");
+      this.onUnavailable(error);
+      this.onError(error);
+    };
   }
   control(type, fields = {}) {
     if (this.socket?.readyState === WebSocket.OPEN)
@@ -116,6 +127,11 @@ export class BridgeTransport {
   close() {
     clearInterval(this.heartbeat);
     clearTimeout(this.deadline);
-    this.socket?.close();
+    const socket = this.socket;
+    this.socket = null;
+    this.ready = this.connected = false;
+    this.pending?.reject(Error("Connection closed."));
+    this.pending = null;
+    socket?.close();
   }
 }

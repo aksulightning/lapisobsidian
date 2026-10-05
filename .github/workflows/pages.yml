@@ -1,11 +1,11 @@
-name: Project website
+name: Browser client
 
 on:
   push:
     branches: [testing-client]
-    paths: ['website/**', '.github/workflows/pages.yml', '.github/scripts/check-website.py']
+    paths: ['client/web/**', 'client/gateway/**', 'client/runtime/gate.mjs', 'client/tests/hosted.test.mjs', 'index.html', 'website/**', '.github/workflows/pages.yml', '.github/scripts/check-website.py']
   pull_request:
-    paths: ['website/**', '.github/workflows/pages.yml', '.github/scripts/check-website.py']
+    paths: ['client/web/**', 'client/gateway/**', 'client/runtime/gate.mjs', 'client/tests/hosted.test.mjs', 'index.html', 'website/**', '.github/workflows/pages.yml', '.github/scripts/check-website.py']
   workflow_dispatch:
 
 permissions:
@@ -32,6 +32,17 @@ jobs:
         run: |
           node --check website/main.js
           python3 .github/scripts/check-website.py
+      - name: Check browser client and TCP gateway
+        run: |
+          find client/web client/gateway -type f \( -name '*.js' -o -name '*.mjs' \) -exec node --check {} \;
+          node --test client/tests/hosted.test.mjs
+      - name: Prepare playable Pages site
+        run: |
+          mkdir -p .pages/client
+          cp index.html .pages/index.html
+          cp -R client/web .pages/client/web
+          cp -R website .pages/website
+          touch .pages/.nojekyll
       - name: Check Pages configuration
         id: pages
         if: github.event_name != 'pull_request'
@@ -51,7 +62,7 @@ jobs:
       - name: Package static site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: website
+          path: .pages
 
   deploy:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/testing-client' && needs.build.outputs.pages_enabled == 'true'
@@ -66,6 +77,7 @@ jobs:
     steps:
       - name: Configure Pages
         uses: actions/configure-pages@v5
-      - name: Deploy website
+      - name: Deploy browser client
         id: deployment
         uses: actions/deploy-pages@v4
+
