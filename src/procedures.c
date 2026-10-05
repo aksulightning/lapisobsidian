@@ -88,6 +88,10 @@ void resetPlayerData (PlayerData *player) {
 
 // Assigns the given data to a player_data entry
 int reservePlayerData (int client_fd, uint8_t *uuid, char *name) {
+  /* Never replace another live transport's player session. */
+  for (int i = 0; i < MAX_PLAYERS; i++)
+    if (player_data[i].client_fd >= 0 && player_data[i].client_fd != client_fd &&
+        (!memcmp(player_data[i].uuid,uuid,16) || !strcmp(player_data[i].name,name))) return 1;
 
   for (int i = 0; i < MAX_PLAYERS; i ++) {
     // Found existing player entry (UUID match)

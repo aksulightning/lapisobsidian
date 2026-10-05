@@ -1,3 +1,4 @@
+#include "lapisclient.h"
 #include "plates.h"
 #include "fluids.h"
 #include "items.h"
@@ -581,6 +582,8 @@ int main (int argc, char **argv) {
   fcntl(server_fd, F_SETFL, flags | O_NONBLOCK);
   #endif
 
+  if (!lc_start()) return EXIT_FAILURE;
+
   // Track time of last server tick (in microseconds)
   int64_t last_tick_time = get_program_time();
   int64_t last_arrow_time = last_tick_time;
@@ -597,9 +600,11 @@ int main (int argc, char **argv) {
   while (true) {
     // Check if it's time to yield to the idle task
     task_yield();
+    lc_poll();
 
     // Attempt to accept a new connection
     for (int i = 0; i < MAX_PLAYERS; i ++) {
+      if (client_count >= MAX_PLAYERS) break;
       if (clients[i] != -1) continue;
       clients[i] = accept(server_fd, (struct sockaddr *)&client_addr, &addr_len);
       // If the accept was successful, make the client non-blocking too
