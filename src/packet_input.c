@@ -68,3 +68,8 @@ bool packet_input_end (void) {
   bool ok = active_fd >= 0 && !failed && cursor == end;
   active_fd = -1; cursor = end = 0; failed = false; return ok;
 }
+
+bool packet_input_begin (int fd, const void *data, size_t count) {
+  if (active_fd >= 0 || fd < 0 || count > PACKET_INPUT_LIMIT) return false;
+  memcpy(frame,data,count); active_fd=fd; cursor=0; end=count; failed=false; return true;
+}

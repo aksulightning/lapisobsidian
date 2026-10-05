@@ -196,3 +196,12 @@ Farm state persists in `farming.bin`. Animals and mobs have nearby ambient,
 hurt and death sounds using the client's own resources.
 
 See [farming, controls, recipes and limits](docs/farming-and-controls.md).
+
+## Lapis Obsidian Client / WebSocket
+
+The server includes a native `lapisclient` v1 endpoint at
+`ws://127.0.0.1:25566/lapisclient`. Build with `./build.sh` (C compiler and OpenSSL
+development library) and run `./lapis-obsidian`. Set exact allowed client origins
+and terminate TLS for public WSS deployments. See
+[the protocol, configuration and client startup guide](docs/lapisclient-protocol.md).
+The existing TCP endpoint is unchanged; HTML5 clients connect directly by WebSocket.

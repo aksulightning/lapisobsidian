@@ -1,3 +1,4 @@
+#include "lapisclient.h"
 #include "plates.h"
 #include <math.h>
 #include "world_border.h"
@@ -20,6 +21,11 @@ void world_border_reset (PlayerData *player) {
 void world_send_view (int fd, int cx, int cz, int old_cx, int old_cz, bool full) {
   if (cx < -2048 || cx > 2047 || cz < -2048 || cz > 2047 ||
       old_cx < -2048 || old_cx > 2047 || old_cz < -2048 || old_cz > 2047) return;
+  if (lc_is(fd)) for (int dx=-VIEW_DISTANCE;dx<=VIEW_DISTANCE;dx++) for(int dz=-VIEW_DISTANCE;dz<=VIEW_DISTANCE;dz++) {
+    int x=old_cx+dx,z=old_cz+dz;
+    if (x<cx-VIEW_DISTANCE || x>cx+VIEW_DISTANCE || z<cz-VIEW_DISTANCE || z>cz+VIEW_DISTANCE)
+      lc_json(fd,"{\"type\":\"chunk_unload\",\"x\":%d,\"z\":%d}",x,z);
+  }
   sc_setCenterChunk(fd,cx,cz);
   if (full) sc_chunkDataAndUpdateLight(fd,cx,cz);
   for (int dx = -VIEW_DISTANCE; dx <= VIEW_DISTANCE; dx++) {
