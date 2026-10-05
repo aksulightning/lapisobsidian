@@ -21,11 +21,46 @@ to configure. Do not put account credentials or API tokens in client config.
 
 ## Scope and limits
 
-The gateway rejects foreign browser origins and connections to any host/port
+### Raw WebSocket-to-TCP bridge
+
+Connect a binary WebSocket client to `wss://<worker-address>/tcp`. Each accepted
+WebSocket immediately opens its own TCP connection to `SERVER_HOST:SERVER_PORT`.
+The same `ALLOWED_ORIGIN` check applies; non-browser clients must supply that
+Origin header. Target addresses in URLs or messages never select the TCP server.
+
+```js
+// Run from the HTTPS site configured in ALLOWED_ORIGIN.
+const socket = new WebSocket("wss://<worker-address>/tcp");
+socket.binaryType = "arraybuffer";
+socket.onopen = () => socket.send(new Uint8Array([0x00, 0xff, 0x01]));
+socket.onmessage = ({ data }) => console.log(new Uint8Array(data));
+socket.onclose = ({ code, reason }) => console.log(code, reason);
+```
+
+Binary payloads are forwarded unchanged, in order, with no JSON control messages,
+Minecraft validation, encoding, or packet framing. TCP is a byte stream: its read
+chunks (and therefore return WebSocket messages) need not match the incoming
+WebSocket message boundaries. Text messages close the connection with code 1003.
+The existing browser game uses `/bridge` and its AUTH/CONNECT protocol; keep its
+configured URL on `/bridge`.
+
+The bridge queues early messages while TCP connects and serializes writes with
+TCP stream backpressure. It allows messages up to 1 MiB and at most 4 MiB or 1024
+pending writes per connection; exceeding a limit closes with code 1009. Empty
+binary messages are no-ops. TCP dialing times out after 10 seconds. TCP EOF closes
+the WebSocket with code 1000; connection and I/O failures use code 1011. Closing
+either connection releases the other. There is no reconnect, application idle
+timeout, or TCP half-close support. Workers' WebSocket API has no send/drain
+backpressure interface, so TCP-to-client buffering remains runtime-managed.
+
+### Game session endpoint
+
+The `/bridge` endpoint rejects foreign browser origins and connections to any host/port
 other than the configured target. It checks the protocol handshake before
 forwarding client bytes, enforces message/rate/queue limits, and closes idle
 connections. It is a public game gateway: Origin checking is not user
-authentication and non-browser clients can forge Origin. Use provider access
+authentication and non-browser clients can forge Origin. This applies to both
+endpoints; `/tcp` allows arbitrary bytes to the configured server. Use provider access
 controls/rate limits for a private server; monitor usage and provider quotas.
 
 Cloudflare blocks some TCP destinations, including private/loopback addresses
@@ -33,6 +68,7 @@ and Cloudflare IP ranges. Use a reachable DNS-only game hostname. See
 https://developers.cloudflare.com/workers/runtime-apis/tcp-sockets/ .
 The existing local launcher remains available for private/LAN TCP servers.
 
-Run `node --test tests/hosted.test.mjs` from `client/` for the transport and
-gateway session checks. Live Cloudflare connectivity needs deployment and a
+Run `node --test tests/hosted.test.mjs tests/tcp-gateway.test.mjs` from `client/`
+for the transport, gateway session, raw-byte TCP integration, and failure checks.
+Live Cloudflare connectivity needs deployment and a
 reachable protocol-772 server; unit checks do not prove live gameplay.
