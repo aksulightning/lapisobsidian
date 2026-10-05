@@ -62,9 +62,11 @@ try {
       const blockUpdates = await page.evaluate(
         () => window.lapisDiagnostics.blockUpdates,
       );
-      await page.mouse.down({ button: "left" });
+      // Headless CDP couples absolute button coordinates to relative motion under
+      // pointer lock. Dispatch the button alone; native look is tested separately.
+      await page.locator("#world").dispatchEvent("mousedown",{button:0,bubbles:true});
       await page.waitForTimeout(800);
-      await page.mouse.up({ button: "left" });
+      await page.locator("#world").dispatchEvent("mouseup",{button:0,bubbles:true});
       await page.waitForFunction(
         (n) => window.lapisDiagnostics.blockUpdates > n,
         blockUpdates,
