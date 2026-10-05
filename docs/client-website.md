@@ -13,6 +13,27 @@ bridge to a remote Origin.
 
 ## GitHub Pages
 
+### Current branch-based deployment
+
+Pages publishes the root of `testing-client`. The repository-root `index.html`
+redirects visitors to `website/`, so the main project URL opens the client
+landing page instead of the repository README. The redirect uses a relative URL
+and includes a normal link as a fallback; it does not require JavaScript.
+
+- Main URL: https://aksulightning.github.io/lapisobsidian/
+- Direct client website: https://aksulightning.github.io/lapisobsidian/website/
+
+Keep **Settings → Pages → Source → Deploy from a branch**, with
+**testing-client / (root)**, to continue using this configuration. GitHub's
+`pages build and deployment` workflow publishes updates automatically.
+The separate `Project website` workflow validates and packages the website,
+but intentionally skips its deployment job in branch-based mode.
+
+### Optional deployment with GitHub Actions
+
+To publish `website/` directly at the main URL instead, switch to the Actions
+configuration below. The root redirect is not part of that deployment artifact.
+
 The `Project website` workflow validates and packages `website/` when relevant
 files change on `testing-client`. Publishing uses GitHub's official Pages actions.
 
