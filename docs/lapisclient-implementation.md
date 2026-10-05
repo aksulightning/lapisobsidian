@@ -2,17 +2,19 @@
 
 ## Delivery status
 
-Implementation is in local branches `codex/lapisclient-server-v1` (based on
-`testing`) and `codex/lapisclient-client-v1` (based on `testing-client`). Both have
-the same server source. Remote publication and draft PR creation have not been
-completed: automatic approval review rejected the push as an external repository
-mutation/publication requiring explicit authorization.
+Implementation is published in draft PR [#2](https://github.com/aksulightning/lapisobsidian/pull/2)
+(`codex/lapisclient-server-v1` → `testing`) and draft PR
+[#3](https://github.com/aksulightning/lapisobsidian/pull/3)
+(`codex/lapisclient-client-v1` → `testing-client`). Both contain the same server
+source. Neither PR has been merged.
 
-The server/client path is implemented and passes real-server gameplay and
-controller/worker tests. The complete milestone is **not yet verified**: Chromium
-exits with SIGTRAP before creating a page in this workspace, and GitHub CI cannot
-run until the branches can be pushed. Actual WebGL rendering, desktop browser
-input and mobile multitouch therefore still require the prepared browser suite.
+The complete automated client/server milestone passed on 2026-10-05 in
+[Client checks run 37355442344](https://github.com/aksulightning/lapisobsidian/actions/runs/37355442344):
+real-server integration, Chromium WebGL rendering, desktop controls, mobile
+multitouch, disconnect/reconnect and production build. Local real-server tests
+also passed with ASan/UBSan. Native build, codec and C regression/sanitizer checks
+passed in [server CI](https://github.com/aksulightning/lapisobsidian/actions/runs/37355129463).
+Browser screenshots and results are attached to the Client checks run.
 
 ## Architecture
 
@@ -168,9 +170,14 @@ Passed locally:
   placement, hotbar/inventory, UTF-8 chat, disconnect/reconnect, malformed inputs,
   wrong origin/subprotocol/version/path, rate limits and timeout closure.
 
-Still unverified: actual WebGL display, desktop/touch input in a running browser,
-physical mobile devices and deployed TLS certificates. The automated browser
-suite is ready but cannot run locally; remote CI awaits push authorization.
+Passed in CI: actual Chromium WebGL rendering, pointer lock, WASD/look, mining,
+hotbar/inventory, chat, menu, multitouch movement/look/jump/use, responsive portrait
+layout, resizing and disconnect/reconnect. Both desktop and touch runs reported
+no browser errors. The production static build is attached to the same CI run.
+
+Still unverified: physical mobile devices and deployed TLS certificates. Mobile
+input was tested with Chromium touch emulation; iOS Safari needs device testing.
+Local Chromium could not launch, so browser verification used GitHub's Ubuntu runner.
 Native WebSocket support is currently POSIX; Windows/ESP and the separate Alpine
 packaging script retain their legacy TCP builds. Run under Linux/WSL, or use
 `build.sh` with Alpine openssl-dev. Rendering/lighting/entity cosmetics are
