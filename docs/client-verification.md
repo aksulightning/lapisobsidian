@@ -20,10 +20,17 @@ checks workflow installs Chromium and runs this test on Ubuntu.
 Local protocol/meshing tests, the real Game/worker integration test and native
 server build passed during implementation. All three real-server tests also
 passed with AddressSanitizer and UndefinedBehaviorSanitizer enabled.
-The local Chromium executable exits with SIGTRAP before page creation in the
-restricted work environment; local rendering/control results must not be inferred
-from protocol tests. Remote CI has not run: automatic approval review blocked pushing the commits.
-The milestone cannot be called fully verified until those browser tests pass.
+The desktop and touch Chromium suite **passed** on 2026-10-05 in
+[Client checks run 37355442344](https://github.com/aksulightning/lapisobsidian/actions/runs/37355442344),
+including WebGL world rendering, controls, chat, resize and reconnect with no
+browser errors. The run also passed real-server tests and the production build;
+its artifacts include screenshots, browser-results.json and the static client.
+Native server build, codec tests and C regression/sanitizer checks passed in
+[server CI](https://github.com/aksulightning/lapisobsidian/actions/runs/37355129463).
+
+The branches are published in draft PRs #2 (`testing`) and #3 (`testing-client`).
+The local Chromium executable exits before page creation, so browser verification
+used GitHub's Ubuntu runner. Touch emulation is not physical device verification.
 
 The existing C regression suite and new `tests/lapisclient-codec.sh` cover the
 shared gameplay and strict JSON decoder. Production WSS certificate configuration,
