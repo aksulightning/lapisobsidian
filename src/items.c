@@ -1,3 +1,4 @@
+#include "lapisclient.h"
 #include "plates.h"
 #include <math.h>
 #include <stdlib.h>
@@ -42,6 +43,7 @@ static bool valid (uint16_t item, uint8_t count, int x, int y, int z) {
  * NoGravity prevents client simulation from fighting our low-rate server physics. */
 static void metadata (int fd, size_t i) {
   const DroppedItem *d = &ctx->items[i];
+  if (lc_is(fd)) { lc_json(fd,"{\"type\":\"entity_update\",\"id\":%d,\"item\":%u,\"count\":%u}",entity_id(i),d->item,d->count); return; }
   uint32_t n = 10u+(uint32_t)sizeVarInt((uint32_t)entity_id(i))+(uint32_t)sizeVarInt(d->item);
   writeVarInt(fd,n); writeByte(fd,0x5c); writeVarInt(fd,(uint32_t)entity_id(i));
   writeByte(fd,5); writeByte(fd,8); writeByte(fd,1);

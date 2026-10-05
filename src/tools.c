@@ -1,3 +1,4 @@
+#include "lapisclient.h"
 #include "plates.h"
 #include <stdio.h>
 #include <string.h>
@@ -97,6 +98,8 @@ ssize_t recv_all (int client_fd, void *buf, size_t n, uint8_t require_first) {
 }
 
 ssize_t send_all (int client_fd, const void *buf, ssize_t len) {
+  /* Unsupported legacy-only cosmetics must never leak TCP bytes to WebSocket. */
+  if (lc_is(client_fd)) return len;
   /* Defence in depth for world-scoped broadcasts from inherited packet code. */
   if (!plates_fd_active(client_fd)) return len;
   // Treat any input buffer as *uint8_t for simplicity

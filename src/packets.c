@@ -1,3 +1,4 @@
+#include "lapisclient.h"
 #include "plates.h"
 #include "doors.h"
 #include "server_config.h"
@@ -229,6 +230,7 @@ int sc_finishConfiguration (int client_fd) {
 
 // S->C Login (play)
 int sc_loginPlay (int client_fd) {
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"world_info\",\"entity\":%d,\"distance\":%d,\"mode\":%d,\"dimension\":\"%s\",\"minY\":-64,\"height\":384,\"registry\":\"lapis-v1\"}",client_fd,VIEW_DISTANCE,commands_mode_for_fd(client_fd),plates_dimension(plate_current));
   const char *dimension = plates_dimension(plate_current);
   uint32_t n = (uint32_t)strlen(dimension), count = plates_dimension_count(), list_bytes = 0;
   for (unsigned i = 0; i < count; i++) { uint32_t k = (uint32_t)strlen(plates_dimension_at(i)); list_bytes += (uint32_t)sizeVarInt(k)+k; }
@@ -283,6 +285,7 @@ int sc_loginPlay (int client_fd) {
 
 // S->C Synchronize Player Position
 int sc_synchronizePlayerPosition (int client_fd, double x, double y, double z, float yaw, float pitch) {
+  if (lc_is(client_fd)) return lc_position(client_fd,x,y,z,yaw,pitch);
 
   writeVarInt(client_fd, 61 + sizeVarInt(-1));
   writeByte(client_fd, 0x41);
@@ -325,6 +328,7 @@ int sc_setDefaultSpawnPosition (int client_fd, int64_t x, int64_t y, int64_t z) 
 
 // S->C Player Abilities (clientbound)
 int sc_playerAbilities (int client_fd, uint8_t flags) {
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"abilities\",\"flags\":%u}",flags);
 
   writeVarInt(client_fd, 10);
   writeByte(client_fd, 0x39);
@@ -338,6 +342,7 @@ int sc_playerAbilities (int client_fd, uint8_t flags) {
 
 // S->C Update Time
 int sc_updateTime (int client_fd, uint64_t ticks) {
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"world_time\",\"ticks\":%u}",(unsigned)(ticks%24000));
 
   writeVarInt(client_fd, 18);
   writeVarInt(client_fd, 0x6A);
@@ -361,6 +366,7 @@ int sc_startWaitingForChunks (int client_fd) {
 
 // S->C Set Center Chunk
 int sc_setCenterChunk (int client_fd, int x, int y) {
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"chunk_center\",\"x\":%d,\"z\":%d}",x,y);
   writeVarInt(client_fd, 1 + sizeVarInt(x) + sizeVarInt(y));
   writeByte(client_fd, 0x57);
   writeVarInt(client_fd, x);
@@ -370,6 +376,7 @@ int sc_setCenterChunk (int client_fd, int x, int y) {
 
 // S->C Chunk Data and Update Light
 int sc_chunkDataAndUpdateLight (int client_fd, int _x, int _z) {
+  if (lc_is(client_fd)) return lc_chunk(client_fd,_x,_z);
   if (_x < -2048 || _x > 2047 || _z < -2048 || _z > 2047) return 1;
 
   const int chunk_data_size = (4101 + sizeVarInt(256) + sizeof(network_block_palette)) * 20 + 6 * 4;
@@ -469,6 +476,7 @@ int sc_chunkDataAndUpdateLight (int client_fd, int _x, int _z) {
 
 // S->C Clientbound Keep Alive (play)
 int sc_keepAlive (int client_fd) {
+  if (lc_is(client_fd)) return 0;
 
   writeVarInt(client_fd, 9);
   writeByte(client_fd, 0x26);
@@ -480,6 +488,7 @@ int sc_keepAlive (int client_fd) {
 
 // S->C Set Container Slot
 int sc_setContainerSlot (int client_fd, int window_id, uint16_t slot, uint8_t count, uint16_t item) {
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"inventory_slot\",\"window\":%d,\"slot\":%u,\"count\":%u,\"item\":%u}",window_id,slot,count,item);
 
   writeVarInt(client_fd,
     1 +
@@ -514,6 +523,7 @@ int sc_blockUpdate (int client_fd, int64_t x, int64_t y, int64_t z, uint8_t bloc
   if (x >= -32768 && x <= 32767 && y >= 0 && y <= 255 && z >= -32768 && z <= 32767)
     { circuits_state_at((int)x,(int)y,(int)z,block,&state);
       farming_state_at((int)x,(int)y,(int)z,block,&state); }
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"block_update\",\"x\":%d,\"y\":%d,\"z\":%d,\"state\":%u}",(int)x,(int)y,(int)z,state);
   writeVarInt(client_fd, 9 + sizeVarInt(state));
   writeByte(client_fd, 0x08);
   writeUint64(client_fd, (((uint64_t)x & 0x3FFFFFFu) << 38) | (((uint64_t)z & 0x3FFFFFFu) << 12) | ((uint64_t)y & 0xFFFu));
@@ -531,6 +541,7 @@ int sc_acknowledgeBlockChange (int client_fd, int sequence) {
 
 // S->C Open Screen
 int sc_openScreen (int client_fd, uint8_t window, const char *title, uint16_t length) {
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"inventory_open\",\"window\":%u}",window);
 
   writeVarInt(client_fd, 1 + 2 * sizeVarInt(window) + 1 + 2 + length);
   writeByte(client_fd, 0x34);
@@ -547,6 +558,7 @@ int sc_openScreen (int client_fd, uint8_t window, const char *title, uint16_t le
 
 // S->C Set Cursor Item
 int sc_setCursorItem (int client_fd, uint16_t item, uint8_t count) {
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"inventory_cursor\",\"item\":%u,\"count\":%u}",item,count);
 
   writeVarInt(client_fd, 1 + sizeVarInt(count) + (count != 0 ? sizeVarInt(item) + 2 : 0));
   writeByte(client_fd, 0x59);
@@ -665,6 +677,7 @@ int cs_setHeldItem (int client_fd) {
 
 // S->C Set Held Item (clientbound)
 int sc_setHeldItem (int client_fd, uint8_t slot) {
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"selected_slot\",\"slot\":%u}",slot);
 
   writeVarInt(client_fd, sizeVarInt(0x62) + 1);
   writeVarInt(client_fd, 0x62);
@@ -712,6 +725,7 @@ int sc_spawnEntity (
   double x, double y, double z,
   uint8_t yaw, uint8_t pitch
 ) {
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"entity_spawn\",\"id\":%d,\"kind\":%d,\"x\":%.9g,\"y\":%.9g,\"z\":%.9g,\"yaw\":%.7g,\"pitch\":%.7g}",id,type,x,y,z,yaw*360.0/256,pitch*360.0/256);
 
   writeVarInt(client_fd, 51 + sizeVarInt(id) + sizeVarInt(type));
   writeByte(client_fd, 0x01);
@@ -743,6 +757,15 @@ int sc_spawnEntity (
 
 // S->C Set Entity Metadata
 int sc_setEntityMetadata (int client_fd, int id, EntityData *metadata, size_t length) {
+  if (lc_is(client_fd)) {
+    for (size_t i=0; i<length; i++) {
+      EntityData *m=&metadata[i];
+      if (m->index==0 && m->type==0) lc_json(client_fd,"{\"type\":\"entity_update\",\"id\":%d,\"flags\":%u}",id,m->value.byte);
+      if (m->index==6 && m->type==21) lc_json(client_fd,"{\"type\":\"entity_update\",\"id\":%d,\"pose\":%d}",id,m->value.pose);
+      if (m->index==17 && m->type==0) lc_json(client_fd,"{\"type\":\"entity_update\",\"id\":%d,\"sheared\":%s}",id,(m->value.byte&16)?"true":"false");
+    }
+    return 0;
+  }
   int entity_metadata_size = sizeEntityMetadata(metadata, length);
   if (entity_metadata_size == -1) return 1;
 
@@ -763,6 +786,9 @@ int sc_setEntityMetadata (int client_fd, int id, EntityData *metadata, size_t le
 
 // S->C Spawn Entity (from PlayerData)
 int sc_spawnEntityPlayer (int client_fd, PlayerData player) {
+  if (lc_is(client_fd)) return lc_json(client_fd,
+    "{\"type\":\"entity_spawn\",\"id\":%d,\"kind\":149,\"x\":%.9g,\"y\":%u,\"z\":%.9g,\"yaw\":%.7g,\"pitch\":%.7g}",
+    player.client_fd,player.x+0.5,player.y,player.z+0.5,player.yaw*180.0/127,player.pitch*90.0/127);
   return sc_spawnEntity(
     client_fd,
     player.client_fd, player.uuid, 149,
@@ -790,6 +816,7 @@ int sc_teleportEntity (
   double x, double y, double z,
   float yaw, float pitch
 ) {
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"entity_move\",\"id\":%d,\"x\":%.9g,\"y\":%.9g,\"z\":%.9g,\"yaw\":%.7g,\"pitch\":%.7g}",id,x,y,z,(double)yaw,(double)pitch);
 
   // Packet length and ID
   writeVarInt(client_fd, 58 + sizeVarInt(id));
@@ -830,6 +857,7 @@ int sc_setHeadRotation (int client_fd, int id, uint8_t yaw) {
 
 // S->C Set Head Rotation
 int sc_updateEntityRotation (int client_fd, int id, uint8_t yaw, uint8_t pitch) {
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"entity_look\",\"id\":%d,\"yaw\":%.7g,\"pitch\":%.7g}",id,id > 0 ? (int8_t)yaw*180.0/127 : yaw*360.0/256,id > 0 ? (int8_t)pitch*90.0/127 : pitch*360.0/256);
 
   // Packet length and ID
   writeByte(client_fd, 4 + sizeVarInt(id));
@@ -862,6 +890,7 @@ int sc_damageEvent (int client_fd, int entity_id, int type) {
 
 // S->C Set Health
 int sc_setHealth (int client_fd, uint8_t health, uint8_t food, uint16_t saturation) {
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"health\",\"health\":%u,\"food\":%u,\"saturation\":%u}",health,food,saturation);
 
   writeVarInt(client_fd, 9 + sizeVarInt(food));
   writeByte(client_fd, 0x61);
@@ -875,6 +904,7 @@ int sc_setHealth (int client_fd, uint8_t health, uint8_t food, uint16_t saturati
 
 // S->C Respawn
 int sc_respawn (int client_fd) {
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"respawn\",\"dimension\":\"%s\",\"mode\":%d}",plates_dimension(plate_current),commands_mode_for_fd(client_fd));
 
   const char *dimension = plates_dimension(plate_current);
   uint32_t n = (uint32_t)strlen(dimension);
@@ -927,6 +957,7 @@ int cs_clientStatus (int client_fd) {
 
 // S->C System Chat
 int sc_systemChat (int client_fd, char* message, uint16_t len) {
+  if (lc_is(client_fd)) return lc_text(client_fd,"chat_message","text",message,len);
   /* NBT TAG_String uses Java modified UTF-8. Supplementary characters use
    * two encoded UTF-16 surrogates, unlike the incoming chat string's UTF-8. */
   uint8_t encoded[1024]; size_t used = 0;
@@ -961,6 +992,7 @@ int sc_systemChat (int client_fd, char* message, uint16_t len) {
 
 // S->C Entity Event
 int sc_entityEvent (int client_fd, int entity_id, uint8_t status) {
+  if (lc_is(client_fd)) return status == 3 ? lc_json(client_fd,"{\"type\":\"entity_remove\",\"id\":%d}",entity_id) : 0;
 
   writeVarInt(client_fd, 6);
   writeByte(client_fd, 0x1E);
@@ -973,6 +1005,7 @@ int sc_entityEvent (int client_fd, int entity_id, uint8_t status) {
 
 // S->C Remove Entities, but for only one entity per packet
 int sc_removeEntity (int client_fd, int entity_id) {
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"entity_remove\",\"id\":%d}",entity_id);
 
   writeVarInt(client_fd, 2 + sizeVarInt(entity_id));
   writeByte(client_fd, 0x46);
@@ -1021,6 +1054,7 @@ int cs_playerCommand (int client_fd) {
 
 // S->C Pickup Item (take_item_entity)
 int sc_pickupItem (int client_fd, int collected, int collector, uint8_t count) {
+  if (lc_is(client_fd)) return lc_json(client_fd,"{\"type\":\"entity_remove\",\"id\":%d}",collected);
 
   writeVarInt(client_fd, 1 + sizeVarInt(collected) + sizeVarInt(collector) + sizeVarInt(count));
   writeByte(client_fd, 0x75);

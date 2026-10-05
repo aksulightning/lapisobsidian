@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { BridgeTransport } from "./transport.js";
-import { HostedTransport } from "./hosted-transport.js";
-import { connectionDefaults } from "./config.js";
+import { LapisClientTransport } from "./transport.js";
 import { Renderer } from "./renderer.js";
 import { Input } from "./input.js";
 import { Game } from "./game.js";
@@ -9,8 +7,6 @@ import { material, itemName } from "./world/blocks.js";
 import { registry } from "./protocol/registry.js";
 const $ = (id) => document.getElementById(id),
   touch = matchMedia("(any-pointer:coarse)").matches;
-// Only the loopback launcher may consume its per-launch authentication token.
-const localMode = location.protocol === "http:" && location.hostname === "127.0.0.1";
 const settings = {
   distance: touch ? 2 : 4,
   quality: touch ? "low" : "medium",
@@ -39,17 +35,17 @@ let game,
 function status(message) {
   $("connection-status").textContent = message;
   $("hud-status").textContent = message;
-  $("connect").disabled = !game || (localMode && !transport.ready) || connected || connecting;
+  $("connect").disabled = !game || connected || connecting;
 }
-const transport = localMode ? new BridgeTransport(status) : new HostedTransport(status);
+const transport = new LapisClientTransport(status);
 transport.onError = (e) => {
   lastError = true;
   notice(e.message);
-  status("Connection failed");
+  status(e.message === "Protocol mismatch" ? "Protocol mismatch" : "Connection failed");
 };
 transport.onClose = () => {
   connected = connecting = false;
-  if (game) game.playing = false;
+  if (game) { game.playing = false; game.protocol?.dispose(); }
   input?.stop();
   $("hud").hidden = true;
   $("touch-controls").hidden = true;
@@ -58,7 +54,7 @@ transport.onClose = () => {
   hideOverlays();
   $("menu").hidden = false;
   document.body.classList.remove("in-world");
-  status(lastError ? "Connection failed" : "Disconnected");
+  status(lastError ? ($("connection-status").textContent === "Protocol mismatch" ? "Protocol mismatch" : "Connection failed") : "Disconnected");
 };
 function showTouch() {
   return (
@@ -245,25 +241,7 @@ try {
   console.error(e);
   notice(e.message);
 }
-if (localMode) {
-let token = location.hash.slice(1);
-if (token) {
-  sessionStorage.setItem("lapis-token", token);
-  history.replaceState(null, "", location.pathname);
-} else token = sessionStorage.getItem("lapis-token");
-if (/^[a-f0-9]{64}$/.test(token || "")) {
-  transport.start(token);
-  token = "";
-} else notice("The local launch token is missing. Restart the client launcher.");
-} else {
-  $("gateway-field").hidden = false;
-  $("gateway").required = true;
-  $("gateway").value = connectionDefaults.gateway;
-  $("host").value = connectionDefaults.host;
-  $("port").value = connectionDefaults.port;
-  $("quit").textContent = "Leave game";
-  status(connectionDefaults.gateway ? "Ready to connect" : "Enter your server address and its secure gateway to play.");
-}
+status("Disconnected");
 $("connect-form").onsubmit = async (e) => {
   e.preventDefault();
   if (!game) return;
@@ -272,25 +250,12 @@ $("connect-form").onsubmit = async (e) => {
   connecting = true;
   status("Connecting...");
   try {
-    if (!localMode) await transport.prepare($("gateway").value.trim());
     const name = $("username").value;
     if (!/^\w{1,15}$/.test(name))
       throw Error(
         "Use 1–15 letters, digits, or underscores for your player name.",
       );
-    const digest = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode("LapisObsidian:" + name),
-    );
-    const uuid = new Uint8Array(digest).slice(0, 16);
-    uuid[6] = (uuid[6] & 15) | 64;
-    uuid[8] = (uuid[8] & 63) | 128;
-    await game.connect(
-      $("host").value.trim(),
-      Number($("port").value),
-      name,
-      uuid,
-    );
+    await game.connect($("endpoint").value.trim(), name, $("access-token").value);
   } catch (err) {
     connecting = false;
     notice(err.message);
@@ -361,8 +326,7 @@ async function fullscreen() {
 }
 $("fullscreen").onclick = fullscreen;
 $("quit").onclick = () => {
-  if (localMode) transport.control("SHUTDOWN");
-  else game?.disconnect();
+  game?.disconnect();
   input?.stop();
   notice("Lapis Obsidian Client has shut down. You can close this tab.");
 };
@@ -420,6 +384,7 @@ Object.defineProperty(window, "lapisDiagnostics", {
       ? {
           connected: game.playing,
           position: { ...game.player },
+          authoritative: game.authoritative,
           chunks: game.world.chunks.size,
           meshes: renderer.chunks.size,
           vertices: renderer.drawn,

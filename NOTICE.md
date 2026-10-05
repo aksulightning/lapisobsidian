@@ -29,8 +29,6 @@ The `client/` application and procedural textures/geometry are original addition
 for Lapis Obsidian Client, distributed under GPL-3.0-only. No proprietary textures,
 models, fonts or sounds are included. System fonts belong to the host OS.
 The semantic registry is generated from this repository's compatibility snapshot.
-Node.js and ws retain their own licenses. Portable builds include NODE-LICENSE,
-node_modules/ws/LICENSE and corresponding project source. Node.js source for the
-copied runtime version is available at https://github.com/nodejs/node; distributors
-must retain the applicable runtime and dependency notices. Playwright is a
-development/test dependency and is not included in portable builds.
+Node.js, ws and Playwright retain their own licenses as development tools.
+Production builds contain static browser code and do not bundle those runtimes.
+The native lapisclient server uses the system OpenSSL library.

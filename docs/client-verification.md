@@ -1,34 +1,31 @@
-# Lapis Obsidian Client verification
+# lapisclient milestone verification
 
-Reference server: unchanged `testing` e96af88797b0718851ae8422415467cb94253982.
+The implementation is exercised with the real C server, not a mocked world or TCP
+bridge. `npm test` builds the server and runs protocol tests covering:
 
-Checks performed during replacement:
+- subprotocol/version negotiation and offline session startup;
+- all 25 initial binary chunks, palette decoding and nonempty mesh geometry;
+- two-player spawn and movement broadcasts, rejected teleport correction;
+- hotbar selection, creative inventory, cursor pickup/place, block break/place;
+- UTF-8 chat, disconnect removal, reconnect and duplicate identity rejection;
+- optional shared token, wrong/missing origin and wrong path/subprotocol;
+- malformed JSON, duplicate keys, fragmented messages, binary client input,
+  oversized messages, invalid field ranges and invalid session transitions.
 
-- Clean npm dependency installation and HTML5 registry/module build.
-- Actual C reference server compilation and full original server test suite.
-- Portable Linux build and packaged runtime startup/authentication/shutdown.
-- CI portable builds passed on Ubuntu, Windows and macOS.
-- Live TCP login, configuration, 25 received/decoded initial chunks, movement,
-  input flags, hotbar, chat echo, creative slots, mining, placement, inventory
-  pickup and same-session reconnect.
-- Split/coalesced frame integrity and invalid VarInt/frame rejection.
-- Bridge random ports/tokens, missing/bad authentication, foreign Origin/Host,
-  malformed controls, target validation, protocol admission and binary integrity.
-- Connection refusal with surviving local session and subsequent PING.
-- Launcher automatic bridge startup/authentication, last-tab shutdown, remote
-  TCP close, WebSocket close, listener close and released port.
+`npm run test:web` adds desktop/touch Chromium integration. It verifies actual
+rendered vertices, pointer lock, WASD/look/jump, mining, hotbar/inventory, chat,
+multitouch move/look/jump/use, responsive layout and reconnect. GitHub's Client
+checks workflow installs Chromium and runs this test on Ubuntu.
 
-Local browser execution was attempted with Playwright and two Chromium builds.
-The standard browser download failed and locally extracted binaries exited
-with SIGTRAP before a page could open. Local execution therefore could not verify
-WebGL, pointer lock, desktop input or multitouch. The same checks subsequently **passed in GitHub Actions** on Ubuntu with
-Chromium, against the actual C server: live chunk rendering, pointer lock,
-keyboard movement, mouse look, hotbar/inventory, chat, simultaneous touch
-movement/look/jump, portrait layout, resize and reconnect.
+Local protocol/meshing tests, the real Game/worker integration test and native
+server build passed during implementation. All three real-server tests also
+passed with AddressSanitizer and UndefinedBehaviorSanitizer enabled.
+The local Chromium executable exits with SIGTRAP before page creation in the
+restricted work environment; local rendering/control results must not be inferred
+from protocol tests. Remote CI has not run: automatic approval review blocked pushing the commits.
+The milestone cannot be called fully verified until those browser tests pass.
 
-[Verified client CI run](https://github.com/aksulightning/lapisobsidian/actions/runs/37301710117)
-also passed packaged runtime startup/authentication/shutdown on Linux, Windows
-and macOS. Screenshots and browser-result JSON are attached to that run. No physical phone, Android/iOS package or signed installer was
-validated here.
-
-Additional build/CI results are recorded in the replacement commit’s checks.
+The existing C regression suite and new `tests/lapisclient-codec.sh` cover the
+shared gameplay and strict JSON decoder. Production WSS certificate configuration,
+physical iOS/Android devices and native Windows/ESP WebSocket builds require
+separate deployment/platform testing.

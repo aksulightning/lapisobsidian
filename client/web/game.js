@@ -16,8 +16,10 @@ export class Game {
       type: "module",
     });
     this.worker.onmessage = ({ data: m }) => this.workerMessage(m);
-    this.worker.onerror = () =>
+    this.worker.onerror = () => {
       event("error", "World processing failed. Disconnect and try again.");
+      this.disconnect();
+    };
     this.reset();
   }
   post(type, fields = {}, transfer = []) {
@@ -60,18 +62,28 @@ export class Game {
     this.blockUpdates = 0;
     this.center = { x: 0, z: 0 };
     this.entityId = 0;
+    this.authoritative = null;
   }
-  async connect(host, port, name, uuid) {
+  async connect(url, name, token) {
+    this.protocol?.dispose();
     this.reset();
     this.protocol = new ProtocolClient(this.transport, (t, v) =>
       this.receive(t, v),
     );
-    await this.transport.connect(host, port);
-    this.protocol.login(host, port, name, uuid, this.settings.distance);
+    await this.transport.connect(url);
+    this.protocol.login(name, token);
     this.event("status", "Authenticating...");
   }
   receive(type, value) {
     switch (type) {
+      case "sessionReady":
+        this.playing = true;
+        this.event("status", "Connected");
+        this.event("ready");
+        break;
+      case "authoritative":
+        this.authoritative = value;
+        break;
       case "join":
         this.entityId = value.entity;
         this.mode = value.mode;
@@ -196,10 +208,9 @@ export class Game {
       this.positioned &&
       this.world.has(this.player.x, this.player.z)
     ) {
-      this.loaded = this.playing = true;
+      this.loaded = true;
       this.protocol.loaded();
-      this.event("status", "Connected");
-      this.event("ready");
+
     }
   }
   prune() {
@@ -218,6 +229,7 @@ export class Game {
     this.post("unload", { x, z });
   }
   disconnect() {
+    this.protocol?.dispose();
     this.playing = false;
     this.transport.disconnect();
   }

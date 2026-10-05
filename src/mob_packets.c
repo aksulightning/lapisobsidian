@@ -1,3 +1,4 @@
+#include "lapisclient.h"
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
@@ -14,6 +15,7 @@ _Static_assert(LAPIS_PROTOCOL_VERSION == 772, "Review mob packets, metadata and 
 /* Protocol 772 relative movement uses signed deltas at 1/4096 block precision.
  * Unlike teleport packets, these updates use the client's normal interpolation. */
 void sc_mob_move (int fd, int id, int16_t dx, int16_t dy, int16_t dz, uint8_t yaw, bool grounded) {
+  if (lc_is(fd)) { lc_json(fd,"{\"type\":\"entity_delta\",\"id\":%d,\"dx\":%.9g,\"dy\":%.9g,\"dz\":%.9g,\"yaw\":%.7g,\"pitch\":0}",id,dx/4096.0,dy/4096.0,dz/4096.0,yaw*360.0/256); return; }
   uint8_t packet[16] = {0,0x2f}; size_t at = 2;
   uint32_t raw = (uint32_t)id;
   do { packet[at++] = (uint8_t)((raw&127u)|(raw > 127 ? 128u : 0u)); raw >>= 7; } while (raw);

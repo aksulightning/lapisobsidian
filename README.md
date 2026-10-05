@@ -1,28 +1,30 @@
 # Lapis Obsidian Client
 
-The `testing-client` branch contains a standalone HTML5 client for the working
-Lapis Obsidian protocol-772 server. The previous nonconnecting preview has been
-replaced with live login, streamed-world rendering, player controls, gameplay
-packets and an automatically managed authenticated loopback bridge.
+The `testing-client` branch contains the HTML5 Lapis Obsidian Client. It connects
+directly to the `testing` server using **lapisclient v1** over WebSocket.
+Rendering, worker meshing and desktop/touch controls share one protocol path.
 
 ```sh
+# Start the server on testing (C compiler + OpenSSL development library required):
+./build.sh
+./lapis-obsidian
+
+# In a separate testing-client checkout:
 cd client
 npm ci
 npm run dev
-# Portable client with bundled runtime:
-npm run build
+# Open http://127.0.0.1:8080 and connect to ws://127.0.0.1:25566/lapisclient
+npm run build  # static production files in client/dist/
 ```
 
-See [setup, packaging, controls and limitations](client/README.md),
-[architecture and protocol provenance](docs/client-architecture.md),
-[bridge security](docs/client-bridge.md), and
-[actual verification results](docs/client-verification.md).
-The frontend is shared by desktop and touch layouts. Native mobile packaging
-is not included. No external proxy is needed.
+See [client setup and controls](client/README.md),
+[lapisclient protocol and deployment](docs/lapisclient-protocol.md),
+[architecture](docs/client-architecture.md), and
+[verification](docs/client-verification.md).
+The server changes are included in this branch so tests use the same implementation.
 
-The GitHub Pages project website lives in [`website/`](website/).
-See [website publishing and editing](docs/client-website.md) for the one-time
-Pages setup and automatic deployment workflow.
+The [project website](website/) and browser client can be hosted on GitHub Pages;
+public gameplay requires a WSS endpoint hosted by the server owner.
 
 ---
 

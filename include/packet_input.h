@@ -15,4 +15,6 @@ int packet_input_poll (PacketInput *input, int64_t now);
 bool packet_input_read (int fd, void *buffer, size_t count, ssize_t *result);
 size_t packet_input_remaining (void);
 bool packet_input_end (void);
+/* Internal validated application-controller arguments, never a network API. */
+bool packet_input_begin (int fd, const void *data, size_t count);
 #endif
