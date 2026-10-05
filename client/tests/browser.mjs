@@ -58,7 +58,13 @@ try {
       await page.waitForFunction(
         () => document.pointerLockElement?.id === "world",
       );
-      await page.waitForFunction(() => window.lapisDiagnostics.target !== null);
+      await page.waitForTimeout(200);
+      // Aim through the input handler after pointer-lock acquisition settles.
+      await page.evaluate(()=>{
+        const p=window.lapisDiagnostics.position;
+        document.dispatchEvent(new MouseEvent('mousemove',{movementX:-p.yaw/.13,movementY:(40-p.pitch)/.13,bubbles:true}));
+      });
+      await page.waitForFunction(() => window.lapisDiagnostics.target !== null && window.lapisDiagnostics.position.pitch>39);
       const blockUpdates = await page.evaluate(
         () => window.lapisDiagnostics.blockUpdates,
       );

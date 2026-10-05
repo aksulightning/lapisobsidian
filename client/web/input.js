@@ -54,6 +54,9 @@ export class Input {
       if (document.hidden) this.reset();
     });
     document.addEventListener("pointerlockchange", () => {
+      // Some browsers emit a large recenter delta when lock is acquired.
+      this.lookX=this.lookY=0;
+      this.ignoreLookUntil=performance.now()+100;
       if (!document.pointerLockElement) {
         this.reset();
         if (this.active && !matchMedia("(pointer:coarse)").matches)
@@ -61,7 +64,7 @@ export class Input {
       }
     });
     document.addEventListener("mousemove", (e) => {
-      if (this.active && document.pointerLockElement === canvas) {
+      if (this.active && document.pointerLockElement === canvas && performance.now() >= (this.ignoreLookUntil||0)) {
         this.lookX += e.movementX * settings.mouse;
         this.lookY += e.movementY * settings.mouse;
       }
