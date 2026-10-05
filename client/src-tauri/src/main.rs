@@ -14,6 +14,9 @@ fn main() {
     let origin = bootstrap.origin.clone();
     let init = format!("if (location.origin === {} && window === window.top) {{ Object.defineProperty(window, '__LAPIS_BOOTSTRAP__', {{value: {}, configurable: true}}); }}", serde_json::to_string(&origin).unwrap(), serde_json::to_string(&bootstrap).unwrap());
     let smoke_test = std::env::args().any(|arg| arg == "--smoke-test");
+    if smoke_test {
+        println!("Startup check: loopback bridge {}", origin);
+    }
     let app = tauri::Builder::default()
         .manage(Mutex::new(Some(bridge)))
         .setup(move |app| {
