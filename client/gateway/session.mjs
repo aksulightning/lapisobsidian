@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { ProtocolGate } from "../runtime/gate.mjs";
-
-// Only the operator-configured game server can be dialled, never arbitrary targets.
 export function configuration(env) {
   const host = String(env.SERVER_HOST || "").trim();
-  const port = Number(env.SERVER_PORT || 25565);
+  const port = Number(env.SERVER_PORT ?? 25565);
   const origin = String(env.ALLOWED_ORIGIN || "");
   if (!host || host.length > 253 || /[\s/@?#]/.test(host) ||
       !Number.isInteger(port) || port < 1 || port > 65535 ||
@@ -13,114 +10,149 @@ export function configuration(env) {
   return { host, port, origin };
 }
 
-export function attachSession(ws, target, connect) {
-  let authenticated = false, session = null, closed = false;
-  let last = Date.now(), windowStart = last, controls = 0, bytes = 0;
-  const send = (value) => { if (!closed) ws.send(JSON.stringify(value)); };
-  const disconnect = () => {
-    const old = session;
-    session = null;
-    if (old) {
-      clearTimeout(old.timer);
-      Promise.resolve(old.socket.close()).catch(() => {});
+export const MAX_WRITE = 65536;
+export async function readBody(request, limit) {
+  if (Number(request.headers.get("Content-Length")) > limit) throw Error("BODY_LIMIT");
+  const reader = request.body?.getReader();
+  if (!reader) return new Uint8Array();
+  const chunks = [];
+  let size = 0;
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    void reader.cancel().catch(() => {});
+  }, 10000);
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (timedOut) throw Error("BODY_TIMEOUT");
+      if (done) break;
+      size += value.byteLength;
+      if (size > limit) {
+        void reader.cancel().catch(() => {});
+        throw Error("BODY_LIMIT");
+      }
+      chunks.push(value);
     }
-  };
-  const close = () => {
-    if (closed) return;
-    closed = true;
-    clearTimeout(authTimer);
-    clearInterval(watchdog);
-    disconnect();
-    ws.close(1000, "Session ended");
-  };
-  const fail = (code, fatal = false) => {
-    send({ type: "ERROR", code });
-    disconnect();
-    if (fatal) close();
-    else send({ type: "DISCONNECTED" });
-  };
-  const authTimer = setTimeout(close, 5000);
-  const watchdog = setInterval(() => {
-    if (Date.now() - last > 35000) close();
-  }, 5000);
-  ws.addEventListener("close", close);
-  ws.addEventListener("error", close);
-  ws.addEventListener("message", ({ data }) => {
+  } finally { clearTimeout(timer); reader.releaseLock(); }
+  const result = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.byteLength; }
+  return result;
+}
+
+// One instance lives inside one Durable Object. Separate HTTP requests share
+// this socket; Workers must not share global sockets across unrelated requests.
+export class HTTPSession {
+  constructor(env, connect) {
+    this.env = env;
+    this.connect = connect;
+    this.state = "new";
+    this.sequence = 0;
+  }
+  touch() {
+    clearTimeout(this.idleTimer);
+    this.idleTimer = setTimeout(() => this.stop(), 60000);
+  }
+  stop() {
+    if (this.state === "closed") return;
+    this.state = "closed";
+    clearTimeout(this.idleTimer);
+    try { Promise.resolve(this.socket?.close()).catch(() => {}); } catch {}
+    if (this.reader) {
+      void this.reader.cancel().catch(() => {}).finally(() => this.reader.releaseLock());
+      void this.writer.abort().catch(() => {}).finally(() => this.writer.releaseLock());
+    }
+  }
+  async open() {
+    if (this.state !== "new") return new Response("Session already used", { status: 409 });
+    this.state = "opening";
+    let timer;
     try {
-      last = Date.now();
-      if (last - windowStart >= 1000) {
-        windowStart = last; controls = bytes = 0;
+      const target = configuration(this.env);
+      this.socket = this.connect({ hostname: target.host, port: target.port }, { secureTransport: "off" });
+      this.socket.closed.catch(() => this.stop());
+      await Promise.race([
+        this.socket.opened,
+        new Promise((_, reject) => { timer = setTimeout(() => reject(Error("Timeout")), 10000); }),
+      ]);
+      if (this.state === "closed") throw Error("Closed");
+      this.reader = this.socket.readable.getReader();
+      this.writer = this.socket.writable.getWriter();
+      this.state = "open";
+      this.touch();
+      return new Response(null, { status: 201 });
+    } catch {
+      this.stop();
+      return new Response("TCP connection failed", { status: 502 });
+    } finally { clearTimeout(timer); }
+  }
+  async read() {
+    if (this.readBusy) return new Response("A read is already pending", { status: 409 });
+    this.readBusy = true;
+    let timer;
+    try {
+      // Retain a timed-out read for the next poll so no TCP bytes are discarded.
+      this.pendingRead ??= this.reader.read();
+      // A poll may time out before the TCP read rejects, so always observe it.
+      this.pendingRead.catch(() => {});
+      const result = await Promise.race([
+        this.pendingRead,
+        new Promise(resolve => { timer = setTimeout(() => resolve(null), 20000); }),
+      ]);
+      if (this.state === "closed") return new Response("Session ended", { status: 410 });
+      if (!result) return new Response(null, { status: 204 });
+      this.pendingRead = null;
+      if (result.done) {
+        this.stop();
+        return new Response(null, { status: 205 });
       }
-      if (typeof data !== "string") {
-        const chunk = new Uint8Array(data);
-        bytes += chunk.byteLength;
-        if (chunk.byteLength > 65536 || bytes > 262144) throw Error("RATE_LIMIT");
-        if (!authenticated || !session?.gate) throw Error("PROTOCOL_REQUIRED");
-        session.gate.push(chunk);
-        return;
-      }
-      if (data.length > 4096 || ++controls > 30) throw Error("RATE_LIMIT");
-      const message = JSON.parse(data);
-      const fields = { AUTH: ["type", "token"], CONNECT: ["type", "host", "port"],
-        PING: ["type"], DISCONNECT: ["type"] }[message?.type];
-      if (!fields || Object.keys(message).length !== fields.length ||
-          Object.keys(message).some(key => !fields.includes(key))) throw Error("INVALID_CONTROL");
-      if (!authenticated) {
-        if (message.type !== "AUTH" || message.token !== "") throw Error("AUTH_FAILED");
-        authenticated = true;
-        clearTimeout(authTimer);
-        send({ type: "AUTH_OK", version: 1 });
-        return;
-      }
-      if (message.type === "PING") { send({ type: "PONG" }); return; }
-      if (message.type === "DISCONNECT") {
-        disconnect(); send({ type: "DISCONNECTED" }); return;
-      }
-      if (message.type !== "CONNECT") throw Error("INVALID_CONTROL");
-      if (session) { send({ type: "ERROR", code: "ALREADY_CONNECTED" }); return; }
-      if (message.host !== target.host || message.port !== target.port) {
-        send({ type: "ERROR", code: "TARGET_NOT_ALLOWED" }); return;
-      }
-      const socket = connect({ hostname: target.host, port: target.port }, { secureTransport: "off" });
-      const current = { socket, queue: Promise.resolve(), queued: 0, gate: null };
-      session = current;
-      current.timer = setTimeout(() => {
-        if (session === current) fail("CONNECT_FAILED");
-      }, 10000);
-      // Socket failures may reject closed independently of opened/readable.
-      socket.closed.catch(() => {});
-      socket.opened.then(async () => {
-        if (closed || session !== current) return;
-        clearTimeout(current.timer);
-        const writer = socket.writable.getWriter();
-        current.gate = new ProtocolGate(target.host, target.port, packet => {
-          current.queued += packet.byteLength;
-          if (current.queued > 262144) throw Error("RATE_LIMIT");
-          current.queue = current.queue.then(async () => {
-            if (session !== current) return;
-            await writer.write(packet);
-            current.queued -= packet.byteLength;
-          }).catch(() => { if (session === current) fail("REMOTE_ERROR"); });
-        });
-        send({ type: "CONNECTED" });
-        const reader = socket.readable.getReader();
-        try {
-          while (!closed && session === current) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            if (session !== current || closed) return;
-            if (ws.bufferedAmount > 4 * 1024 * 1024) throw Error("Backpressure");
-            ws.send(value);
-          }
-          if (session === current) { disconnect(); send({ type: "DISCONNECTED" }); }
-        } finally { reader.releaseLock(); }
-      }).catch(() => {
-        if (session === current) fail(current.gate ? "REMOTE_ERROR" : "CONNECT_FAILED");
-      });
-    } catch (error) {
-      const allowed = ["AUTH_FAILED", "RATE_LIMIT", "PROTOCOL_REQUIRED", "UNSUPPORTED_PACKET"];
-      fail(allowed.includes(error.message) ? error.message : "INVALID_CONTROL", true);
+      return new Response(result.value, { headers: { "Content-Type": "application/octet-stream" } });
+    } catch {
+      this.stop();
+      return new Response("TCP read failed", { status: 502 });
+    } finally {
+      clearTimeout(timer);
+      this.readBusy = false;
+      if (this.state === "open") this.touch();
     }
-  });
-  return close;
+  }
+  async write(request) {
+    if (this.writeBusy || request.headers.get("X-Sequence") !== String(this.sequence))
+      return new Response("Out-of-order write", { status: 409 });
+    if (request.headers.get("Content-Type") !== "application/octet-stream")
+      return new Response("Binary body required", { status: 415 });
+    this.writeBusy = true;
+    let timer;
+    try {
+      await Promise.race([
+        (async () => {
+          const bytes = await readBody(request, MAX_WRITE);
+          if (this.state !== "open") throw Error("Closed");
+          if (bytes.byteLength) await this.writer.write(bytes);
+        })(),
+        new Promise((_, reject) => { timer = setTimeout(() => reject(Error("Timeout")), 10000); }),
+      ]);
+      if (this.state !== "open") throw Error("Closed");
+      this.sequence++;
+      return new Response(null, { status: 204 });
+    } catch (error) {
+      this.stop();
+      return new Response("TCP write failed", { status: error.message === "BODY_LIMIT" ? 413 : 502 });
+    } finally {
+      clearTimeout(timer);
+      this.writeBusy = false;
+      if (this.state === "open") this.touch();
+    }
+  }
+  async fetch(request) {
+    const path = new URL(request.url).pathname;
+    if (path === "/open" && request.method === "POST") return this.open();
+    if (request.method === "DELETE") { this.stop(); return new Response(null, { status: 204 }); }
+    if (this.state !== "open") return new Response("Session ended", { status: 410 });
+    this.touch();
+    if (path === "/read" && request.method === "GET") return this.read();
+    if (path === "/write" && request.method === "POST") return this.write(request);
+    return new Response("Not found", { status: 404 });
+  }
 }

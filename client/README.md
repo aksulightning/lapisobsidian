@@ -8,14 +8,14 @@ The local launcher needs no external proxy, Electron, Java installation, or prop
 ## Play in a browser
 
 Open https://aksulightning.github.io/lapisobsidian/ to load the actual game client.
-Enter the secure gateway URL supplied by your server owner, the matching TCP
+Enter the HTTPS translator URL supplied by your server owner, the matching TCP
 server address/port, and your player name, then choose **Play / Connect**.
 No local Node installation is needed for this mode.
 
 The hosted gateway still needs to be deployed and configured before live play
 is possible. See [gateway deployment](gateway/README.md). Set public defaults
-in `web/config.js` after deploying it. The gateway translates WebSocket traffic
-to the existing TCP protocol; it does not replace or host the game server.
+in `web/config.js` after deploying it. The serverless translator forwards binary HTTPS requests and responses
+to the existing TCP connection, without WebSockets or player installations; it does not replace or host the game server.
 An empty configuration does not imply that a public game server is available.
 
 ## Develop and run
@@ -76,18 +76,17 @@ installer. `npm run build:standalone` is an alias for the complete build.
 
 ## Architecture
 
-```text
-HTML5 UI + input → player/world logic → protocol codec → transport
-                                                          ↓ binary WebSocket
-                                           authenticated loopback bridge
-                                                          ↓ TCP
-                                             Lapis Obsidian server
-```
+Website players use the browser client, an HTTPS transport, and the serverless
+TCP translator. Each HTTPS session has a dedicated connection to the TCP game
+server. The translator carries bytes; game protocol encoding remains in the
+browser. The optional local launcher uses its separate loopback transport.
 
 `web/main.js` owns menus and connection presentation. `input.js` supplies input
 intentions independently of gameplay. `game.js` owns movement, collision,
 interaction and synchronization. `protocol/` owns packet framing, encoding and
-server packet decoding. `transport.js` owns WebSocket lifecycle only.
+server packet decoding. `hosted-transport.js` implements the website’s HTTPS
+sessions; `transport.js` implements the optional local launcher’s WebSocket
+transport.
 `world/worker.js` decodes chunks and builds meshes off the UI thread.
 `renderer.js` uses WebGL2, depth testing, a procedural atlas, transparency,
 distance/frustum culling, fog, and bounded display resolution.
