@@ -1,0 +1,71 @@
+name: Project website
+
+on:
+  push:
+    branches: [testing-client]
+    paths: ['website/**', '.github/workflows/pages.yml', '.github/scripts/check-website.py']
+  pull_request:
+    paths: ['website/**', '.github/workflows/pages.yml', '.github/scripts/check-website.py']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-website-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: read
+    outputs:
+      pages_enabled: ${{ steps.pages.outputs.enabled }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate website
+        run: |
+          node --check website/main.js
+          python3 .github/scripts/check-website.py
+      - name: Check Pages configuration
+        id: pages
+        if: github.event_name != 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              const { data } = await github.rest.repos.getPages(context.repo);
+              const enabled = data.build_type === 'workflow';
+              core.setOutput('enabled', String(enabled));
+              if (!enabled) core.warning('Select GitHub Actions under Settings → Pages → Build and deployment → Source, then re-run this workflow.');
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              core.setOutput('enabled', 'false');
+              core.warning('GitHub Pages is not enabled. Select GitHub Actions under Settings → Pages → Build and deployment → Source, then re-run this workflow.');
+            }
+      - name: Package static site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: website
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/testing-client' && needs.build.outputs.pages_enabled == 'true'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -20,6 +20,10 @@ See [setup, packaging, controls and limitations](client/README.md),
 The frontend is shared by desktop and touch layouts. Native mobile packaging
 is not included. No external proxy is needed.
 
+The GitHub Pages project website lives in [`website/`](website/).
+See [website publishing and editing](docs/client-website.md) for the one-time
+Pages setup and automatic deployment workflow.
+
 ---
 
 # Lapis Obsidian
