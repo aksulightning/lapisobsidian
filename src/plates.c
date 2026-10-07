@@ -15,6 +15,7 @@
 #include <unistd.h>
 #endif
 #include "plates.h"
+#include "optional_features.h"
 #include "plate_contexts.h"
 #include "server_config.h"
 #include "beta173_rng.h"
@@ -263,6 +264,9 @@ bool plates_travel (PlayerData *p, const char *name) {
   if (!plates_enabled || who < 0 || id < 0 || p->client_fd < 0 || !p->health || (p->flags&0x22) ||
       player_plates[who] == id || get_program_time() < sessions[who].travelled || !plates_load((unsigned)id)) return false;
   if (!inventory_close(p)) return false;
+#if LAPIS_WORLD_EDIT == 1
+  world_edit_reset_player(p);
+#endif
   signs_reset_player(p); musicbox_reset_player(p); items_forget_player(p); mobs_forget_player(p);
   for (int i = 0; i < MAX_PLAYERS; i++) if (i != who && plates_player_active(&player_data[i]) && player_data[i].client_fd >= 0) {
     sc_removeEntity(player_data[i].client_fd,p->client_fd);

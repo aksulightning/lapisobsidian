@@ -22,6 +22,28 @@ Set `CC` to select a compiler. `DEBUG=1 ./build.sh` enables ASan/UBSan and addit
 conversion/shadow diagnostics. The existing MinGW `--9x` build option is retained.
 Embedded ESP-IDF support is inherited and has not been validated by this fork.
 
+### Optional gameplay features
+
+World edit and tree chopper are **disabled by default** and must be enabled
+when compiling. Enable either independently, or both:
+
+```sh
+LAPIS_WORLD_EDIT=1 ./build.sh
+LAPIS_TREE_CHOPPER=1 ./build.sh
+LAPIS_WORLD_EDIT=1 LAPIS_TREE_CHOPPER=1 ./build.sh
+```
+
+The same variables work with `build-alpine.sh`. Only the exact value `1`
+enables a feature; unset, empty, `0`, or other values disable it. Setting these
+variables when launching an already-built server has no effect. Rebuild without
+them to remove the features. For ESP-IDF, set them when configuring/reconfiguring
+the build; direct compiler invocations use `-DLAPIS_WORLD_EDIT=1` and/or
+`-DLAPIS_TREE_CHOPPER=1`.
+
+World edit adds admin-only `/we` selection, fill and replace commands. Tree
+chopper lets survival players fell an oak with an axe; sneak for single-block
+mining. See [optional feature commands and limits](docs/optional-features.md).
+
 ## Configuration
 
 The first startup creates `server.txt` in the working directory. Edit it and

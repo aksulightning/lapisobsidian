@@ -4,6 +4,9 @@ Commands use the Java 1.21.8/protocol 772 slash-command packets. The server send
 a small command tree on entering play, so modern clients recognize the names.
 No plugin, scripting runtime, database or permission framework is involved.
 
+Builds compiled with `LAPIS_WORLD_EDIT=1` also advertise admin-only `/we` commands;
+see [optional world edit](optional-features.md). Default builds do not expose them.
+
 | Command | Access | Behavior |
 | --- | --- | --- |
 | `/help` | Everyone | Lists command syntax |

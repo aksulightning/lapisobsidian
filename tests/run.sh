@@ -78,3 +78,4 @@ if ! .tests/packet_input 2>.tests/packet-rejections.log; then cat .tests/packet-
 "${CC:-gcc}" "${integration_flags[@]}" tests/security.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/security
 .tests/security
 ./tests/no-jar.sh
+./tests/optional-features.sh

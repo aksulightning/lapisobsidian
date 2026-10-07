@@ -48,4 +48,6 @@ if [[ "${DEBUG:-0}" == 1 ]]; then
   flags=(-O1 -g -Wall -Wextra -Wconversion -Wshadow -fsanitize=address,undefined -fno-omit-frame-pointer)
 fi
 # Disable contraction so density vectors do not depend on FMA availability.
+[[ "${LAPIS_WORLD_EDIT:-0}" != 1 ]] || flags+=(-DLAPIS_WORLD_EDIT=1)
+[[ "${LAPIS_TREE_CHOPPER:-0}" != 1 ]] || flags+=(-DLAPIS_TREE_CHOPPER=1)
 "$compiler" src/*.c "${flags[@]}" -ffp-contract=off -Iinclude -o "lapis-obsidian$exe" $windows_linker -lm

@@ -1,6 +1,7 @@
 /* Minecraft Java 1.21.8 / protocol 772 command and game-mode packets. */
 #include <string.h>
 #include "commands.h"
+#include "optional_features.h"
 #include "items.h"
 #include "packets.h"
 #include "procedures.h"
@@ -44,7 +45,11 @@ int cs_chatCommand (int fd, int length, bool signed_packet) {
   return 0;
 }
 int sc_commands (int fd) {
-  static const char *const names[] = {"help","seed","worldinfo","spawn","tp","time","gamemode","admin","spawnmob","music","plate","tps"};
+  static const char *const names[] = {"help","seed","worldinfo","spawn","tp","time","gamemode","admin","spawnmob","music","plate","tps",
+#if LAPIS_WORLD_EDIT == 1
+    "we",
+#endif
+  };
   const unsigned count = sizeof(names)/sizeof(names[0]);
   uint8_t data[512]; size_t used = 0;
   data[used++] = (uint8_t)(1+count*2); /* root, literals and greedy argument nodes */
