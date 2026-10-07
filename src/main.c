@@ -10,6 +10,8 @@
 #include "musicbox.h"
 #include "signs.h"
 #include "commands.h"
+#include "server_console.h"
+#include "server_stats.h"
 #include "world_border.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -586,6 +588,11 @@ int main (int argc, char **argv) {
   int64_t last_arrow_time = last_tick_time;
   int64_t last_mob_move_time = last_tick_time;
   int64_t last_music_time = last_tick_time;
+  server_stats_reset();
+  ServerConsole console;
+  server_console_init(&console);
+  if (!console.closed) puts("Console ready. Type help for commands.");
+  fflush(stdout);
 
   /**
    * Cycles through all connected clients, handling one packet at a time
@@ -597,6 +604,8 @@ int main (int argc, char **argv) {
   while (true) {
     // Check if it's time to yield to the idle task
     task_yield();
+    server_console_poll(&console,stdout);
+    if (console.stop) break;
 
     // Attempt to accept a new connection
     for (int i = 0; i < MAX_PLAYERS; i ++) {
@@ -640,7 +649,11 @@ int main (int argc, char **argv) {
     if (arrow_now-last_mob_move_time >= 50000) last_mob_move_time = arrow_now;
     if (arrow_now-last_music_time >= 20000) last_music_time = arrow_now;
     if (arrow_now-last_arrow_time >= 100000) last_arrow_time = arrow_now;
-    if (time_since_last_tick > TIME_BETWEEN_TICKS) last_tick_time = arrow_now;
+    if (time_since_last_tick > TIME_BETWEEN_TICKS) {
+      /* One process-wide cycle, regardless of the number of loaded Plates. */
+      server_stats_record_tick(time_since_last_tick);
+      last_tick_time = arrow_now;
+    }
 
     if (clients[client_index] == -1) continue;
 
@@ -663,13 +676,36 @@ int main (int argc, char **argv) {
 
   }
 
+  for (int i = 0; i < MAX_PLAYERS; i++) if (clients[i] >= 0) {
+    plates_select_for_fd(clients[i]);
+    disconnectClient(&clients[i],0);
+  }
+  bool saved = true;
+  for (unsigned plate = 0; plate < (plates_enabled ? PLATE_LIMIT : 1u); plate++) {
+    if (plates_enabled && !plates_is_loaded(plate)) continue;
+    if (!plates_select(plate)) continue;
+    writeBlockChangesToDisk(0,block_changes_count-1);
+    if (!doors_save()) saved = false;
+    if (!signs_save()) saved = false;
+    if (!farming_save()) saved = false;
+    if (!circuits_save()) saved = false;
+  }
+  writePlayerDataToDisk();
+  if (plates_enabled) plates_shutdown(); else musicbox_shutdown();
+  if (!saved) fputs("Could not save one or more world sidecar files.\n",stderr);
+
+  #ifdef _WIN32
+  closesocket(server_fd);
+  #else
   close(server_fd);
+  #endif
  
   #ifdef _WIN32 //cleanup windows socket
     WSACleanup();
   #endif
 
   printf("Server closed.\n");
+  return saved ? EXIT_SUCCESS : EXIT_FAILURE;
 
 }
 

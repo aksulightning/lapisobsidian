@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "commands.h"
+#include "server_stats.h"
 #include "mobs.h"
 #include "packets.h"
 #include "procedures.h"
@@ -38,6 +39,13 @@ int main (void) {
   q->x = -10; q->y = 90; q->z = 20;
   assert(commands_configure(NULL)); commands_reset_player(p); commands_reset_player(q);
   assert(run("help") == COMMAND_OK && strstr(response,"/gamemode"));
+  assert(strstr(response,"/tps"));
+  server_stats_reset();
+  assert(run("/tps") == COMMAND_OK && strstr(response,"warming up"));
+  server_stats_record_tick(2000000);
+  assert(run("tps") == COMMAND_OK && strstr(response,"0.50 / 1.00"));
+  assert(run("tps extra") == COMMAND_USAGE);
+  assert(run("stop") == COMMAND_UNKNOWN); /* Console shutdown is never a player command. */
   assert(run("  /seed  ") == COMMAND_UNKNOWN); /* slash only at command start */
   world_seed = UINT64_C(0x8000000000000000);
   assert(run("/seed") == COMMAND_OK && strstr(response,"-9223372036854775808"));

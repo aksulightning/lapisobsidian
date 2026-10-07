@@ -6,7 +6,7 @@ flags=(-std=c11 -O2 -Wall -Wextra -Wconversion -Wshadow -Werror -ffp-contract=of
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   flags+=(-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie)
 fi
-for source in plates plate_state plate_terrain fluids circuits notes midi musicbox farming packet_input server_config; do
+for source in plates plate_state plate_terrain fluids circuits notes midi musicbox farming packet_input server_config server_stats server_console; do
   "${CC:-gcc}" "${flags[@]}" -c "src/$source.c" -o ".tests/$source.o"
 done
 "${CC:-gcc}" "${flags[@]}" tests/server_config.c tests/sanitizer.c src/server_config.c src/beta173_rng.c -o .tests/server-config
@@ -26,8 +26,10 @@ rm -f .tests/demo/songs/lapis-demo.mid
 "${CC:-gcc}" "${flags[@]}" -c src/signs.c -o .tests/signs.o
 "${CC:-gcc}" "${flags[@]}" -c src/sign_packets.c -o .tests/sign-packets.o
 "${CC:-gcc}" "${flags[@]}" -c src/command_packets.c -o .tests/command-packets.o
-"${CC:-gcc}" "${flags[@]}" tests/commands.c tests/sanitizer.c src/commands.c src/world_border.c src/globals.c src/plate_state.c -o .tests/commands
+"${CC:-gcc}" "${flags[@]}" tests/commands.c tests/sanitizer.c src/commands.c src/server_stats.c src/world_border.c src/globals.c src/plate_state.c -o .tests/commands
 .tests/commands
+"${CC:-gcc}" "${flags[@]}" tests/server_console.c tests/sanitizer.c src/server_console.c src/server_stats.c src/globals.c src/plate_state.c -o .tests/server-console
+.tests/server-console
 "${CC:-gcc}" "${flags[@]}" tests/world_border.c tests/sanitizer.c src/world_border.c src/globals.c src/plate_state.c -o .tests/world-border
 .tests/world-border
 "${CC:-gcc}" "${flags[@]}" tests/farlands.c tests/sanitizer.c src/beta173_*.c -lm -o .tests/farlands

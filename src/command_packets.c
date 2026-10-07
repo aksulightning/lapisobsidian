@@ -44,7 +44,7 @@ int cs_chatCommand (int fd, int length, bool signed_packet) {
   return 0;
 }
 int sc_commands (int fd) {
-  static const char *const names[] = {"help","seed","worldinfo","spawn","tp","time","gamemode","admin","spawnmob","music","plate"};
+  static const char *const names[] = {"help","seed","worldinfo","spawn","tp","time","gamemode","admin","spawnmob","music","plate","tps"};
   const unsigned count = sizeof(names)/sizeof(names[0]);
   uint8_t data[512]; size_t used = 0;
   data[used++] = (uint8_t)(1+count*2); /* root, literals and greedy argument nodes */

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "commands.h"
+#include "server_stats.h"
 #include "server_config.h"
 #include "world_border.h"
 #include "mobs.h"
@@ -120,7 +121,12 @@ CommandResult commands_execute (PlayerData *player, const char *input, size_t le
   if (!strcmp(argv[0],"music")) return musicbox_command(player,(int)argc,argv);
   if (!strcmp(argv[0],"help")) {
     if (argc != 1) return reply(player,COMMAND_USAGE,"Usage: /help");
-    return reply(player,COMMAND_OK,"Commands: /plate list|go <name>, /help, /seed, /worldinfo, /spawn, /music, /time query, /admin <token>. Admin: /tp <player|x y z>, /time set <day|night|0..23999>, /gamemode <mode> [player], /spawnmob <type> [x y z].");
+    return reply(player,COMMAND_OK,"Commands: /plate list|go <name>, /help, /tps, /seed, /worldinfo, /spawn, /music, /time query, /admin <token>. Admin: /tp <player|x y z>, /time set <day|night|0..23999>, /gamemode <mode> [player], /spawnmob <type> [x y z].");
+  }
+  if (!strcmp(argv[0],"tps")) {
+    if (argc != 1) return reply(player,COMMAND_USAGE,"Usage: /tps");
+    server_stats_format(output,sizeof(output));
+    return reply(player,COMMAND_OK,output);
   }
   if (!strcmp(argv[0],"admin")) {
     if (argc != 2) return reply(player,COMMAND_USAGE,"Usage: /admin <token>");

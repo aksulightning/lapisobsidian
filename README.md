@@ -96,7 +96,7 @@ and limits](docs/fluids.md).
 
 ## Commands
 
-`/help`, `/seed`, `/worldinfo`, `/spawn`, and `/time query` work for everyone.
+`/help`, `/tps`, `/seed`, `/worldinfo`, `/spawn`, and `/time query` work for everyone.
 `/tp`, `/time set`, `/gamemode`, and `/spawnmob` require administrator access. Configure a
 private random `LAPIS_ADMIN_TOKEN` environment value (32..128 non-space ASCII
 bytes), then use `/admin <token>` in-game. Admin login is disabled by default.
@@ -107,6 +107,11 @@ administrator commands on a trusted network or protected tunnel. See
 [command syntax, permissions and limits](docs/commands.md) for details.
 [Inventory and packet hardening](docs/security-hardening.md) describes the current
 protections, regression tests and remaining network limitations.
+
+The running server also accepts `help`, `tps`, `list`, `say <message>`, and
+`stop` from its terminal. `stop` saves pending state and shuts down. TPS reports
+the actual main tick rate against the configured target (currently 1 TPS).
+See [console details](docs/commands.md#tps-and-server-console).
 
 ## Signs
 

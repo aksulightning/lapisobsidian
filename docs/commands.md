@@ -7,6 +7,7 @@ No plugin, scripting runtime, database or permission framework is involved.
 | Command | Access | Behavior |
 | --- | --- | --- |
 | `/help` | Everyone | Lists command syntax |
+| `/tps` | Everyone | Measured main-loop tick rate, configured target, and sample size |
 | `/seed` | Everyone | Shows the signed 64-bit world seed |
 | `/worldinfo` | Everyone | Generator/protocol versions, mirroring, coordinate bounds, time |
 | `/spawn` | Everyone | Teleports the caller to the existing world spawn at X/Z=8/8 |
@@ -31,6 +32,48 @@ be used while dead. They update stored position, fall-distance tracking, chunk
 center/view, the caller's position and the entity position seen by other players.
 They preserve inventory. Spawn retains the generator's existing fixed location;
 it can be underwater, on a canopy, or obstructed by edits.
+
+## TPS and server console
+
+`/tps` and console `tps` report the same process-wide measurement: completed
+main server tick cycles divided by their total elapsed monotonic time over the
+last 60 cycles (or all available cycles during startup). Before the first tick,
+the response says `warming up`. The displayed rate is capped at the configured
+target from `TIME_BETWEEN_TICKS`. The current default is **1 TPS**, not vanilla's
+20 TPS; movement, music and other subsystem updates have their own cadences.
+The measurement counts a cycle once even when multiple Plates are loaded. It
+includes delays between ticks, without counting missed ticks as completed work.
+
+On desktop builds, type commands into the terminal running `lapis-obsidian`:
+
+| Console command | Behavior |
+| --- | --- |
+| `help` | Lists console commands |
+| `tps` | Shows the same statistics as `/tps` |
+| `list` | Lists online players across all Plates, excluding pending logins |
+| `say <message>` | Broadcasts `[Server] <message>` to all online players |
+| `stop` | Disconnects clients, writes pending world/player state, and exits |
+
+An optional leading slash is accepted. Console commands are local to standard
+input and do not require `LAPIS_ADMIN_TOKEN`. Player commands and permissions
+remain separate: `/stop`, `/say`, and `/list` are not exposed in-game. Lines are
+limited to 256 bytes of printable ASCII plus tab separators; oversized or invalid
+lines are discarded in full. `say` consumes the remainder of the line as its
+message. Linux/POSIX terminals and pipes, and Windows consoles and redirected
+input are supported. ESP builds do not poll standard input.
+
+Input is polled without waiting for a line, with a fixed byte budget per loop.
+Closing stdin disables the console and leaves the server running; a final line
+without a newline is processed on EOF. For example, this runs three commands and shuts down:
+
+```sh
+printf 'help\ntps\nstop\n' | ./lapis-obsidian
+```
+
+There is no command history or completion. Use `stop` for orderly shutdown; terminating the process
+with a signal retains the existing behavior. Saving uses the existing serializer
+and sidecar formats, including each loaded Plate, and respects builds with disk
+sync disabled.
 
 ## Administrator setup
 
