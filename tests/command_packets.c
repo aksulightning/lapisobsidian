@@ -61,17 +61,17 @@ int main (void) {
   setup(); assert(cs_chatCommand(sockets[1],1000000,false) != 0); cleanup();
   /* Decode the complete advertised command graph independently. */
   setup(); assert(sc_commands(sockets[1]) == 0); uint8_t wire[512]; size_t length = frame(wire,sizeof(wire)), at = 0;
-  assert(value(wire,length,&at) == 0x10); assert(value(wire,length,&at) == 23);
-  const char *names[] = {"help","seed","worldinfo","spawn","tp","time","gamemode","admin","spawnmob","music","plate"};
-  for (unsigned i = 0; i < 23; i ++) {
+  assert(value(wire,length,&at) == 0x10); assert(value(wire,length,&at) == 25);
+  const char *names[] = {"help","seed","worldinfo","spawn","tp","time","gamemode","admin","spawnmob","music","plate","tps"};
+  for (unsigned i = 0; i < 25; i ++) {
     unsigned flags = value(wire,length,&at), children = value(wire,length,&at);
-    assert(flags == (i == 0 ? 0u : i < 12 ? 5u : 6u)); assert(children == (i == 0 ? 11u : i < 12 ? 1u : 0u));
-    for (unsigned j = 0; j < children; j ++) assert(value(wire,length,&at) == (i == 0 ? j+1 : i+11));
+    assert(flags == (i == 0 ? 0u : i < 13 ? 5u : 6u)); assert(children == (i == 0 ? 12u : i < 13 ? 1u : 0u));
+    for (unsigned j = 0; j < children; j ++) assert(value(wire,length,&at) == (i == 0 ? j+1 : i+12));
     if (i) {
-      const char *name = i < 12 ? names[i-1] : "arguments";
+      const char *name = i < 13 ? names[i-1] : "arguments";
       unsigned n = value(wire,length,&at); assert(n == strlen(name) && n <= length-at);
       assert(!memcmp(wire+at,name,n)); at += n;
-      if (i >= 12) { assert(value(wire,length,&at) == 5); assert(value(wire,length,&at) == 2); }
+      if (i >= 13) { assert(value(wire,length,&at) == 5); assert(value(wire,length,&at) == 2); }
     }
   }
   assert(value(wire,length,&at) == 0 && at == length); cleanup();
