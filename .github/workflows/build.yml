@@ -19,12 +19,14 @@ jobs:
       fail-fast: false
       matrix:
         arch: [amd64, riscv64]
-        variant: [native, web]
+        variant: [native, web, web2]
         include:
           - variant: native
             web_client: '0'
           - variant: web
             web_client: '1'
+          - variant: web2
+            web_client: '2'
     env:
       ALPINE_IMAGE: alpine:3.23.6
       TARGET_ARCH: ${{ matrix.arch }}
@@ -44,6 +46,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Build separate alternative application
+        if: matrix.variant == 'web2'
+        run: npm --prefix client2 run build
       - name: Archive matching source
         run: |
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
@@ -78,7 +83,7 @@ jobs:
                 -o .tests/alpine-config
               .tests/alpine-config
               nm "$package/lapis-obsidian" > .tests/alpine-symbols.txt
-              if [ "$LAPIS_OBSIDIAN_WEB_CLIENT" = 1 ]; then
+              if [ "$LAPIS_OBSIDIAN_WEB_CLIENT" = 1 ] || [ "$LAPIS_OBSIDIAN_WEB_CLIENT" = 2 ]; then
                 grep -q "web_client_listen" .tests/alpine-symbols.txt
                 ./tests/web-client.sh
               elif grep -q "web_client_" .tests/alpine-symbols.txt; then
@@ -89,6 +94,10 @@ jobs:
               cp client/public/assets/LICENSE.md "$package/CLIENT-ASSET-LICENSE.md"
               cp client/public/assets/manifest.json "$package/CLIENT-ASSET-MANIFEST.json"
               cp -R docs "$package/docs"
+              if [ "$LAPIS_OBSIDIAN_WEB_CLIENT" = 2 ]; then
+                mkdir -p "$package/client2"
+                cp -R client2/dist "$package/client2/dist"
+              fi
               {
                 printf "Project: Lapis Obsidian\nCommit: %s\n" "$SOURCE_SHA"
                 printf "Architecture: %s\nVariant: %s\n" "$TARGET_ARCH" "$BUILD_VARIANT"
@@ -105,10 +114,15 @@ jobs:
               sha256sum "$archive" source.tar.gz > SHA256SUMS
             '
       - name: Exercise web gameplay on the shipped architecture
-        if: matrix.variant == 'web'
+        if: matrix.variant == 'web' || matrix.variant == 'web2'
         env:
           WEB_TEST_TIMEOUT_MS: '180000'
-        run: node tests/web_integration.mjs .tests/alpine-package/lapis-obsidian
+        run: |
+          if [ "$LAPIS_OBSIDIAN_WEB_CLIENT" = 2 ]; then
+            node tests/web_integration.mjs .tests/alpine-package/lapis-obsidian --client2
+          else
+            node tests/web_integration.mjs .tests/alpine-package/lapis-obsidian
+          fi
       - name: Upload architecture artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

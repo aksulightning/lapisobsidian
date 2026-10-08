@@ -1,48 +1,507 @@
 // Original protocol-772 integration with js-minecraft. SPDX-License-Identifier: MIT
-import {Cursor,Payload,Stream,frame,chunkData,movement,stack} from './wire.mjs';
-import {stateToBlock,itemToBlock,blockToItem,items} from './registry.mjs';
-import WorldClient from '../src/js/net/minecraft/client/world/WorldClient.js';
-import Chunk from '../src/js/net/minecraft/client/world/Chunk.js';
-import PlayerControllerMultiplayer from '../src/js/net/minecraft/client/network/controller/PlayerControllerMultiplayer.js';
-import PlayerEntity from '../src/js/net/minecraft/client/entity/PlayerEntity.js';
-import GuiDisconnected from '../src/js/net/minecraft/client/gui/screens/GuiDisconnected.js';
-import ProtocolState from '../src/js/net/minecraft/client/network/ProtocolState.js';
-import GuiInventory from './inventory.mjs';
+import {
+  Cursor,
+  Payload,
+  Stream,
+  frame,
+  chunkData,
+  movement,
+  stack,
+} from "./wire.mjs";
+import { stateToBlock, itemToBlock, blockToItem, items } from "./registry.mjs";
+import WorldClient from "../src/js/net/minecraft/client/world/WorldClient.js";
+import Chunk from "../src/js/net/minecraft/client/world/Chunk.js";
+import PlayerControllerMultiplayer from "../src/js/net/minecraft/client/network/controller/PlayerControllerMultiplayer.js";
+import PlayerEntity from "../src/js/net/minecraft/client/entity/PlayerEntity.js";
+import GuiDisconnected from "../src/js/net/minecraft/client/gui/screens/GuiDisconnected.js";
+import ProtocolState from "../src/js/net/minecraft/client/network/ProtocolState.js";
+import GuiInventory from "./inventory.mjs";
 export default class Connection {
-  constructor(app){this.app=app;this.phase='login';this.ready=false;this.hasPosition=false;this.sequence=0;this.slots=new Map();this.entities=new Map();this.registries=new Map();this.playerInfoMap=new Map();this.windowId=0;this.stateId=0;this.mode=0;this.closed=false;this.selected=-1;this.timers=new Set();}
-  connect(address){let url;try{url=new URL(address.includes('://')?address:`${location.protocol}//${address}`);if(!['http:','https:'].includes(url.protocol)||url.username||url.password||url.pathname!=='/'||url.search||url.hash)throw Error('Enter the server HTTP(S) origin.');if(url.origin!==location.origin){location.assign(url.origin);return;}const name=this.app.getSession().getProfile().getUsername();if(!/^[A-Za-z0-9_]{1,15}$/.test(name))throw Error('Name must contain 1–15 letters, digits or underscores.');this.socket=new WebSocket(`${url.protocol==='https:'?'wss:':'ws:'}//${url.host}/ws`);this.socket.binaryType='arraybuffer';const stream=new Stream((id,p)=>this.receive(id,p));this.socket.onopen=()=>{this.send(0,p=>p.vi(772).str(url.hostname).u16(25565).vi(2));const compact=this.app.getSession().getProfile().getCompactUUID();this.send(0,p=>p.str(name).bytes(Uint8Array.from(compact.match(/../g),n=>parseInt(n,16))));};this.socket.onmessage=event=>{try{stream.push(new Uint8Array(event.data));}catch(error){this.fail(error.message);}};this.socket.onerror=()=>this.fail('Cannot connect to the server web port.');this.socket.onclose=()=>{if(!this.closed)this.fail('Server closed the connection.');};this.deadline=setTimeout(()=>this.fail('Login or terrain timed out. Check the server log and protocol 772.'),60000);}catch(error){this.fail(error.message);} }
-  send(id,fill){if(this.socket?.readyState===WebSocket.OPEN){if(this.socket.bufferedAmount>65536){this.fail('Connection is too slow.');return;}this.socket.send(frame(id,fill));}}
-  getState(){return this.phase==='play'?ProtocolState.PLAY:ProtocolState.LOGIN;}getNetworkManager(){return this;}getPlayerInfoMap(){return this.playerInfoMap;}isConnected(){return this.socket?.readyState===WebSocket.OPEN;}
-  close(){this.closed=true;this.ready=false;clearTimeout(this.deadline);for(const timer of this.timers)clearTimeout(timer);this.timers.clear();this.socket?.close(1000);}
-  fail(message){if(this.closed)return;this.close();this.app.loadWorld(null);this.app.displayScreen(new GuiDisconnected(message));}
-  sendPacket(packet){const kind=packet.constructor.name,player=this.app.player;if(kind==='ClientChatPacket'){const message=packet.message.slice(0,256);if(message.startsWith('/'))this.send(6,p=>p.str(message.slice(1)));else this.send(8,p=>p.str(message).u64(BigInt(Date.now())).u64(0).u8(0).vi(0).bytes(new Uint8Array(3)).u8(0));}else if(kind==='ClientSwingArmPacket')this.send(0x3c,p=>p.vi(0));else if(kind==='ClientPlayerStatePacket'){if(packet.state===3||packet.state===4)this.send(0x29,p=>p.vi(player.id).vi(packet.state===3?1:2).vi(0));}else if(kind.startsWith('ClientPlayer')&&this.ready){this.syncSelection();if(this.socket?.readyState===WebSocket.OPEN)this.socket.send(movement(player));this.send(0x2a,p=>p.u8((player.isSneaking()?32:0)|(player.isSprinting()?64:0)));}}
-  syncSelection(){const index=this.app.player?.inventory.selectedSlotIndex;if(Number.isInteger(index)&&index!==this.selected){this.selected=index;this.send(0x34,p=>p.u16(index));}}
-  receive(id,p){
-    if(this.phase==='login'){if(id!==2)throw Error('Login rejected (offline protocol 772 required).');this.phase='configuration';this.send(3);this.send(0,w=>w.str('en_US').u8(2).vi(0).u8(1).u8(127).vi(1).u8(0).u8(1).vi(0));return;}
-    if(this.phase==='configuration'){if(id===14){if(p.vi()!==1)throw Error('Unsupported core packs');const pack=[p.str(),p.str(),p.str()];if(pack.join(':')!=='minecraft:core:1.21.8')throw Error('Protocol 772 / core 1.21.8 required');this.send(7,w=>{w.vi(1);for(const value of pack)w.str(value);});}else if(id===7){const name=p.str(),count=p.vi();if(count<0||count>4096)throw Error('Registry limit exceeded');const entries=[];for(let n=0;n<count;n++){entries.push(p.str());if(p.u8())throw Error('Unsupported registry data');}this.registries.set(name,entries);}else if(id===3){this.phase='play';this.send(3);}return;}
-    const app=this.app,player=app.player;
-    switch(id){
-      case 0x2b:{const entity=p.i32();p.u8();const count=p.vi();for(let n=0;n<count;n++)p.str();p.vi();p.vi();p.vi();p.bytes(3);p.vi();p.str();p.u64();this.mode=p.u8();app.playerController=new PlayerControllerMultiplayer(app,this,entity);app.loadWorld(new WorldClient(app));app.player.health=20;app.player.food=20;app.player.inventory.items=[];break;}
-      case 0x41:{const teleport=p.vi(),coords=[p.f64(),p.f64(),p.f64()];p.bytes(24);const yaw=p.f32(),pitch=p.f32();if(p.i32()!==0)throw Error('Relative teleport unsupported');player.setPositionAndRotation(...coords,yaw,pitch);player.motionX=player.motionY=player.motionZ=0;this.hasPosition=true;this.send(0,w=>w.vi(teleport));this.loaded();break;}
-      case 0x27:{const incoming=chunkData(p),provider=app.world.getChunkProvider();const old=provider.chunks.get(incoming.x+(incoming.z<<16));if(old)app.world.group.remove(old.group);const chunk=new Chunk(app.world,incoming.x,incoming.z);for(let layer=0;layer<20;layer++){const section=chunk.sections[layer];section.blocks=Array.from(incoming.blocks.subarray(layer*4096,(layer+1)*4096),state=>stateToBlock.get(state)??1);section.empty=!section.blocks.some(Boolean);}chunk.loaded=true;chunk.biomes=incoming.biomes;for(let x=0;x<16;x++)for(let z=0;z<16;z++){let y=319;while(y>0&&!chunk.getBlockAt(x,y,z))y--;chunk.heightMap[z*16+x]=y+1;}provider.chunks.set(incoming.x+(incoming.z<<16),chunk);app.world.group.add(chunk.group);app.worldRenderer.flushRebuild=true;this.loaded();break;}
-      case 0x08:{const[x,y,z]=p.pos(),state=p.vi();if(y<0||y>=320)break;const old=app.world.getBlockAt(x,y,z);if(old&&!state)app.particleRenderer.spawnBlockBreakParticle(app.world,x,y,z);app.world.setBlockAt(x,y,z,stateToBlock.get(state)??1);app.worldRenderer.flushRebuild=true;app.soundManager.playSound(state?'step.stone':'random.glass',x,y,z,.5,1);break;}
-      case 0x26:this.send(0x1b,w=>w.u64(p.u64()));break;
-      case 0x14:{const window=p.vi();this.stateId=p.vi();const slot=p.u16(),value=stack(p);this.slots.set(`${window}:${slot}`,value);if(window===0&&slot>=36&&slot<45){player.inventory.setItem(slot-36,value.count?(itemToBlock.get(value.item)||1):0);app.itemRenderer.scheduleDirty('hotbar');}break;}
-      case 0x59:this.cursor=stack(p);break;
-      case 0x62:player.inventory.selectedSlotIndex=p.u8();this.selected=player.inventory.selectedSlotIndex;break;
-      case 0x61:player.health=p.f32();player.food=p.vi();if(player.health<=0)app.ingameOverlay.chatOverlay.addMessage('You died. Press R to respawn.');break;
-      case 0x72:if(p.u8()===8)app.ingameOverlay.chatOverlay.addMessage(new TextDecoder().decode(p.bytes(p.u16())));break;
-      case 0x22:if(p.u8()===3){this.mode=p.f32();if(this.mode!==1)player.flying=false;}break;
-      case 0x34:this.windowId=p.vi();p.vi();app.displayScreen(new GuiInventory(this));break;
-      case 0x01:{const entity=p.vi();p.bytes(16);const type=p.vi(),x=p.f64(),y=p.f64(),z=p.f64();if(entity===player.id||this.entities.size>=128)break;const other=new PlayerEntity(app,app.world,entity);other.username=`Entity ${type}`;other.setPositionAndRotation(x,y,z,0,0);other.onUpdate=()=>{};this.entities.set(entity,other);app.world.addEntity(other);break;}
-      case 0x1f:{const other=this.entities.get(p.vi()),x=p.f64(),y=p.f64(),z=p.f64();if(other)other.setPosition(x,y,z);break;}
-      case 0x2e:case 0x2f:{const other=this.entities.get(p.vi()),delta=[p.u16(),p.u16(),p.u16()].map(n=>(n>32767?n-65536:n)/4096);if(other)other.setPosition(other.x+delta[0],other.y+delta[1],other.z+delta[2]);break;}
-      case 0x46:for(let n=p.vi();n>0;n--){const entity=p.vi();app.world.removeEntityById(entity);this.entities.delete(entity);}break;
-      case 0x6a:p.u64();app.world.time=Number(p.u64()%24000n);break;
-      case 0x4b:this.ready=this.hasPosition=false;this.entities.clear();p.vi();p.str();p.u64();this.mode=p.u8();app.loadWorld(new WorldClient(app));break;
+  constructor(app) {
+    this.app = app;
+    this.phase = "login";
+    this.ready = false;
+    this.hasPosition = false;
+    this.sequence = 0;
+    this.slots = new Map();
+    this.entities = new Map();
+    this.registries = new Map();
+    this.playerInfoMap = new Map();
+    this.windowId = 0;
+    this.stateId = 0;
+    this.mode = 0;
+    this.closed = false;
+    this.selected = -1;
+    this.timers = new Set();
+  }
+  connect(address) {
+    let url;
+    try {
+      url = new URL(
+        address.includes("://") ? address : `${location.protocol}//${address}`,
+      );
+      if (
+        !["http:", "https:"].includes(url.protocol) ||
+        url.username ||
+        url.password ||
+        url.pathname !== "/" ||
+        url.search ||
+        url.hash
+      )
+        throw Error("Enter the server HTTP(S) origin.");
+      if (url.origin !== location.origin) {
+        location.assign(url.origin);
+        return;
+      }
+      const name = this.app.getSession().getProfile().getUsername();
+      if (!/^[A-Za-z0-9_]{1,15}$/.test(name))
+        throw Error("Name must contain 1–15 letters, digits or underscores.");
+      this.socket = new WebSocket(
+        `${url.protocol === "https:" ? "wss:" : "ws:"}//${url.host}/ws`,
+      );
+      this.socket.binaryType = "arraybuffer";
+      const stream = new Stream((id, p) => this.receive(id, p));
+      this.socket.onopen = () => {
+        this.send(0, (p) => p.vi(772).str(url.hostname).u16(25565).vi(2));
+        const compact = this.app.getSession().getProfile().getCompactUUID();
+        this.send(0, (p) =>
+          p
+            .str(name)
+            .bytes(
+              Uint8Array.from(compact.match(/../g), (n) => parseInt(n, 16)),
+            ),
+        );
+      };
+      this.socket.onmessage = (event) => {
+        try {
+          stream.push(new Uint8Array(event.data));
+        } catch (error) {
+          this.fail(error.message);
+        }
+      };
+      this.socket.onerror = () =>
+        this.fail("Cannot connect to the server web port.");
+      this.socket.onclose = () => {
+        if (!this.closed) this.fail("Server closed the connection.");
+      };
+      this.deadline = setTimeout(
+        () =>
+          this.fail(
+            "Login or terrain timed out. Check the server log and protocol 772.",
+          ),
+        60000,
+      );
+    } catch (error) {
+      this.fail(error.message);
     }
   }
-  loaded(){const player=this.app.player;if(this.ready||!this.hasPosition||!this.app.world.getChunkProvider().chunkExists(Math.floor(player.x/16),Math.floor(player.z/16)))return;this.ready=true;clearTimeout(this.deadline);this.app.loadingScreen=null;this.app.displayScreen(null);this.send(0x2b);this.syncSelection();}
-  action(button){if(!this.ready||this.app.player.health<=0)return;this.syncSelection();const hit=this.app.player.rayTrace(5,this.app.timer.partialTicks);if(button===0){this.app.player.swingArm();if(!hit)return;const face=hit.face.y===1?1:hit.face.y===-1?0:hit.face.z===-1?2:hit.face.z===1?3:hit.face.x===-1?4:5;const dig=(status)=>this.send(0x28,p=>p.vi(status).pos(hit.x,hit.y,hit.z).u8(face).vi(++this.sequence));dig(0);if(this.mode!==1){const timer=setTimeout(()=>{this.timers.delete(timer);if(this.ready)dig(2);},750);this.timers.add(timer);}}else if(button===2){if(hit){const face=hit.face.y===1?1:hit.face.y===-1?0:hit.face.z===-1?2:hit.face.z===1?3:hit.face.x===-1?4:5;this.send(0x3f,p=>p.vi(0).pos(hit.x,hit.y,hit.z).vi(face).f32(.5).f32(.5).f32(.5).u8(0).u8(0).vi(++this.sequence));}else this.send(0x40,p=>p.vi(0).vi(++this.sequence).f32(this.app.player.rotationYaw).f32(this.app.player.rotationPitch));}}
-  creative(block,slot=this.app.player.inventory.selectedSlotIndex){if(this.mode!==1)return;const item=blockToItem.get(block);if(item)this.send(0x37,p=>p.u16(36+slot).vi(64).vi(item).vi(0).vi(0));}
+  send(id, fill) {
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      if (this.socket.bufferedAmount > 65536) {
+        this.fail("Connection is too slow.");
+        return;
+      }
+      this.socket.send(frame(id, fill));
+    }
+  }
+  getState() {
+    return this.phase === "play" ? ProtocolState.PLAY : ProtocolState.LOGIN;
+  }
+  getNetworkManager() {
+    return this;
+  }
+  getPlayerInfoMap() {
+    return this.playerInfoMap;
+  }
+  isConnected() {
+    return this.socket?.readyState === WebSocket.OPEN;
+  }
+  close() {
+    this.closed = true;
+    this.ready = false;
+    clearTimeout(this.deadline);
+    for (const timer of this.timers) clearTimeout(timer);
+    this.timers.clear();
+    this.socket?.close(1000);
+  }
+  fail(message) {
+    if (this.closed) return;
+    this.close();
+    this.app.loadWorld(null);
+    this.app.displayScreen(new GuiDisconnected(message));
+  }
+  sendPacket(packet) {
+    const kind = packet.constructor.name,
+      player = this.app.player;
+    if (kind === "ClientChatPacket") {
+      const message = packet.message.slice(0, 256);
+      if (message.startsWith("/")) this.send(6, (p) => p.str(message.slice(1)));
+      else
+        this.send(8, (p) =>
+          p
+            .str(message)
+            .u64(BigInt(Date.now()))
+            .u64(0)
+            .u8(0)
+            .vi(0)
+            .bytes(new Uint8Array(3))
+            .u8(0),
+        );
+    } else if (kind === "ClientSwingArmPacket") this.send(0x3c, (p) => p.vi(0));
+    else if (kind === "ClientPlayerStatePacket") {
+      if (packet.state === 3 || packet.state === 4)
+        this.send(0x29, (p) =>
+          p
+            .vi(player.id)
+            .vi(packet.state === 3 ? 1 : 2)
+            .vi(0),
+        );
+    } else if (kind.startsWith("ClientPlayer") && this.ready) {
+      this.syncSelection();
+      if (this.socket?.readyState === WebSocket.OPEN)
+        this.socket.send(movement(player));
+      this.send(0x2a, (p) =>
+        p.u8((player.isSneaking() ? 32 : 0) | (player.isSprinting() ? 64 : 0)),
+      );
+    }
+  }
+  syncSelection() {
+    const index = this.app.player?.inventory.selectedSlotIndex;
+    if (Number.isInteger(index) && index !== this.selected) {
+      this.selected = index;
+      this.send(0x34, (p) => p.u16(index));
+    }
+  }
+  receive(id, p) {
+    if (this.phase === "login") {
+      if (id !== 2)
+        throw Error("Login rejected (offline protocol 772 required).");
+      this.phase = "configuration";
+      this.send(3);
+      this.send(0, (w) =>
+        w.str("en_US").u8(2).vi(0).u8(1).u8(127).vi(1).u8(0).u8(1).vi(0),
+      );
+      return;
+    }
+    if (this.phase === "configuration") {
+      if (id === 14) {
+        if (p.vi() !== 1) throw Error("Unsupported core packs");
+        const pack = [p.str(), p.str(), p.str()];
+        if (pack.join(":") !== "minecraft:core:1.21.8")
+          throw Error("Protocol 772 / core 1.21.8 required");
+        this.send(7, (w) => {
+          w.vi(1);
+          for (const value of pack) w.str(value);
+        });
+      } else if (id === 7) {
+        const name = p.str(),
+          count = p.vi();
+        if (count < 0 || count > 4096) throw Error("Registry limit exceeded");
+        const entries = [];
+        for (let n = 0; n < count; n++) {
+          entries.push(p.str());
+          if (p.u8()) throw Error("Unsupported registry data");
+        }
+        this.registries.set(name, entries);
+      } else if (id === 3) {
+        this.phase = "play";
+        this.send(3);
+      }
+      return;
+    }
+    const app = this.app,
+      player = app.player;
+    switch (id) {
+      case 0x2b: {
+        const entity = p.i32();
+        p.u8();
+        const count = p.vi();
+        for (let n = 0; n < count; n++) p.str();
+        p.vi();
+        p.vi();
+        p.vi();
+        p.bytes(3);
+        p.vi();
+        p.str();
+        p.u64();
+        this.mode = p.u8();
+        app.playerController = new PlayerControllerMultiplayer(
+          app,
+          this,
+          entity,
+        );
+        app.loadWorld(new WorldClient(app));
+        app.player.health = 20;
+        app.player.food = 20;
+        app.player.inventory.items = [];
+        break;
+      }
+      case 0x41: {
+        const teleport = p.vi(),
+          coords = [p.f64(), p.f64(), p.f64()];
+        p.bytes(24);
+        const yaw = p.f32(),
+          pitch = p.f32();
+        if (p.i32() !== 0) throw Error("Relative teleport unsupported");
+        player.setPositionAndRotation(...coords, yaw, pitch);
+        player.motionX = player.motionY = player.motionZ = 0;
+        this.hasPosition = true;
+        this.send(0, (w) => w.vi(teleport));
+        this.loaded();
+        break;
+      }
+      case 0x27: {
+        const incoming = chunkData(p),
+          provider = app.world.getChunkProvider();
+        const old = provider.chunks.get(incoming.x + (incoming.z << 16));
+        if (old) app.world.group.remove(old.group);
+        const chunk = new Chunk(app.world, incoming.x, incoming.z);
+        for (let layer = 0; layer < 20; layer++) {
+          const section = chunk.sections[layer];
+          section.blocks = Array.from(
+            incoming.blocks.subarray(layer * 4096, (layer + 1) * 4096),
+            (state) => stateToBlock.get(state) ?? 1,
+          );
+          section.empty = !section.blocks.some(Boolean);
+        }
+        chunk.loaded = true;
+        chunk.biomes = incoming.biomes;
+        for (let x = 0; x < 16; x++)
+          for (let z = 0; z < 16; z++) {
+            let y = 319;
+            while (y > 0 && !chunk.getBlockAt(x, y, z)) y--;
+            chunk.heightMap[z * 16 + x] = y + 1;
+          }
+        provider.chunks.set(incoming.x + (incoming.z << 16), chunk);
+        app.world.group.add(chunk.group);
+        app.worldRenderer.flushRebuild = true;
+        this.loaded();
+        break;
+      }
+      case 0x08: {
+        const [x, y, z] = p.pos(),
+          state = p.vi();
+        if (y < 0 || y >= 320) break;
+        const old = app.world.getBlockAt(x, y, z);
+        if (old && !state)
+          app.particleRenderer.spawnBlockBreakParticle(app.world, x, y, z);
+        app.world.setBlockAt(x, y, z, stateToBlock.get(state) ?? 1);
+        app.worldRenderer.flushRebuild = true;
+        app.soundManager.playSound(
+          state ? "step.stone" : "random.glass",
+          x,
+          y,
+          z,
+          0.5,
+          1,
+        );
+        break;
+      }
+      case 0x26:
+        this.send(0x1b, (w) => w.u64(p.u64()));
+        break;
+      case 0x14: {
+        const window = p.vi();
+        this.stateId = p.vi();
+        const slot = p.u16(),
+          value = stack(p);
+        this.slots.set(`${window}:${slot}`, value);
+        if (window === 0 && slot >= 36 && slot < 45) {
+          player.inventory.setItem(
+            slot - 36,
+            value.count ? itemToBlock.get(value.item) || 1 : 0,
+          );
+          app.itemRenderer.scheduleDirty("hotbar");
+        }
+        break;
+      }
+      case 0x59:
+        this.cursor = stack(p);
+        break;
+      case 0x62:
+        player.inventory.selectedSlotIndex = p.u8();
+        this.selected = player.inventory.selectedSlotIndex;
+        break;
+      case 0x61:
+        player.health = p.f32();
+        player.food = p.vi();
+        if (player.health <= 0)
+          app.ingameOverlay.chatOverlay.addMessage(
+            "You died. Press R to respawn.",
+          );
+        break;
+      case 0x72:
+        if (p.u8() === 8)
+          app.ingameOverlay.chatOverlay.addMessage(
+            new TextDecoder().decode(p.bytes(p.u16())),
+          );
+        break;
+      case 0x22:
+        if (p.u8() === 3) {
+          this.mode = p.f32();
+          if (this.mode !== 1) player.flying = false;
+        }
+        break;
+      case 0x34:
+        this.windowId = p.vi();
+        p.vi();
+        app.displayScreen(new GuiInventory(this));
+        break;
+      case 0x01: {
+        const entity = p.vi();
+        p.bytes(16);
+        const type = p.vi(),
+          x = p.f64(),
+          y = p.f64(),
+          z = p.f64();
+        if (entity === player.id || this.entities.size >= 128) break;
+        const other = new PlayerEntity(app, app.world, entity);
+        other.username = `Entity ${type}`;
+        other.setPositionAndRotation(x, y, z, 0, 0);
+        other.onUpdate = () => {};
+        this.entities.set(entity, other);
+        app.world.addEntity(other);
+        break;
+      }
+      case 0x1f: {
+        const other = this.entities.get(p.vi()),
+          x = p.f64(),
+          y = p.f64(),
+          z = p.f64();
+        if (other) other.setPosition(x, y, z);
+        break;
+      }
+      case 0x2e:
+      case 0x2f: {
+        const other = this.entities.get(p.vi()),
+          delta = [p.u16(), p.u16(), p.u16()].map(
+            (n) => (n > 32767 ? n - 65536 : n) / 4096,
+          );
+        if (other)
+          other.setPosition(
+            other.x + delta[0],
+            other.y + delta[1],
+            other.z + delta[2],
+          );
+        break;
+      }
+      case 0x46:
+        for (let n = p.vi(); n > 0; n--) {
+          const entity = p.vi();
+          app.world.removeEntityById(entity);
+          this.entities.delete(entity);
+        }
+        break;
+      case 0x6a:
+        p.u64();
+        app.world.time = Number(p.u64() % 24000n);
+        break;
+      case 0x4b:
+        this.ready = this.hasPosition = false;
+        this.entities.clear();
+        p.vi();
+        p.str();
+        p.u64();
+        this.mode = p.u8();
+        app.loadWorld(new WorldClient(app));
+        break;
+    }
+  }
+  loaded() {
+    const player = this.app.player;
+    if (
+      this.ready ||
+      !this.hasPosition ||
+      !this.app.world
+        .getChunkProvider()
+        .chunkExists(Math.floor(player.x / 16), Math.floor(player.z / 16))
+    )
+      return;
+    this.ready = true;
+    clearTimeout(this.deadline);
+    this.app.loadingScreen = null;
+    this.app.displayScreen(null);
+    this.send(0x2b);
+    this.syncSelection();
+  }
+  action(button) {
+    if (!this.ready || this.app.player.health <= 0) return;
+    this.syncSelection();
+    const hit = this.app.player.rayTrace(5, this.app.timer.partialTicks);
+    if (button === 0) {
+      this.app.player.swingArm();
+      if (!hit) return;
+      const face =
+        hit.face.y === 1
+          ? 1
+          : hit.face.y === -1
+            ? 0
+            : hit.face.z === -1
+              ? 2
+              : hit.face.z === 1
+                ? 3
+                : hit.face.x === -1
+                  ? 4
+                  : 5;
+      const dig = (status) =>
+        this.send(0x28, (p) =>
+          p.vi(status).pos(hit.x, hit.y, hit.z).u8(face).vi(++this.sequence),
+        );
+      dig(0);
+      if (this.mode !== 1) {
+        const timer = setTimeout(() => {
+          this.timers.delete(timer);
+          if (this.ready) dig(2);
+        }, 750);
+        this.timers.add(timer);
+      }
+    } else if (button === 2) {
+      if (hit) {
+        const face =
+          hit.face.y === 1
+            ? 1
+            : hit.face.y === -1
+              ? 0
+              : hit.face.z === -1
+                ? 2
+                : hit.face.z === 1
+                  ? 3
+                  : hit.face.x === -1
+                    ? 4
+                    : 5;
+        this.send(0x3f, (p) =>
+          p
+            .vi(0)
+            .pos(hit.x, hit.y, hit.z)
+            .vi(face)
+            .f32(0.5)
+            .f32(0.5)
+            .f32(0.5)
+            .u8(0)
+            .u8(0)
+            .vi(++this.sequence),
+        );
+      } else
+        this.send(0x40, (p) =>
+          p
+            .vi(0)
+            .vi(++this.sequence)
+            .f32(this.app.player.rotationYaw)
+            .f32(this.app.player.rotationPitch),
+        );
+    }
+  }
+  creative(block, slot = this.app.player.inventory.selectedSlotIndex) {
+    if (this.mode !== 1) return;
+    const item = blockToItem.get(block);
+    if (item)
+      this.send(0x37, (p) =>
+        p
+          .u16(36 + slot)
+          .vi(64)
+          .vi(item)
+          .vi(0)
+          .vi(0),
+      );
+  }
 }

@@ -1,7 +1,63 @@
 // Original provenance audit. SPDX-License-Identifier: MIT
-import {readdir,readFile} from 'node:fs/promises';import {resolve,relative} from 'node:path';import {createHash} from 'node:crypto';
-const root=resolve(import.meta.dirname,'..');
-async function walk(dir){const files=[];for(const entry of await readdir(dir,{withFileTypes:true})){if(['dist','node_modules'].includes(entry.name))continue;const path=resolve(dir,entry.name);if(entry.isDirectory())files.push(...await walk(path));else files.push(path);}return files;}
-const manifest=JSON.parse(await readFile(root+'/provenance.json','utf8')),records=new Map(manifest.files.map(file=>[file.path,file]));
-for(const path of await walk(root)){const local=relative(root,path);if(/\.(?:png|jpg|jpeg|gif|webp|ogg|mp3|wav|ico|jar)$/i.test(path))throw Error(`Unapproved media: ${local}`);if(local.startsWith('src/')||local.startsWith('libraries/')){const record=records.get(local);if(!record)throw Error(`Undocumented upstream file: ${local}`);if(createHash('sha256').update(await readFile(path)).digest('hex')!==record.sha256)throw Error(`Provenance hash mismatch: ${local}`);}if((local.startsWith('adapter/')||local.startsWith('src/'))&&/\.m?js$/.test(local)){const source=await readFile(path,'utf8');if(/resources\.download\.minecraft\.net|textures\.minecraft\.net|piston-data\.mojang\.com|launchermeta\.mojang\.com|resources\.load|new Image\s*\(/i.test(source))throw Error(`Unapproved resource loading: ${local}`);if(/['"`](?:Minecraft Realms|Minecraft written|js-minecraft )/.test(source))throw Error(`Inherited UI branding: ${local}`);}}
-for(const record of records.values()){if(!record.source||!record.commit||!record.author||!['CC-BY-NC-4.0','MIT','Apache-2.0'].includes(record.license))throw Error(`Incomplete license record: ${record.path}`);}for(const asset of manifest.assets)if(asset.license!=='CC0-1.0'||!asset.creator||!asset.source)throw Error('Unapproved original asset record');console.log(`Audit passed: ${records.size} attributed upstream code files; no imported media files. Manual provenance review remains required for additions.`);
+import { readdir, readFile } from "node:fs/promises";
+import { resolve, relative } from "node:path";
+import { createHash } from "node:crypto";
+const root = resolve(import.meta.dirname, "..");
+async function walk(dir) {
+  const files = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (["dist", "node_modules"].includes(entry.name)) continue;
+    const path = resolve(dir, entry.name);
+    if (entry.isDirectory()) files.push(...(await walk(path)));
+    else files.push(path);
+  }
+  return files;
+}
+const manifest = JSON.parse(await readFile(root + "/provenance.json", "utf8")),
+  records = new Map(manifest.files.map((file) => [file.path, file]));
+for (const path of await walk(root)) {
+  const local = relative(root, path);
+  if (/\.(?:png|jpg|jpeg|gif|webp|ogg|mp3|wav|ico|jar)$/i.test(path))
+    throw Error(`Unapproved media: ${local}`);
+  if (local.startsWith("src/") || local.startsWith("libraries/")) {
+    const record = records.get(local);
+    if (!record) throw Error(`Undocumented upstream file: ${local}`);
+    if (
+      createHash("sha256")
+        .update(await readFile(path))
+        .digest("hex") !== record.sha256
+    )
+      throw Error(`Provenance hash mismatch: ${local}`);
+  }
+  if (
+    (local.startsWith("adapter/") || local.startsWith("src/")) &&
+    /\.m?js$/.test(local)
+  ) {
+    const source = await readFile(path, "utf8");
+    if (
+      /resources\.download\.minecraft\.net|textures\.minecraft\.net|piston-data\.mojang\.com|launchermeta\.mojang\.com|resources\.load|new Image\s*\(/i.test(
+        source,
+      )
+    )
+      throw Error(`Unapproved resource loading: ${local}`);
+    if (
+      /['"`](?:Minecraft Realms|Minecraft written|js-minecraft )/.test(source)
+    )
+      throw Error(`Inherited UI branding: ${local}`);
+  }
+}
+for (const record of records.values()) {
+  if (
+    !record.source ||
+    !record.commit ||
+    !record.author ||
+    !["CC-BY-NC-4.0", "MIT", "Apache-2.0"].includes(record.license)
+  )
+    throw Error(`Incomplete license record: ${record.path}`);
+}
+for (const asset of manifest.assets)
+  if (asset.license !== "CC0-1.0" || !asset.creator || !asset.source)
+    throw Error("Unapproved original asset record");
+console.log(
+  `Audit passed: ${records.size} attributed upstream code files; no imported media files. Manual provenance review remains required for additions.`,
+);

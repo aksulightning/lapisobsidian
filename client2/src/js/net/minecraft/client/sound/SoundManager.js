@@ -67,6 +67,7 @@ export default class SoundManager {
     }
 
     playSound(name, x, y, z, volume, pitch) {
+        if (!this.isCreated()) return;
         let pool = this.soundPool[name];
 
         if (typeof pool === "undefined") {

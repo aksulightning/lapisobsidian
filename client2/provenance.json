@@ -766,7 +766,7 @@
       "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/sound/SoundManager.js",
       "commit": "468f942c4984578a03e472c49646198680489723",
       "sourceSha256": "fc50c4ee9e4ff0f7f85d4fbaa1868f5b134483bdbd0df3bc96ef6a0af9d5fef5",
-      "sha256": "dcf1f837e087edfed5a81fa9ea52f40e1b8703c27ba07ede55acd55db9504798",
+      "sha256": "fd8d81ce559c71078d30018ee41a94e5071efce206f1a3daa48a7940fa10c191",
       "modified": true,
       "author": "LabyStudio and contributors",
       "license": "CC-BY-NC-4.0"

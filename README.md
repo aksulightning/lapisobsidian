@@ -89,7 +89,8 @@ Nightly static binaries for all three targets are configured in
 with tests, source archives and checksums; see the guide for download details.
 The [Build and test workflow](https://github.com/aksulightning/lapisobsidian/actions/workflows/build.yml)
 also builds AMD64 and RISC-V 64-bit on pushes, pull requests and manual runs.
-Download the `native` artifact for a default server or `web` for the optional
+Download the `native` artifact for a default server, `web2` for the alternative
+client with separate files/licenses, or `web` for the optional
 HTML5 client; each contains a static binary, matching source and checksums.
 
 ## Tests
