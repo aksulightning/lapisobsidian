@@ -22,7 +22,7 @@ const {chromium}=require('../.tests/browser/node_modules/playwright');
     const page=await browser.newPage({viewport:{width:1280,height:800}});
     page.on('pageerror',e=>errors.push(e.message));
     await page.goto(`http://127.0.0.1:${port}/`);await page.fill('#name','BrowserTester');await page.click('#play');
-    await page.waitForSelector('#hud:not([hidden])',{timeout:60000});
+    await page.waitForSelector('#hud:not([hidden]) #vitals',{timeout:60000});
     await page.waitForFunction(()=>document.querySelector('#vitals').textContent.includes('Creative'));
     await page.screenshot({path:'.tests/web-client.png'});
     await page.click('#resume');
@@ -37,10 +37,20 @@ const {chromium}=require('../.tests/browser/node_modules/playwright');
     await page.keyboard.down('Space');await page.waitForTimeout(250);await page.keyboard.up('Space');
     assert.notEqual(await page.locator('#location').textContent(),before,'jump changes player position');
     await page.keyboard.press('Escape');await page.click('#leave');
-    await page.click('#play');await page.waitForSelector('#hud:not([hidden])',{timeout:60000});
+    await page.click('#play');await page.waitForSelector('#hud:not([hidden]) #vitals',{timeout:60000});
     await page.waitForFunction(()=>document.querySelector('#hotbar').textContent.includes('dirt ×64'));
     assert.deepEqual(errors,[]);
     console.log('Chromium: renders world, pointer lock, chat, inventory, jumping and reconnect passed');
+  } catch(error) {
+    if(browser) {
+      const page=browser.contexts()[0]?.pages()[0];
+      if(page) {
+        console.error('Browser status:',await page.locator('#status').textContent());
+        console.error('Browser errors:',errors);
+        await page.screenshot({path:'.tests/web-client.png'});
+      }
+    }
+    console.error(logs);throw error;
   } finally {
     if(browser)await browser.close();server.stdin.end('stop\n');
     const timer=setTimeout(()=>server.kill(),5000);if(server.exitCode===null)await once(server,'exit');clearTimeout(timer);
