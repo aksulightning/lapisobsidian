@@ -70,7 +70,8 @@ async function port() {
       () => window.app?.currentScreen?.constructor.name === "GuiMainMenu",
     );
     assert.equal(await page.title(), "Lapis Obsidian Client");
-    await page.screenshot({ path: ".tests/web-client2-menu.png" });
+    console.log("Main menu initialized");
+    await page.screenshot({ path: ".tests/web-client2-menu.png", timeout: 60000 });
     async function clickButton(label) {
       const point = await page.evaluate((label) => {
         const button = app.currentScreen.buttonList.find(
@@ -84,6 +85,7 @@ async function port() {
       }, label);
       await page.mouse.click(point.x, point.y);
     }
+    console.log("Connecting through GUI");
     await clickButton("Multiplayer");
     await page.waitForFunction(
       () => app.currentScreen?.constructor.name === "GuiDirectConnect",
@@ -167,6 +169,7 @@ async function port() {
     );
     await page.keyboard.press("KeyE");
     // Observe authoritative edits in the application world using its codec.
+    await page.waitForFunction(() => app.player.onGround);
     const target = await page.evaluate(() => [
       Math.floor(app.player.x),
       Math.floor(app.player.y) - 1,

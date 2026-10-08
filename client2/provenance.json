@@ -296,7 +296,7 @@
       "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/screens/GuiMainMenu.js",
       "commit": "468f942c4984578a03e472c49646198680489723",
       "sourceSha256": "91c0ac5e57595ff2f74765af637447daad58703b8319ca590158ea9768b84207",
-      "sha256": "8df8ac32316e79d9ff376b7ff803ac5a3a5f768522f3beda6d987ced7423190c",
+      "sha256": "8d5d090004c0e4bddf88e223eeb7ba1765f7d0a616851aad37878363d3ab8379",
       "modified": true,
       "author": "LabyStudio and contributors",
       "license": "CC-BY-NC-4.0"
@@ -1268,6 +1268,16 @@
       "sourceSha256": "979375d602405a4e482530d6dbe90e1b7ddf91a5ea351fc666216268ed6fad9a",
       "sha256": "979375d602405a4e482530d6dbe90e1b7ddf91a5ea351fc666216268ed6fad9a",
       "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "style.css",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/style.css",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "3eb3386c4a5adf57b2c952229d471ed5b678de84ba17ca8358abbab768ec38e4",
+      "sha256": "c23d81c08b8f00f806b26a292eb64fae038d58d1cfc628544ffd441df9de8e9d",
+      "modified": true,
       "author": "LabyStudio and contributors",
       "license": "CC-BY-NC-4.0"
     }

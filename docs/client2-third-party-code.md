@@ -7,7 +7,7 @@ modification status. No upstream copyright/license notice is removed.
 
 | Component | Source/version | License and retained files |
 | --- | --- | --- |
-| LabyStudio/js-minecraft, LabyStudio and contributors | https://github.com/LabyStudio/js-minecraft, commit `468f942c4984578a03e472c49646198680489723` | CC BY-NC 4.0; reachable `client2/src/js/**/*.js`; full license in `client2/LICENSE`, attribution/change notice in `client2/NOTICE.md` |
+| LabyStudio/js-minecraft, LabyStudio and contributors | https://github.com/LabyStudio/js-minecraft, commit `468f942c4984578a03e472c49646198680489723` | CC BY-NC 4.0; reachable `client2/src/js/**/*.js` and adapted `client2/style.css`; full license in `client2/LICENSE`, attribution/change notice in `client2/NOTICE.md` |
 | Three.js, Three.js Authors | Same upstream snapshot, bundled revision string `141dev`; exact bytes/hash in manifest (not claimed to be a tagged release) | MIT; `client2/libraries/three.module.js`, unchanged; header and full notice `licenses/THREE-MIT.txt` preserved |
 | long.js, Closure Library Authors; Daniel Wirtz / long.js Authors | Same pinned snapshot; bundled file has no reliable version tag, exact bytes/hash in manifest | Apache-2.0; `client2/libraries/long.js`, unchanged; header and `licenses/Apache-2.0.txt` preserved |
 
@@ -17,7 +17,7 @@ screenshots are copied. The source README is consulted but not distributed.
 
 Modified files in the machine-readable inventory cover bootstrap, branding,
 Direct Connect, Connecting, multiplayer actions/loading/readiness/texture cache,
-health/food overlay, 320-block chunks/world, world timer cleanup, sound buffer
+health/food overlay, 320-block chunks/world, world timer cleanup, independent logo layout, removal of costly backdrop blur, sound buffer
 synthesis and survival flight restrictions. The original renderer, mesher,
 models, GUI widgets, player controller and movement/collision code otherwise
 remain upstream code. Fresh MIT adapter modules translate the existing server

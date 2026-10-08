@@ -43,7 +43,7 @@ export default class GuiMainMenu extends GuiScreen {
     }
 
     drawScreen(stack, mouseX, mouseY, partialTicks) {
-        let logoWidth = 274;
+        let logoWidth = 310;
         let x = this.width / 2 - logoWidth / 2;
         let y = 30;
 
@@ -160,8 +160,8 @@ export default class GuiMainMenu extends GuiScreen {
 
         // Apply blur
         let style = this.minecraft.window.canvas.style;
-        style.backdropFilter = "blur(10px)";
-        style.webkitBackdropFilter = "blur(10px)";
+        style.backdropFilter = "";
+        style.webkitBackdropFilter = "";
         this.minecraft.window.wrapper.insertBefore(this.minecraft.window.canvasWorld, this.minecraft.window.canvas);
     }
 
