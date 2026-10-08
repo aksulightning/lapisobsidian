@@ -360,11 +360,21 @@ static bool game_packet_ready(const WebClient *c) {
 }
 int web_client_poll(int fd, int64_t now) {
   WebClient *c=lookup(fd); if (!c) return 1; c->now=now;
-  if (c->failed || now<c->started) return -1;
-  int sent=flush(c); if (sent<0) return -1;
+  if (c->failed || now<c->started) {
+    if (c->state==WEBSOCKET) fprintf(stderr,"WebSocket %d failed: queued=%zu raw=%zu data=%zu\n",fd,c->out_size-c->out_pos,c->raw_size,c->data_size);
+    return -1;
+  }
+  int sent=flush(c);
+  if (sent<0) {
+    if (c->state==WEBSOCKET) fprintf(stderr,"WebSocket %d output failed: queued=%zu errno=%d\n",fd,c->out_size-c->out_pos,errno);
+    return -1;
+  }
   if (c->state==CLOSING) return sent ? -1 : 0;
   if ((c->state!=WEBSOCKET && now-c->started>=WEB_TIMEOUT) ||
-      (c->partial_since && now-c->partial_since>=WEB_TIMEOUT)) return -1;
+      (c->partial_since && now-c->partial_since>=WEB_TIMEOUT)) {
+    if (c->state==WEBSOCKET) fprintf(stderr,"WebSocket %d partial input timed out: raw=%zu data=%zu fragmented=%d\n",fd,c->raw_size,c->data_size,(int)c->fragmented);
+    return -1;
+  }
   /* Let the game parser consume buffered bytes before reading another burst.
    * A client can accumulate input while a slow CPU is generating terrain. */
   if (c->state==WEBSOCKET && game_packet_ready(c)) return 1;

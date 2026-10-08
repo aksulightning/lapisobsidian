@@ -259,7 +259,7 @@ async function port() {
     if (server.exitCode === null) await once(server, "exit").catch(() => {});
     clearTimeout(stopTimer);
     await rm(cwd, { recursive: true, force: true });
-    if (!completed) { console.error(logs.slice(-4000)); console.log("Wire counters", {sent,received}); }
+    if (!completed) { console.error(logs.slice(-8000)); console.log("Wire counters", {sent,received}); }
   }
 })().catch((error) => {
   console.error(error);
