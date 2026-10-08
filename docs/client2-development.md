@@ -18,8 +18,13 @@ name, then Connect. For another origin, the client navigates to its web page
 before opening a same-origin WebSocket. Browser security prevents raw TCP.
 
 WASD moves; mouse looks; Space jumps; Ctrl sprints; Shift sneaks; 1–9/wheel
-selects a slot; left click mines; right click uses/places; E opens server
-inventory (creative mode offers blocks for the selected hotbar slot); T opens
+selects a slot; hold left mouse to mine or attack a targeted entity; hold right
+mouse to eat, use, place or interact; Q drops one held item. Releasing the mouse,
+changing tools/targets, losing focus or dying cancels the active action. E opens
+server inventory: left click moves stacks, right click splits/places one item,
+and Shift-click transfers stacks. The survival screen exposes 2×2 crafting and
+armor; tables, chests and furnaces use their server slot layouts. Creative mode
+offers all server items for the selected hotbar slot. T opens
 chat/commands; Escape pauses; R requests respawn after death; F3 shows debug;
 F5 changes perspective. Local practice world retains upstream sandbox behavior;
 it is separate from server play. Settings remain in browser cookies.
@@ -37,6 +42,7 @@ Verification:
 LAPIS_OBSIDIAN_WEB_CLIENT=2 ./tests/web-client.sh
 SANITIZE=1 LAPIS_OBSIDIAN_WEB_CLIENT=2 ./tests/web-client.sh
 node tests/web_integration.mjs ./lapis-obsidian --client2
+node tests/web2_survival.mjs ./lapis-obsidian
 npm install --prefix .tests/browser --no-save --no-package-lock playwright@1.51.1
 node .tests/browser/node_modules/playwright/cli.js install --with-deps chromium
 node tests/web2_browser.cjs
@@ -46,7 +52,12 @@ SANITIZE=1 ./tests/run.sh
 
 Browser tests use the real C executable with an isolated temporary world and
 check configuration, chunks, rendering, movement, edits, inventory, chat and
-clean disconnect. CI also checks mode 1 and native builds. No server or world
+clean disconnect, held/canceled survival mining, dropped items, distinct cow
+geometry and a measured Web Audio signal with pitch. `web2_survival.mjs` runs the
+production protocol/actions against an isolated C server over WebSocket and checks
+mining cancellation, drops/pickup, hunger, held/released eating, right-click
+crafting, mob attacks and server-generated note/mob audio events. It requires no
+graphics driver. CI also checks mode 1 and native builds. No server or world
 from a normal installation is touched. `WEB_TEST_TIMEOUT_MS=180000` permits
 slower RISC-V emulation for protocol tests.
 
@@ -58,3 +69,8 @@ This client supports this server's offline login only, not authenticated online
 servers. Use a trusted network by default; for remote use put the listener behind
 a TLS reverse proxy preserving Host/Origin and `/ws`, with access control.
 The C listener has no TLS and offline names do not prove identity.
+
+Sounds are original synthesized cues, unlocked on the first click. Notes honor
+server pitch; positional effects attenuate over normal gameplay distances.
+Unclear upstream asset rights remain grounds for exclusion; no original-game
+recordings, textures, skins or additional asset repositories are used.

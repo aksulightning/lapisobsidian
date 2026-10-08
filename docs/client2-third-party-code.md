@@ -18,7 +18,13 @@ screenshots are copied. The source README is consulted but not distributed.
 Modified files in the machine-readable inventory cover bootstrap, branding,
 Direct Connect, Connecting, multiplayer actions/loading/readiness/texture cache,
 cached tinted glyph sheets replacing per-glyph Canvas filters, health/food overlay, 320-block chunks/world, world timer cleanup, independent logo layout, removal of costly backdrop blur, sound buffer
-synthesis and survival flight restrictions. The original renderer, mesher,
+synthesis and survival flight restrictions. Follow-up gameplay changes add held-action cancellation and survival input,
+hunger/death movement restrictions, inventory/count overlays, audio gesture
+resume, first-play and attenuation/pitch fixes. New MIT modules implement typed
+server entities and procedural models, action timing/ray targeting, server
+inventory slot layouts and procedural item icons/audio. These import only the
+already retained Three.js/upstream code and server factual IDs. The original
+renderer, mesher,
 models, GUI widgets, player controller and movement/collision code otherwise
 remain upstream code. Fresh MIT adapter modules translate the existing server
 wire format; factual registry mappings come from the server's checked-in data.

@@ -179,6 +179,7 @@ jobs:
       - run: LAPIS_OBSIDIAN_WEB_CLIENT=2 ./tests/web-client.sh
       - run: SANITIZE=1 LAPIS_OBSIDIAN_WEB_CLIENT=2 ./tests/web-client.sh
       - run: node tests/web_integration.mjs ./lapis-obsidian --client2
+      - run: node tests/web2_survival.mjs ./lapis-obsidian
       - run: npm install --prefix .tests/browser --no-save --no-package-lock playwright@1.51.1
       - run: node .tests/browser/node_modules/playwright/cli.js install --with-deps chromium
       - run: node tests/web2_browser.cjs

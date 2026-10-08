@@ -8,6 +8,8 @@ import FontRenderer from "../../render/gui/FontRenderer.js";
 import EnumSkyBlock from "../../../util/EnumSkyBlock.js";
 import PlayerListOverlay from "./PlayerListOverlay.js";
 import Keyboard from "../../../util/Keyboard.js";
+import {items, itemToBlock} from '../../../../../../../adapter/registry.mjs';
+import {drawItem} from '../../../../../../../adapter/item-icons.mjs';
 
 export default class IngameOverlay extends Gui {
 
@@ -36,6 +38,14 @@ export default class IngameOverlay extends Gui {
 
         if (this.minecraft.lapisConnection) {
             this.drawCenteredString(stack, `Health ${Math.ceil(this.minecraft.player.health)} / 20   Food ${this.minecraft.player.food} / 20`, this.window.width / 2, 8);
+            const c=this.minecraft.lapisConnection;
+            const held=c.slots.get(`0:${36+this.minecraft.player.inventory.selectedSlotIndex}`);
+            if(held?.count)this.drawCenteredString(stack,(items[held.item]||'Item').replaceAll('_',' '),this.window.width/2,this.window.height-36);
+            if(c.actions.progress>0 && c.actions.progress<1) {
+                stack.fillStyle='#26354b';stack.fillRect(this.window.width/2-32,this.window.height/2+13,64,4);
+                stack.fillStyle='#87d4dc';stack.fillRect(this.window.width/2-32,this.window.height/2+13,64*c.actions.progress,4);
+            }
+            if(this.minecraft.player.health<=0)this.drawCenteredString(stack,'You died · R to respawn',this.window.width/2,this.window.height/2-24);
         }
         // Render chat canvas
         stack.drawImage(this.window.canvasChat, 0, 0);
@@ -111,6 +121,9 @@ export default class IngameOverlay extends Gui {
                 let block = Block.getById(typeId);
                 this.minecraft.itemRenderer.renderItemInGui("hotbar", i, block, Math.floor(x + i * 20 + 11), y + 11, brightness);
             }
+            const value=this.minecraft.lapisConnection?.slots.get(`0:${36+i}`);
+            if(value?.count && !itemToBlock.get(value.item))drawItem(stack,value,x+i*20+3,y+3);
+            if(value?.count>1)this.drawRightString(stack,String(value.count),x+i*20+19,y+12);
         }
     }
 

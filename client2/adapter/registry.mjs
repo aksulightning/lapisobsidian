@@ -13,6 +13,13 @@ const legacy = {
   oak_planks: 5,
   bedrock: 7,
   water: 9,
+  water_1: 9,
+  water_2: 9,
+  water_3: 9,
+  water_4: 9,
+  water_5: 9,
+  water_6: 9,
+  water_7: 9,
   sand: 12,
   gravel: 13,
   oak_log: 17,
@@ -48,14 +55,19 @@ export function registerBlocks() {
   for (const [name, id] of nameToBlock) {
     if (id < 256) continue;
     const tile = Math.min(255, tileNames.indexOf(name));
-    const block =
-      name === "lava" ? new BlockWater(id, tile) : new Block(id, tile);
+    const block = /^lava/.test(name)
+      ? new BlockWater(id, tile)
+      : new Block(id, tile);
     if (/sapling|flower|fern|grass$|rail|air/.test(name)) {
       block.isSolid = () => false;
       block.getTransparency = () => 0.4;
     }
     if (/glass|ice|leaves/.test(name)) block.getTransparency = () => 0.3;
-    if (name === "lava") block.getLightValue = () => 15;
+    if (/^lava/.test(name)) block.getLightValue = () => 15;
+    if (/log|wood|planks|chest|crafting/.test(name))
+      block.sound = Block.sounds.wood;
+    if (/grass|leaves|plant|wheat/.test(name)) block.sound = Block.sounds.grass;
+    if (/sand/.test(name)) block.sound = Block.sounds.sand;
   }
 }
 export { blocks, items };

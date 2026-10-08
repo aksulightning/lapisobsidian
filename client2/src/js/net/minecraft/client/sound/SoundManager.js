@@ -1,5 +1,6 @@
 import Block from "../world/block/Block.js";
 import * as THREE from "../../../../../../libraries/three.module.js";
+import {synthesize} from '../../../../../../adapter/audio.mjs';
 
 export default class SoundManager {
 
@@ -31,52 +32,56 @@ export default class SoundManager {
 
         // Original synthesized buffers; no asset files are loaded.
         for (let i = 0; i < amount; i++) {
-            pool.push(this.loadSound(name + i));
+            pool.push(this.loadSound(name, i));
         }
 
         // Register sound pool
         this.soundPool[name] = pool;
     }
 
-    loadSound(path) {
+    loadSound(path, variant = 0) {
         if (!this.isCreated()) {
             return;
         }
 
         // Create sound
         let sound = new THREE.PositionalAudio(this.audioListener);
-        sound.setRefDistance(0.1);
-        sound.setRolloffFactor(6);
-        sound.setFilter(sound.context.createBiquadFilter());
+        sound.setRefDistance(3);
+        sound.setRolloffFactor(1);
+        sound.setMaxDistance(32);
         sound.setVolume(0);
 
         // Original short noise/tone sounds. Generated audio is CC0-1.0.
         const rate = sound.context.sampleRate;
-        const buffer = sound.context.createBuffer(1, Math.floor(rate * 0.12), rate);
-        const samples = buffer.getChannelData(0);
-        let seed = Array.from(path).reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7);
-        for (let i = 0; i < samples.length; i++) {
-            seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5;
-            const envelope = Math.pow(1 - i / samples.length, 3);
-            samples[i] = (((seed >>> 0) / 4294967296 - 0.5) * 0.6 + Math.sin(i / rate * 1800) * 0.15) * envelope;
-        }
+        const samples = synthesize(path, rate, variant);
+        const buffer = sound.context.createBuffer(1, samples.length, rate);
+        buffer.getChannelData(0).set(samples);
         sound.setBuffer(buffer);
         this.scene.add(sound);
 
         return sound;
     }
 
-    playSound(name, x, y, z, volume, pitch) {
+    playSound(name, x, y, z, volume = 1, pitch = 1) {
         if (!this.isCreated()) return;
+        if (![x,y,z,volume,pitch].every(Number.isFinite) || volume<=0 || pitch<=0) return;
+        // Limit pools from server-provided names; reclaim stopped resources.
+        if (!this.soundPool[name] && Object.keys(this.soundPool).length >= 64) {
+            const oldest=Object.keys(this.soundPool)[0];
+            for(const sound of this.soundPool[oldest]) { if(sound.isPlaying)sound.stop();sound.disconnect();this.scene.remove(sound); }
+            delete this.soundPool[oldest];
+        }
         let pool = this.soundPool[name];
 
         if (typeof pool === "undefined") {
             // Load sound pool
             this.loadSoundPool(name);
-        } else if (pool.length > 0) {
+            pool = this.soundPool[name];
+        }
+        if (pool.length > 0) {
             this.audioListener.context.resume().catch(() => {});
             // Play random sound in pool
-            let sound = pool[Math.floor(Math.random() * pool.length)];
+            let sound = pool.find(sound=>!sound.isPlaying) || pool[0];
             if (typeof volume === "undefined" || typeof sound === "undefined") {
                 return;
             }
@@ -88,10 +93,11 @@ export default class SoundManager {
 
             // Update position
             sound.position.set(x, y, z);
+            sound.updateMatrixWorld(true);
 
             // Update volume and pitch
-            sound.setVolume(volume);
-            sound.filters[0].frequency.setValueAtTime(12000 * pitch, sound.context.currentTime);
+            sound.setVolume(Math.min(2,volume));
+            sound.setPlaybackRate(Math.max(.25,Math.min(4,pitch)));
 
             // Play sound
             sound.offset = 0;

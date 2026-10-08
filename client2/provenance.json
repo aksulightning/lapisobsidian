@@ -46,8 +46,8 @@
       "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/GameWindow.js",
       "commit": "468f942c4984578a03e472c49646198680489723",
       "sourceSha256": "22dd7953f726097f2d9c46befbdc26821dbb9f4c792a8f2788d84980024ac7ed",
-      "sha256": "22dd7953f726097f2d9c46befbdc26821dbb9f4c792a8f2788d84980024ac7ed",
-      "modified": false,
+      "sha256": "7b2ca8441925c5982b617e03d52708827cfe5abd1d7fe6bcf155fb450b01b75f",
+      "modified": true,
       "author": "LabyStudio and contributors",
       "license": "CC-BY-NC-4.0"
     },
@@ -56,7 +56,7 @@
       "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/Minecraft.js",
       "commit": "468f942c4984578a03e472c49646198680489723",
       "sourceSha256": "db263a7472113eda162ecaee4804cb9e59338d411156d0659a79a02228a6f9ce",
-      "sha256": "eb25ed49d76c30d832a72ab950d1eac4b471625d5996fa084c1f48a33c327a1d",
+      "sha256": "306ea0006a1f6b88b88d76d51b41f15169e896e99b41fc13ad5b3788ff43d712",
       "modified": true,
       "author": "LabyStudio and contributors",
       "license": "CC-BY-NC-4.0"
@@ -136,7 +136,7 @@
       "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/entity/PlayerEntity.js",
       "commit": "468f942c4984578a03e472c49646198680489723",
       "sourceSha256": "699f850e27c95aeb06309a8bb82ebb91bc15b281fc9c8fe66c5d7ec1cb7cbfab",
-      "sha256": "017640826fc288a0dca15b14d2ca919cf356cfe3f0e7f678c508b48e8d261af5",
+      "sha256": "faae9989f09c58437de229d6c3ae2291d838ba578dbaee5a176bf49ed0739f9d",
       "modified": true,
       "author": "LabyStudio and contributors",
       "license": "CC-BY-NC-4.0"
@@ -186,7 +186,7 @@
       "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/overlay/IngameOverlay.js",
       "commit": "468f942c4984578a03e472c49646198680489723",
       "sourceSha256": "a0de1bedd76fd08843253d24a92e412b4f92dbfb27cfab2921540fa73b2849d7",
-      "sha256": "c3e02c6e621554be317d3d9b069f8403d2c7dfd870128de94f4285514bcd849b",
+      "sha256": "d00b9f2667997fb9babf41c6a7df77ba3c906d09333dfb6ea9875982404e3f6f",
       "modified": true,
       "author": "LabyStudio and contributors",
       "license": "CC-BY-NC-4.0"
@@ -766,7 +766,7 @@
       "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/sound/SoundManager.js",
       "commit": "468f942c4984578a03e472c49646198680489723",
       "sourceSha256": "fc50c4ee9e4ff0f7f85d4fbaa1868f5b134483bdbd0df3bc96ef6a0af9d5fef5",
-      "sha256": "fd8d81ce559c71078d30018ee41a94e5071efce206f1a3daa48a7940fa10c191",
+      "sha256": "9c8882510b5c0654f1eb2af701f10a4ab1af5dcf8ccef93a6d0fd7fb8f981fc6",
       "modified": true,
       "author": "LabyStudio and contributors",
       "license": "CC-BY-NC-4.0"
@@ -1288,7 +1288,7 @@
       "creator": "Lapis Obsidian contributors",
       "license": "CC0-1.0",
       "source": "original procedural Canvas artwork",
-      "modified": false
+      "modified": true
     },
     {
       "path": "src/js/net/minecraft/client/sound/SoundManager.js",
@@ -1296,6 +1296,27 @@
       "license": "CC0-1.0",
       "source": "original synthesized audio output only; code retains CC-BY-NC-4.0",
       "modified": true
+    },
+    {
+      "path": "adapter/audio.mjs",
+      "creator": "Lapis Obsidian contributors",
+      "license": "CC0-1.0",
+      "source": "original differentiated synthesized sound design and output; no recordings",
+      "modified": false
+    },
+    {
+      "path": "adapter/entities.mjs",
+      "creator": "Lapis Obsidian contributors",
+      "license": "CC0-1.0",
+      "source": "original procedural model designs/output only; adapter code is MIT",
+      "modified": false
+    },
+    {
+      "path": "adapter/item-icons.mjs",
+      "creator": "Lapis Obsidian contributors",
+      "license": "CC0-1.0",
+      "source": "original procedural Canvas item glyphs",
+      "modified": false
     }
   ]
 }

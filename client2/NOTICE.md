@@ -6,7 +6,10 @@ https://github.com/LabyStudio/js-minecraft
 Licensed under Creative Commons Attribution-NonCommercial 4.0 International.
 See LICENSE. Changes: protocol 772 integration, independent branding,
 original procedural resources, synthesized audio, server-authoritative interaction,
-320-block world height, loading/connection lifecycle, texture caching and cached font tinting.
+320-block world height, loading/connection lifecycle, texture caching and cached
+font tinting. Follow-up changes: typed/interpolated entities, procedural mob/item
+models, held survival actions and cancellation, server crafting/inventory UI,
+food/death controls, server sound decoding, first-play audio and spatial/pitch fixes.
 No endorsement by the upstream authors is implied. Noncommercial use only;
 commercial use of their code needs separate permission from the rightsholders.
 

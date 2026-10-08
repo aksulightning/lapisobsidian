@@ -18,6 +18,7 @@ export const tileNames = [
   "cobblestone",
 ];
 export function color(name) {
+  if (/snow/.test(name)) return [222, 233, 239];
   if (/water/.test(name)) return [58, 124, 207];
   if (/lava/.test(name)) return [244, 109, 42];
   if (/grass|leaves|sapling|fern/.test(name)) return [121, 180, 102];
@@ -87,9 +88,14 @@ export function createResources() {
     for (let i = 0; i < 256; i++) {
       const glyph = FontRenderer.CHAR_INDEX_LOOKUP[i];
       if (glyph === "\0" || glyph === " ") continue;
-      const x = (i % 16) * 8, y = Math.floor(i / 16) * 8;
-      ctx.save(); ctx.beginPath(); ctx.rect(x, y, 8, 8); ctx.clip();
-      ctx.fillText(glyph, x, y + 7, 7); ctx.restore();
+      const x = (i % 16) * 8,
+        y = Math.floor(i / 16) * 8;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x, y, 8, 8);
+      ctx.clip();
+      ctx.fillText(glyph, x, y + 7, 7);
+      ctx.restore();
     }
   });
   resources["misc/grasscolor.png"] = canvas(256, 256, (ctx) => {

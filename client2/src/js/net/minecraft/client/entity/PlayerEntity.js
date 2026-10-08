@@ -114,7 +114,7 @@ export default class PlayerEntity extends EntityLiving {
             }
         }
 
-        if (this.sprinting && (this.moveForward <= 0 || this.collision || this.isSneaking())) {
+        if (this.sprinting && ((this.minecraft.lapisConnection?.mode !== 1 && this.food <= 6) || this.health <= 0 || this.moveForward <= 0 || this.collision || this.isSneaking())) {
             this.sprinting = false;
 
             this.updateFOVModifier();
@@ -310,7 +310,7 @@ export default class PlayerEntity extends EntityLiving {
         let jumping = false;
         let sneaking = false;
 
-        if (this.minecraft.hasInGameFocus()) {
+        if (this.minecraft.hasInGameFocus() && this.health > 0) {
             if (Keyboard.isKeyDown("KeyR")) {
                 // this.respawn();
             }
@@ -346,6 +346,7 @@ export default class PlayerEntity extends EntityLiving {
             }
         }
 
+        if (this.minecraft.lapisConnection?.actions.using) { moveForward *= 0.2; moveStrafe *= 0.2; }
         this.moveForward = moveForward;
         this.moveStrafing = moveStrafe;
 

@@ -36,7 +36,10 @@ sufficient to reject inclusion under the requested policy.
 | `client2/adapter/resources.mjs`: in-memory terrain atlas | Original Lapis Obsidian contributor artwork, CC0-1.0 | Fresh deterministic 16×16 mineral/vegetation/liquid/wood patterns; no external image input |
 | Same: UI sheets, abstract panorama, independent title, sun/moon, character | Original artwork, CC0-1.0 | Fresh shapes/colors; upstream layout/render code uses these buffers |
 | Same: glyph bitmap | Browser-provided system monospace font rasterized locally | No font file shipped or downloaded; font rights remain with the installed font's author |
-| `client2/src/js/net/minecraft/client/sound/SoundManager.js`: generated audio buffers | Original synthesis design/output, CC0-1.0 | Noise/tone envelopes replace all upstream recordings; source class remains CC BY-NC |
+| `client2/adapter/audio.mjs`: generated audio buffers | Original synthesis design/output, CC0-1.0 | Original differentiated tone/noise envelopes replace recordings; upstream SoundManager class remains CC BY-NC |
+
+| `client2/adapter/entities.mjs`: procedural models | Original Lapis Obsidian contributor designs, CC0-1.0 | Animal, humanoid, spider, creeper, ghast, item and projectile geometry made from fresh boxes; no imported models |
+| `client2/adapter/item-icons.mjs`: item glyphs | Original Lapis Obsidian contributor designs, CC0-1.0 | Canvas shapes for tools, food, buckets, blocks and labeled fallback; no input media |
 
 The generated artwork/audio dedication is in
 `client2/licenses/ORIGINAL-ASSETS-CC0.txt`. `client2/provenance.json` records these

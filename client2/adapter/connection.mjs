@@ -12,10 +12,12 @@ import { stateToBlock, itemToBlock, blockToItem, items } from "./registry.mjs";
 import WorldClient from "../src/js/net/minecraft/client/world/WorldClient.js";
 import Chunk from "../src/js/net/minecraft/client/world/Chunk.js";
 import PlayerControllerMultiplayer from "../src/js/net/minecraft/client/network/controller/PlayerControllerMultiplayer.js";
-import PlayerEntity from "../src/js/net/minecraft/client/entity/PlayerEntity.js";
+import { spawnEntity, moveEntity, metadata } from "./entities.mjs";
+import { Actions } from "./actions.mjs";
 import GuiDisconnected from "../src/js/net/minecraft/client/gui/screens/GuiDisconnected.js";
 import ProtocolState from "../src/js/net/minecraft/client/network/ProtocolState.js";
 import GuiInventory from "./inventory.mjs";
+import Block from "../src/js/net/minecraft/client/world/block/Block.js";
 export default class Connection {
   constructor(app) {
     this.app = app;
@@ -33,6 +35,7 @@ export default class Connection {
     this.closed = false;
     this.selected = -1;
     this.timers = new Set();
+    this.actions = new Actions(this);
   }
   connect(address) {
     let url;
@@ -118,6 +121,9 @@ export default class Connection {
     return this.socket?.readyState === WebSocket.OPEN;
   }
   close() {
+    this.actions.cancel();
+    for (const entity of this.entities.values()) entity.renderer?.dispose?.();
+    this.entities.clear();
     this.closed = true;
     this.ready = false;
     clearTimeout(this.deadline);
@@ -288,32 +294,29 @@ export default class Connection {
           app.particleRenderer.spawnBlockBreakParticle(app.world, x, y, z);
         app.world.setBlockAt(x, y, z, stateToBlock.get(state) ?? 1);
         app.worldRenderer.flushRebuild = true;
-        app.soundManager.playSound(
-          state ? "step.stone" : "random.glass",
-          x,
-          y,
-          z,
-          0.5,
-          1,
-        );
+        const sound = app.world.getBlockAt(x, y, z) || old;
+        app.soundManager.playSound(this.blockSound(sound), x, y, z, 0.5, 1);
         break;
       }
       case 0x26:
         this.send(0x1b, (w) => w.u64(p.u64()));
         break;
       case 0x14: {
-        const window = p.vi();
+        let window = p.vi();
         this.stateId = p.vi();
         const slot = p.u16(),
           value = stack(p);
+        if (window === -2) window = 0;
         this.slots.set(`${window}:${slot}`, value);
-        if (window === 0 && slot >= 36 && slot < 45) {
-          player.inventory.setItem(
-            slot - 36,
-            value.count ? itemToBlock.get(value.item) || 1 : 0,
-          );
-          app.itemRenderer.scheduleDirty("hotbar");
+        // Open containers use their own wire slots for the same player inventory.
+        const first =
+          window === 2 ? 27 : window === 12 ? 10 : window === 14 ? 3 : null;
+        if (first !== null && slot >= first && slot < first + 36) {
+          const canonical =
+            slot - first < 27 ? 9 + slot - first : 36 + slot - first - 27;
+          this.slots.set(`0:${canonical}`, value);
         }
+        this.refreshHotbar();
         break;
       }
       case 0x59:
@@ -326,6 +329,9 @@ export default class Connection {
       case 0x61:
         player.health = p.f32();
         player.food = p.vi();
+        player.saturation = p.f32();
+        if (player.food <= 6 && this.mode !== 1) player.sprinting = false;
+        if (player.health <= 0) this.actions.cancel();
         if (player.health <= 0)
           app.ingameOverlay.chatOverlay.addMessage(
             "You died. Press R to respawn.",
@@ -339,27 +345,76 @@ export default class Connection {
         break;
       case 0x22:
         if (p.u8() === 3) {
+          this.actions.cancel();
           this.mode = p.f32();
           if (this.mode !== 1) player.flying = false;
         }
         break;
       case 0x34:
+        // Closing an old screen must not close the newly opened server window.
+        if (app.currentScreen instanceof GuiInventory)
+          app.currentScreen.connection = null;
         this.windowId = p.vi();
-        p.vi();
+        this.windowType = p.vi();
         app.displayScreen(new GuiInventory(this));
         break;
+      case 0x3f: {
+        const flags = p.u8(),
+          count = p.vi();
+        // This server emits Add Player + Update Game Mode, without profile properties.
+        if (flags !== 5 || count < 0 || count > 128) break;
+        for (let n = 0; n < count; n++) {
+          const uuid = Array.from(p.bytes(16), (b) =>
+              b.toString(16).padStart(2, "0"),
+            ).join(""),
+            name = p.str();
+          const properties = p.vi();
+          for (let i = 0; i < properties; i++) {
+            p.str();
+            p.str();
+            if (p.u8()) p.str();
+          }
+          const mode = p.vi();
+          this.playerInfoMap.set(uuid, {
+            name,
+            mode,
+            displayName: null,
+            profile: { getUsername: () => name },
+            ping: 0,
+          });
+          for (const other of this.entities.values())
+            if (other.uuid === uuid) other.username = name;
+        }
+        app.ingameOverlay.playerListOverlay.dirty = true;
+        break;
+      }
+      case 0x39: {
+        const flags = p.u8();
+        p.f32();
+        p.f32();
+        if (!(flags & 4)) player.flying = false;
+        break;
+      }
       case 0x01: {
         const entity = p.vi();
-        p.bytes(16);
+        const uuid = Array.from(p.bytes(16), (b) =>
+          b.toString(16).padStart(2, "0"),
+        ).join("");
         const type = p.vi(),
           x = p.f64(),
           y = p.f64(),
           z = p.f64();
-        if (entity === player.id || this.entities.size >= 128) break;
-        const other = new PlayerEntity(app, app.world, entity);
-        other.username = `Entity ${type}`;
-        other.setPositionAndRotation(x, y, z, 0, 0);
-        other.onUpdate = () => {};
+        const pitch = (p.u8() * 360) / 256,
+          yaw = (p.u8() * 360) / 256,
+          head = (p.u8() * 360) / 256;
+        if (entity === player.id || this.entities.size >= 1024) break;
+        if (this.entities.has(entity)) this.removeEntity(entity);
+        const other = spawnEntity(app, entity, type, x, y, z, yaw, pitch);
+        other.uuid = uuid;
+        other.username =
+          this.playerInfoMap.get(uuid)?.name ||
+          (type === 149 ? "Player" : other.kind);
+        other.headYaw = head;
         this.entities.set(entity, other);
         app.world.addEntity(other);
         break;
@@ -369,7 +424,11 @@ export default class Connection {
           x = p.f64(),
           y = p.f64(),
           z = p.f64();
-        if (other) other.setPosition(x, y, z);
+        p.bytes(24);
+        const yaw = p.f32(),
+          pitch = p.f32();
+        p.u8();
+        if (other) moveEntity(other, x, y, z, yaw, pitch);
         break;
       }
       case 0x2e:
@@ -378,19 +437,126 @@ export default class Connection {
           delta = [p.u16(), p.u16(), p.u16()].map(
             (n) => (n > 32767 ? n - 65536 : n) / 4096,
           );
+        const yaw = id === 0x2f ? (p.u8() * 360) / 256 : other?.rotationYaw;
+        const pitch = id === 0x2f ? (p.u8() * 360) / 256 : other?.rotationPitch;
+        p.u8();
         if (other)
-          other.setPosition(
-            other.x + delta[0],
-            other.y + delta[1],
-            other.z + delta[2],
+          moveEntity(
+            other,
+            ...other.wirePosition.map((n, i) => n + delta[i]),
+            yaw,
+            pitch,
           );
+        break;
+      }
+      case 0x31: {
+        const other = this.entities.get(p.vi()),
+          yaw = (p.u8() * 360) / 256,
+          pitch = (p.u8() * 360) / 256;
+        if (other) moveEntity(other, ...other.wirePosition, yaw, pitch);
+        break;
+      }
+      case 0x4c: {
+        const other = this.entities.get(p.vi()),
+          yaw = (p.u8() * 360) / 256;
+        if (other) other.headYaw = yaw;
+        break;
+      }
+      case 0x5c:
+        metadata(this.entities.get(p.vi()), p);
+        break;
+      case 0x5f: {
+        const other = this.entities.get(p.vi());
+        let slot;
+        do {
+          slot = p.u8();
+          const value = stack(p);
+          if (other && (slot & 127) === 0) {
+            other.equipment = value;
+            other.inventory?.setItem(0, itemToBlock.get(value.item) || 0);
+          }
+        } while (slot & 128);
+        break;
+      }
+      case 0x02: {
+        const other = this.entities.get(p.vi());
+        if (p.u8() === 0) other?.swingArm?.();
+        break;
+      }
+      case 0x19: {
+        const other = this.entities.get(p.vi());
+        if (other) other.hurtTicks = 6;
+        else
+          app.soundManager.playSound(
+            "player.hurt",
+            player.x,
+            player.y,
+            player.z,
+            0.6,
+            1,
+          );
+        break;
+      }
+      case 0x1e: {
+        const entity = p.i32(),
+          event = p.u8();
+        if (entity === player.id && event === 9) {
+          this.actions.using = false;
+          app.soundManager.playSound(
+            "player.eat",
+            player.x,
+            player.y,
+            player.z,
+            0.5,
+            1,
+          );
+        }
+        if (entity === player.id && event === 47)
+          app.soundManager.playSound(
+            "item.break",
+            player.x,
+            player.y,
+            player.z,
+            0.5,
+            1,
+          );
+        break;
+      }
+      case 0x75: {
+        const collected = p.vi(),
+          collector = p.vi();
+        p.vi();
+        this.removeEntity(collected);
+        if (collector === player.id)
+          app.soundManager.playSound(
+            "item.pickup",
+            player.x,
+            player.y,
+            player.z,
+            0.4,
+            1,
+          );
+        break;
+      }
+      case 0x6e: {
+        const holder = p.vi();
+        if (holder !== 0) break;
+        const name = p.str();
+        if (p.u8()) p.f32();
+        p.vi();
+        const x = p.i32() / 8,
+          y = p.i32() / 8,
+          z = p.i32() / 8,
+          volume = p.f32(),
+          pitch = p.f32();
+        p.u64();
+        app.soundManager.playSound(name, x, y, z, volume, pitch);
         break;
       }
       case 0x46:
         for (let n = p.vi(); n > 0; n--) {
           const entity = p.vi();
-          app.world.removeEntityById(entity);
-          this.entities.delete(entity);
+          this.removeEntity(entity);
         }
         break;
       case 0x6a:
@@ -398,13 +564,21 @@ export default class Connection {
         app.world.time = Number(p.u64() % 24000n);
         break;
       case 0x4b:
+        this.actions.cancel();
         this.ready = this.hasPosition = false;
+        for (const entity of this.entities.values())
+          entity.renderer?.dispose?.();
         this.entities.clear();
+        this.slots.clear();
+        this.cursor = null;
+        this.windowId = 0;
+        this.selected = -1;
         p.vi();
         p.str();
         p.u64();
         this.mode = p.u8();
         app.loadWorld(new WorldClient(app));
+        app.player.inventory.items = [];
         break;
     }
   }
@@ -426,71 +600,27 @@ export default class Connection {
     this.syncSelection();
   }
   action(button) {
-    if (!this.ready || this.app.player.health <= 0) return;
-    this.syncSelection();
-    const hit = this.app.player.rayTrace(5, this.app.timer.partialTicks);
-    if (button === 0) {
-      this.app.player.swingArm();
-      if (!hit) return;
-      const face =
-        hit.face.y === 1
-          ? 1
-          : hit.face.y === -1
-            ? 0
-            : hit.face.z === -1
-              ? 2
-              : hit.face.z === 1
-                ? 3
-                : hit.face.x === -1
-                  ? 4
-                  : 5;
-      const dig = (status) =>
-        this.send(0x28, (p) =>
-          p.vi(status).pos(hit.x, hit.y, hit.z).u8(face).vi(++this.sequence),
-        );
-      dig(0);
-      if (this.mode !== 1) {
-        const timer = setTimeout(() => {
-          this.timers.delete(timer);
-          if (this.ready) dig(2);
-        }, 750);
-        this.timers.add(timer);
-      }
-    } else if (button === 2) {
-      if (hit) {
-        const face =
-          hit.face.y === 1
-            ? 1
-            : hit.face.y === -1
-              ? 0
-              : hit.face.z === -1
-                ? 2
-                : hit.face.z === 1
-                  ? 3
-                  : hit.face.x === -1
-                    ? 4
-                    : 5;
-        this.send(0x3f, (p) =>
-          p
-            .vi(0)
-            .pos(hit.x, hit.y, hit.z)
-            .vi(face)
-            .f32(0.5)
-            .f32(0.5)
-            .f32(0.5)
-            .u8(0)
-            .u8(0)
-            .vi(++this.sequence),
-        );
-      } else
-        this.send(0x40, (p) =>
-          p
-            .vi(0)
-            .vi(++this.sequence)
-            .f32(this.app.player.rotationYaw)
-            .f32(this.app.player.rotationPitch),
-        );
+    this.actions.press(button);
+  }
+  removeEntity(id) {
+    const entity = this.entities.get(id);
+    entity?.renderer?.dispose?.();
+    this.app.world?.removeEntityById(id);
+    this.entities.delete(id);
+  }
+  blockSound(id) {
+    return Block.getById(id)?.sound?.getStepSound() || "step.stone";
+  }
+  refreshHotbar() {
+    const app = this.app;
+    for (let index = 0; index < 9; index++) {
+      const value = this.slots.get(`0:${36 + index}`);
+      app.player.inventory.setItem(
+        index,
+        value?.count ? itemToBlock.get(value.item) || 0 : 0,
+      );
     }
+    app.itemRenderer.scheduleDirty("hotbar");
   }
   creative(block, slot = this.app.player.inventory.selectedSlotIndex) {
     if (this.mode !== 1) return;

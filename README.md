@@ -283,3 +283,10 @@ Documentation: [setup/testing](docs/client2-development.md),
 [asset provenance](docs/client2-asset-sources.md),
 [third-party code](docs/client2-third-party-code.md),
 [license compliance](docs/client2-license-compliance.md).
+
+Mode 2 survival controls: hold left mouse to mine/attack; hold right mouse to
+use/eat/interact; release to cancel. E opens inventory/crafting (right-click to
+split/place one, Shift-click to transfer), Q drops one item and R respawns after
+death. Animals, drops and projectiles have original procedural models; sounds
+are original synthesized cues, enabled by a click. Validate these paths with
+`node tests/web2_survival.mjs ./lapis-obsidian` after the mode-2 build.

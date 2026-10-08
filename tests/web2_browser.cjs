@@ -28,6 +28,7 @@ async function port() {
     env: {
       ...process.env,
       LAPIS_OBSIDIAN_CLIENT2_DIR: resolve("client2/dist"),
+      LAPIS_ADMIN_TOKEN: "mode2-browser-test-admin-token-123456",
     },
     stdio: ["pipe", "pipe", "pipe"],
   });
@@ -38,7 +39,8 @@ async function port() {
   const errors = [],
     requests = [];
   let completed = false;
-  const sent = {}, received = {};
+  const sent = {},
+    received = {};
   try {
     for (let i = 0; !logs.includes("Server listening"); i++) {
       assert.ok(i < 500, logs);
@@ -59,11 +61,20 @@ async function port() {
     const page = await browser.newPage({
       viewport: { width: 800, height: 600 },
     });
-    const {Stream}=await import('../client2/adapter/wire.mjs');
-    page.on('websocket', ws => {
-      const output=new Stream(id=>sent[id]=(sent[id]||0)+1),input=new Stream(id=>received[id]=(received[id]||0)+1);
-      ws.on('framesent', e=>{try{output.push(new Uint8Array(e.payload));}catch{}});
-      ws.on('framereceived', e=>{try{input.push(new Uint8Array(e.payload));}catch{}});
+    const { Stream } = await import("../client2/adapter/wire.mjs");
+    page.on("websocket", (ws) => {
+      const output = new Stream((id) => (sent[id] = (sent[id] || 0) + 1)),
+        input = new Stream((id) => (received[id] = (received[id] || 0) + 1));
+      ws.on("framesent", (e) => {
+        try {
+          output.push(new Uint8Array(e.payload));
+        } catch {}
+      });
+      ws.on("framereceived", (e) => {
+        try {
+          input.push(new Uint8Array(e.payload));
+        } catch {}
+      });
     });
     page.on("pageerror", (e) => {
       errors.push(e.message);
@@ -74,11 +85,21 @@ async function port() {
       if (m.type() === "error") console.error("CONSOLE:", m.text());
     });
     async function wait(predicate, argument, options = {}) {
-      const deadline = Date.now() + (options.timeout || argument?.timeout || 60000);
-      while (!await page.evaluate(predicate, argument)) {
-        const detail = await page.evaluate(() => ({screen: app.currentScreen?.constructor.name, message: app.currentScreen?.message, phase: app.lapisConnection?.phase, ready: app.lapisConnection?.ready, chunks: app.world?.getChunkProvider().chunks.size}));
+      const deadline =
+        Date.now() + (options.timeout || argument?.timeout || 60000);
+      while (!(await page.evaluate(predicate, argument))) {
+        const detail = await page.evaluate(() => ({
+          screen: app.currentScreen?.constructor.name,
+          message: app.currentScreen?.message,
+          phase: app.lapisConnection?.phase,
+          ready: app.lapisConnection?.ready,
+          chunks: app.world?.getChunkProvider().chunks.size,
+        }));
         if (detail.message) throw Error(`Client error: ${detail.message}`);
-        assert.ok(Date.now() < deadline, `Browser condition timed out: ${predicate.toString()} ${JSON.stringify(detail)}`);
+        assert.ok(
+          Date.now() < deadline,
+          `Browser condition timed out: ${predicate.toString()} ${JSON.stringify(detail)}`,
+        );
         await delay(50);
       }
     }
@@ -87,20 +108,34 @@ async function port() {
       () => window.app?.currentScreen?.constructor.name === "GuiMainMenu",
     );
     assert.equal(await page.title(), "Lapis Obsidian Client");
-    console.log("Main menu initialized", await page.evaluate(() => ({ fps: app.fps, size: [app.window.width, app.window.height], canvas: [app.window.canvas.width, app.window.canvas.height] })));
+    console.log(
+      "Main menu initialized",
+      await page.evaluate(() => ({
+        fps: app.fps,
+        size: [app.window.width, app.window.height],
+        canvas: [app.window.canvas.width, app.window.canvas.height],
+      })),
+    );
     async function capture(path) {
       const data = await page.evaluate(() => {
         app.onRender(app.timer.partialTicks);
-        const canvas = document.createElement('canvas');
-        canvas.width = app.window.canvas.width; canvas.height = app.window.canvas.height;
-        const context = canvas.getContext('2d');
-        context.drawImage(app.window.canvasWorld, 0, 0, canvas.width, canvas.height);
+        const canvas = document.createElement("canvas");
+        canvas.width = app.window.canvas.width;
+        canvas.height = app.window.canvas.height;
+        const context = canvas.getContext("2d");
+        context.drawImage(
+          app.window.canvasWorld,
+          0,
+          0,
+          canvas.width,
+          canvas.height,
+        );
         context.drawImage(app.window.canvas, 0, 0);
-        return canvas.toDataURL('image/png').split(',')[1];
+        return canvas.toDataURL("image/png").split(",")[1];
       });
-      await writeFile(path, Buffer.from(data, 'base64'));
+      await writeFile(path, Buffer.from(data, "base64"));
     }
-    await capture('.tests/web-client2-menu.png');
+    await capture(".tests/web-client2-menu.png");
     async function clickButton(label) {
       const point = await page.evaluate((label) => {
         const button = app.currentScreen.buttonList.find(
@@ -124,7 +159,15 @@ async function port() {
       app.currentScreen.fieldAddress.text = location.host;
     });
     await clickButton("Connect");
-    console.log("Connection started", await page.evaluate(() => ({ screen: app.currentScreen?.constructor.name, address: app.currentScreen?.address, phase: app.lapisConnection?.phase, closed: app.lapisConnection?.closed })));
+    console.log(
+      "Connection started",
+      await page.evaluate(() => ({
+        screen: app.currentScreen?.constructor.name,
+        address: app.currentScreen?.address,
+        phase: app.lapisConnection?.phase,
+        closed: app.lapisConnection?.closed,
+      })),
+    );
     await wait(
       () =>
         app.lapisConnection?.ready &&
@@ -159,7 +202,7 @@ async function port() {
     assert.ok(state.chunks >= 25);
     assert.ok(state.blocks > 1000);
     assert.ok(state.registry > 0);
-    await capture('.tests/web-client2-world.png');
+    await capture(".tests/web-client2-world.png");
     console.log("World:", state);
     await page.evaluate(() => app.playerController.sendChatMessage("/tps"));
     await wait(
@@ -170,9 +213,7 @@ async function port() {
       { timeout: 10000 },
     );
     await page.evaluate(() => app.lapisConnection.creative(3));
-    await wait(
-      () => app.player.inventory.getItemInSlot(0) === 3,
-    );
+    await wait(() => app.player.inventory.getItemInSlot(0) === 3);
     await page.mouse.click(400, 300);
     await wait(() => document.pointerLockElement === app.window.canvas);
     await wait(() => app.player.onGround);
@@ -182,7 +223,7 @@ async function port() {
       app.player.z,
     ]);
     await page.keyboard.down("Space");
-    await wait(before => Math.abs(app.player.y-before[1])>.05, before);
+    await wait((before) => Math.abs(app.player.y - before[1]) > 0.05, before);
     await page.keyboard.up("Space");
     const after = await page.evaluate(() => [
       app.player.x,
@@ -195,9 +236,7 @@ async function port() {
       "keyboard jumping moves the upstream player",
     );
     await page.keyboard.press("KeyE");
-    await wait(
-      () => app.currentScreen?.constructor.name === "Inventory",
-    );
+    await wait(() => app.currentScreen?.constructor.name === "Inventory");
     await page.keyboard.press("KeyE");
     // Observe authoritative edits in the application world using its codec.
     await wait(() => app.player.onGround);
@@ -213,10 +252,7 @@ async function port() {
         ),
       target,
     );
-    await wait(
-      ([x, y, z]) => app.world.getBlockAt(x, y, z) === 0,
-      target,
-    );
+    await wait(([x, y, z]) => app.world.getBlockAt(x, y, z) === 0, target);
     await page.evaluate(
       ([x, y, z]) =>
         app.lapisConnection.send(0x3f, (p) =>
@@ -233,9 +269,147 @@ async function port() {
         ),
       target,
     );
+    await wait(([x, y, z]) => app.world.getBlockAt(x, y, z) === 3, target);
+    // Test the actual held-input path; a released mouse must never finish mining.
+    await page.evaluate(() =>
+      app.playerController.sendChatMessage(
+        "/admin mode2-browser-test-admin-token-123456",
+      ),
+    );
+    await wait(() =>
+      app.ingameOverlay.chatOverlay.messages.some((m) =>
+        String(m.message || m).includes("Administrator access enabled"),
+      ),
+    );
+    await page.evaluate(() =>
+      app.playerController.sendChatMessage("/gamemode survival"),
+    );
+    await wait(() => app.lapisConnection.mode === 0);
+    await page.evaluate(([x, y, z]) => {
+      const p = app.player,
+        dx = x + 0.5 - p.x,
+        dy = y + 0.5 - p.y - p.getEyeHeight(),
+        dz = z + 0.5 - p.z;
+      p.setRotation(
+        (-Math.atan2(dx, dz) * 180) / Math.PI,
+        (-Math.atan2(dy, Math.hypot(dx, dz)) * 180) / Math.PI,
+      );
+    }, target);
+    await page.mouse.down();
+    await wait(() => !!app.lapisConnection.actions.dig);
+    await page.mouse.up();
+    await delay(1100);
+    assert.equal(
+      await page.evaluate(([x, y, z]) => app.world.getBlockAt(x, y, z), target),
+      3,
+      "mouse release cancels digging",
+    );
+    await page.mouse.down();
+    await wait(([x, y, z]) => app.world.getBlockAt(x, y, z) === 0, target);
+    await page.mouse.up();
+    await wait(() =>
+      [...app.lapisConnection.entities.values()].some(
+        (e) => e.kind === "item" && e.itemStack?.count,
+      ),
+    );
+    assert.ok(
+      await page.evaluate(() =>
+        [...app.lapisConnection.entities.values()]
+          .filter((e) => e.kind === "item")
+          .every(
+            (e) => e.constructor.name === "ServerEntity" && e.height < 0.5,
+          ),
+      ),
+    );
+    await page.keyboard.press("KeyE");
+    await wait(() => app.currentScreen?.constructor.name === "Inventory");
+    assert.equal(
+      await page.evaluate(() => app.currentScreen.cells.length),
+      46,
+      "survival crafting, armor, storage and hotbar slots",
+    );
+    await capture(".tests/web-client2-survival-inventory.png");
+    await page.keyboard.press("KeyE");
+    // Distinct original mob model, driven by a real spawn packet.
+    const spot = await page.evaluate(async () => {
+      const {nameToBlock}=await import("/adapter/registry.mjs");
+      const p = app.player,
+        x = Math.floor(p.x),
+        z = Math.floor(p.z);
+      for (let dx = 2; dx <= 4; dx++)
+        for (let dz = 1; dz <= 4; dz++) {
+          let y = 250;
+          while (y > 0 && (!app.world.getBlockAt(x + dx, y, z + dz) || ['snow','moss_carpet','short_grass','fern'].some(name=>nameToBlock.get(name)===app.world.getBlockAt(x+dx,y,z+dz)))) y--;
+          if(app.world.getBlockAt(x+dx,y,z+dz)===9)continue;
+          if (Math.abs(y + 1 - p.y) < 4) return [x + dx, y + 1, z + dz];
+        }
+      throw Error("No nearby spawn ground");
+    });
+    await page.evaluate(
+      (spot) =>
+        app.playerController.sendChatMessage("/spawnmob cow " + spot.join(" ")),
+      spot,
+    );
+    await wait(() =>
+      [...app.lapisConnection.entities.values()].some((e) => e.kind === "cow"),
+    );
+    await page.evaluate(() => {
+      const cow = [...app.lapisConnection.entities.values()].find(
+        (e) => e.kind === "cow",
+      );
+      const p = app.player,
+        dx = cow.x - p.x,
+        dy = cow.y + 0.8 - p.y - p.getEyeHeight(),
+        dz = cow.z - p.z;
+      p.setRotation(
+        (-Math.atan2(dx, dz) * 180) / Math.PI,
+        (-Math.atan2(dy, Math.hypot(dx, dz)) * 180) / Math.PI,
+      );
+    });
     await wait(
-      ([x, y, z]) => app.world.getBlockAt(x, y, z) === 3,
-      target,
+      () =>
+        [...app.lapisConnection.entities.values()].find((e) => e.kind === "cow")
+          ?.renderer.group.children.length >= 8,
+    );
+    await capture(".tests/web-client2-entities.png");
+    // Measure Web Audio signal after the positional listener, even in muted CI.
+    await page.evaluate(async () => {
+      const sound = app.soundManager,
+        context = sound.audioListener.context;
+      await context.resume();
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 256;
+      sound.audioListener.getInput().connect(analyser);
+      window.testAudioAnalyser = analyser;
+      const position = app.worldRenderer.camera.position;
+      sound.playSound(
+        "minecraft:block.note_block.harp",
+        position.x,
+        position.y,
+        position.z,
+        1,
+        1.5,
+      );
+    });
+    await wait(
+      () => {
+        const data = new Float32Array(testAudioAnalyser.fftSize);
+        testAudioAnalyser.getFloatTimeDomainData(data);
+        return data.some((value) => Math.abs(value) > 0.0001);
+      },
+      null,
+      { timeout: 5000 },
+    );
+    assert.equal(
+      await page.evaluate(
+        () =>
+          app.soundManager.soundPool["minecraft:block.note_block.harp"][0]
+            .playbackRate,
+      ),
+      1.5,
+    );
+    await page.evaluate(() =>
+      app.soundManager.audioListener.getInput().disconnect(testAudioAnalyser),
     );
     await page.evaluate(() => app.loadWorld(null));
     await wait(() => !app.world);
@@ -250,16 +424,19 @@ async function port() {
     );
     completed = true;
     console.log(
-      "Mode 2 Chromium: login, configuration, chunks, inventory, chat, movement, disconnect passed",
+      "Mode 2 Chromium: login, chunks, inventory, chat, movement, held/canceled survival mining, dropped items, cow geometry, audible first-play audio/pitch and disconnect passed",
     );
   } finally {
     await browser?.close();
     server.stdin.end("stop\n");
-    const stopTimer=setTimeout(()=>server.kill(),5000);
+    const stopTimer = setTimeout(() => server.kill(), 5000);
     if (server.exitCode === null) await once(server, "exit").catch(() => {});
     clearTimeout(stopTimer);
     await rm(cwd, { recursive: true, force: true });
-    if (!completed) { console.error(logs.slice(-8000)); console.log("Wire counters", {sent,received}); }
+    if (!completed) {
+      console.error(logs.slice(-8000));
+      console.log("Wire counters", { sent, received });
+    }
   }
 })().catch((error) => {
   console.error(error);

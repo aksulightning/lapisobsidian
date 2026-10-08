@@ -287,6 +287,7 @@ export default class Minecraft {
     onTick() {
         if (this.lapisConnection && this.isInGame() && !this.lapisConnection.ready) return;
         if (this.isInGame() && !this.isPaused()) {
+            this.lapisConnection?.actions.tick();
             // Tick overlay
             this.ingameOverlay.onTick();
 
@@ -337,6 +338,11 @@ export default class Minecraft {
 
     onKeyPressed(button) {
         if (!this.player) return;
+        if (button === 'KeyQ' && this.lapisConnection && this.hasInGameFocus() && this.player.health > 0) {
+            this.lapisConnection.actions.cancel();
+            this.lapisConnection.syncSelection();
+            this.lapisConnection.actions.digPacket(4, {x:0,y:0,z:0,face:0});
+        }
         if (button === 'KeyR' && this.lapisConnection && this.player.health <= 0) this.lapisConnection.send(0x0b, p => p.vi(0));
         // Select slot
         for (let i = 1; i <= 9; i++) {
@@ -371,7 +377,7 @@ export default class Minecraft {
 
     onMouseClicked(button) {
         if (this.lapisConnection && !this.isSingleplayer()) {
-            if (this.window.isLocked()) this.lapisConnection.action(button);
+            if (this.hasInGameFocus()) this.lapisConnection.action(button);
             return;
         }
         if (this.window.isLocked()) {

@@ -66,6 +66,7 @@ export default class GameWindow {
             this.updateWindowSize();
         });
         this.registerListener(document, 'mousedown', event => {
+            this.initialSoundEngine();
             // In-Game mouse click
             this.minecraft.onMouseClicked(event.button);
 
@@ -81,7 +82,7 @@ export default class GameWindow {
                 currentScreen.mouseClicked(
                     event.x / this.scaleFactor,
                     event.y / this.scaleFactor,
-                    event.code
+                    event.button
                 );
             }
 
@@ -93,7 +94,6 @@ export default class GameWindow {
                 this.updateFocusState(FocusStateType.REQUEST_LOCK);
             }
 
-            this.initialSoundEngine();
         });
         this.registerListener(document, 'mousemove', event => {
             this.mouseX = event.clientX / this.scaleFactor;
@@ -110,7 +110,12 @@ export default class GameWindow {
 
             this.requestCursorUpdate();
         });
+        this.registerListener(window, 'blur', () => {
+            this.minecraft.lapisConnection?.actions.cancel();
+            clearInterval(this.mouseDownInterval);
+        });
         this.registerListener(document, 'mouseup', event => {
+            this.minecraft.lapisConnection?.actions.release(event.button);
             // Handle mouse release on screen
             let currentScreen = this.minecraft.currentScreen;
             if (currentScreen !== null) {
@@ -126,6 +131,7 @@ export default class GameWindow {
             }
         });
         this.registerListener(document, 'pointerlockchange', event => {
+            if (!this.isCursorLockedToCanvas()) this.minecraft.lapisConnection?.actions.cancel();
             let intentState = this.focusState.getIntent(); // Get target state we want to switch into
             let isCursorLocked = this.isCursorLockedToCanvas(); // Get current state of the canvas lock
             let isLockIntent = intentState === FocusStateType.LOCKED; // Check if we want to lock the cursor
@@ -551,6 +557,7 @@ export default class GameWindow {
         if (!this.minecraft.soundManager.isCreated()) {
             this.minecraft.soundManager.create(this.minecraft.worldRenderer);
         }
+        this.minecraft.soundManager.audioListener.context.resume().catch(() => {});
     }
 
     registerListener(parent, event, listener = null, preventDefaults = true) {

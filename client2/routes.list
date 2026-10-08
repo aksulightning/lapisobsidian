@@ -1,7 +1,11 @@
 /LICENSE|LICENSE|text/plain
 /NOTICE.md|NOTICE.md|text/plain
+/adapter/actions.mjs|adapter/actions.mjs|text/javascript
+/adapter/audio.mjs|adapter/audio.mjs|text/javascript
 /adapter/connection.mjs|adapter/connection.mjs|text/javascript
+/adapter/entities.mjs|adapter/entities.mjs|text/javascript
 /adapter/inventory.mjs|adapter/inventory.mjs|text/javascript
+/adapter/item-icons.mjs|adapter/item-icons.mjs|text/javascript
 /adapter/registry.mjs|adapter/registry.mjs|text/javascript
 /adapter/resources.mjs|adapter/resources.mjs|text/javascript
 /adapter/wire.mjs|adapter/wire.mjs|text/javascript
