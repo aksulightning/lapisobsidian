@@ -3,20 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Lapis Obsidian · Play</title>
+  <title>Lapis Obsidian Client</title>
   <link rel="stylesheet" href="/style.css">
-  <script type="module" src="/client.mjs"></script>
+  <script type="module" src="/src/core/client.mjs"></script>
 </head>
 <body>
   <canvas id="world" aria-label="First-person voxel world"></canvas>
   <main id="menu">
-    <p class="eyebrow">LAPIS OBSIDIAN / EXPERIMENTAL WEB CLIENT</p>
-    <h1>A world to<br>make your own.</h1>
+    <p class="eyebrow">INDEPENDENT VOXEL EXPLORATION</p>
+    <h1>Lapis Obsidian Client</h1>
     <p>Explore, mine, and build together on this server.</p>
     <form id="join">
+      <label for="server-address">Web server address</label><input id="server-address" type="url" required aria-describedby="server-help"><p id="server-help" class="controls">Use the server’s web port (8080 by default). Connecting to another address opens its client page.</p>
       <label for="name">Player name</label>
       <div class="row"><input id="name" maxlength="15" pattern="[A-Za-z0-9_]{1,15}" value="WebPlayer" required autocomplete="off"><button id="play">Enter world →</button></div>
     </form>
+    <button id="menu-settings" type="button">Settings</button>
     <label class="toggle"><input id="touch-mode" type="checkbox"> Touch controls</label>
     <p id="status" role="status">Play with touch controls or a keyboard and mouse. WebGL is required.</p>
     <p class="controls desktop-help">W A S D to move · Mouse to look · Space to jump/swim<br>Hold left mouse to mine · Right mouse to place/use · 1–9 hotbar<br>T to chat · E inventory · R respawn · Esc release mouse</p>
@@ -29,7 +31,7 @@
     <form id="chat" hidden><input id="message" maxlength="200" placeholder="Message or /command" aria-label="Chat message"><button id="send-message">Send</button><button id="close-chat" type="button">Close</button></form>
     <div id="hotbar" aria-label="Hotbar"></div>
     <button id="resume" hidden>Click to resume</button>
-    <button id="leave">Disconnect</button>
+    <button id="pause">Pause</button><button id="leave">Disconnect</button>
     <button id="respawn" hidden>Respawn</button>
     <div id="touch-controls" hidden>
       <div id="touch-menu"><button id="touch-inventory">Inventory</button><button id="touch-chat">Chat</button><button id="touch-drop">Drop</button></div>
@@ -43,6 +45,14 @@
     <div id="slots"></div><p id="cursor"></p>
     <div id="creative" hidden><label for="block">Creative block</label><select id="block"></select><button id="give">Put in selected hotbar slot</button></div>
     <button id="close-inventory">Back to world</button>
+  </dialog>
+<dialog id="pause-menu"><h2>Lapis Obsidian Client</h2><p>The multiplayer world keeps running while paused.</p><button id="pause-resume">Resume</button><button id="pause-settings">Settings</button><button id="pause-leave">Disconnect</button></dialog>
+  <dialog id="settings"><h2>Settings</h2>
+    <label for="volume">Audio volume</label><input id="volume" type="range" min="0" max="1" step="0.05">
+    <label for="distance">Render distance (1–3 chunks)</label><input id="distance" type="range" min="1" max="3" step="1">
+    <label for="sensitivity">Look sensitivity</label><input id="sensitivity" type="range" min="0.25" max="3" step="0.05">
+    <label class="toggle"><input id="ambience" type="checkbox"> Original ambient tones</label>
+    <button id="close-settings">Done</button>
   </dialog>
 </body>
 </html>

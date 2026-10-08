@@ -1,9 +1,19 @@
-import {packet, PacketStream, readChunk} from './protocol.mjs';
-import {World, Renderer, direction, material} from './renderer.mjs';
-import {items, blocks} from './catalog.mjs';
+import {packet, PacketStream, readChunk, readKnownPacks, readRegistry, movementPacket, PROTOCOL_VERSION} from '../network/protocol.mjs';
+import {Renderer, direction} from '../rendering/renderer.mjs';
+import {items, blocks} from '/catalog.mjs';
+
+import {World} from '../world/world.mjs';
+import {material,setBlockCatalog} from '../rendering/material.mjs';
+
+import {textures,itemTexture} from '../assets/registry.mjs';
+import {AudioSystem,soundEvent} from '../audio/audio.mjs';
+import {validateSettings,serverAddress,connectionFailure} from '../ui/settings.mjs';
 
 const $ = id => document.getElementById(id);
+setBlockCatalog(blocks);
 const world = new World(), entities = new Map(), keys = new Set(), slots = new Map();
+const audio=new AudioSystem(), registries=new Map();
+let settings=validateSettings(),lastStep=0,lastAmbient=0,lastInput=-1,lastSprint=false,lastFootPosition=[0,0];
 const player = {x:8.5,y:80,z:8.5,yaw:0,pitch:0,vy:0,grounded:false,health:20,food:20,mode:0,hotbar:0};
 let renderer, socket, phase='login', ready=false, sequence=0, windowId=0, stateId=0;
 let target=null, mining=null, leftDown=false, lastSent=0, lastFrame=performance.now(), myId=-1;
@@ -14,8 +24,29 @@ const storage = {
   get(key) { try { return localStorage.getItem(key); } catch { return null; } },
   set(key,value) { try { localStorage.setItem(key,value); } catch { /* Private storage may be unavailable. */ } }
 };
+try{settings=validateSettings(JSON.parse(storage.get('lapis.web.settings')||'{}'));}catch{}
+$('server-address').value=location.origin;
 $('name').value=storage.get('lapis.web.name')||'WebPlayer';
 $('touch-mode').checked=storage.get('lapis.web.touch')===null ? navigator.maxTouchPoints>0 : storage.get('lapis.web.touch')==='true';
+function applySettings(){
+ audio.volume=settings.volume;if(renderer)renderer.distance=settings.renderDistance;
+ $('volume').value=settings.volume;$('distance').value=settings.renderDistance;$('sensitivity').value=settings.sensitivity;$('ambience').checked=settings.ambience;
+ storage.set('lapis.web.settings',JSON.stringify(settings));
+}
+function openSettings(){resetInput();document.exitPointerLock?.();$('settings').showModal();}
+$('menu-settings').onclick=openSettings;$('pause-settings').onclick=openSettings;
+$('close-settings').onclick=()=>{$('settings').close();};
+for(const id of ['volume','distance','sensitivity','ambience'])$(id).oninput=()=>{settings=validateSettings({volume:$('volume').value,renderDistance:$('distance').value,sensitivity:$('sensitivity').value,ambience:$('ambience').checked});applySettings();};
+applySettings();
+document.addEventListener('click',event=>{if(event.target.closest('button')){audio.unlock();audio.play('click');}});
+function pause(){if(!ready)return;resetInput();document.exitPointerLock?.();$('pause-menu').showModal();}
+$('pause').onclick=pause;$('pause-resume').onclick=()=>{$('pause-menu').close();lockMouse();};$('pause-leave').onclick=()=>disconnect();
+function icon(button,stack){
+ if(!stack?.count)return;
+ const name=items[stack.item],isBlock=Object.values(blocks).includes(name),id=itemTexture(name,isBlock);
+ const image=document.createElement('img');image.className='item-icon';image.alt='';image.src=textures[id]?.path||textures.fallback.path;
+ image.onerror=()=>{image.onerror=null;image.src=textures.fallback.path;};button.prepend(image);
+}
 function setTouchMode() {
   touchMode=$('touch-mode').checked; document.body.classList.toggle('touch-mode',touchMode);
   document.querySelector('.touch-help').hidden=!touchMode;
@@ -42,7 +73,7 @@ function refreshInventory() {
   for (let i=0;i<9;i++) {
     const button=document.createElement('button'); button.className=`slot${i===player.hotbar?' selected':''}`;
     button.textContent=`${i+1} · ${itemLabel(slots.get(`0:${36+i}`))}`;
-    button.onclick=()=>selectSlot(i); $('hotbar').append(button);
+    icon(button,slots.get(`0:${36+i}`)); button.onclick=()=>selectSlot(i); $('hotbar').append(button);
   }
   if (!$('inventory').open) return;
   $('slots').replaceChildren();
@@ -51,6 +82,7 @@ function refreshInventory() {
     const button=document.createElement('button'); button.className='slot';
     const label=windowId===0 && i<=4 ? (i===0?'Output':`Craft ${i}`) : `Slot ${i}`;
     button.textContent=`${label} · ${itemLabel(slots.get(`${windowId}:${i}`))}`;
+    icon(button,slots.get(`${windowId}:${i}`));
     button.onclick=event=>send(0x11,w=>w.varint(windowId).varint(stateId).short(i).byte($('split-stack').checked?1:0).varint(event.shiftKey?1:0).varint(0).byte(0));
     button.oncontextmenu=event=>{ event.preventDefault(); send(0x11,w=>w.varint(windowId).varint(stateId).short(i).byte(1).varint(0).varint(0).byte(0)); };
     $('slots').append(button);
@@ -64,7 +96,7 @@ function readStack(r) {
   if (added || removed) throw Error('Unsupported item components');
   return {count,item};
 }
-function clearWorld() { renderer?.clear(); entities.clear(); ready=false; hasPosition=false; resetInput(); player.vy=0; lastMovement=''; }
+function clearWorld() { renderer?.clear(); entities.clear(); ready=false; hasPosition=false; resetInput(); player.vy=0;lastInput=-1;lastSprint=false; lastMovement=''; }
 function showReady() {
   if (ready || !hasPosition || !world.chunks.has(world.key(Math.floor(player.x/16),Math.floor(player.z/16)))) return;
   ready=true; clearInterval(loginTimer); send(0x2b);
@@ -76,12 +108,13 @@ function showReady() {
 function receive(id,r) {
   if (phase==='login') {
     if (id!==2) throw Error('Server rejected login');
-    phase='configuration'; send(3);
+    phase='configuration'; registries.clear(); send(3);
     send(0,w=>w.string('en_US').byte(2).varint(0).byte(1).byte(127).varint(1).byte(0).byte(1).varint(0));
     return;
   }
   if (phase==='configuration') {
-    if (id===0x0e) send(7,w=>w.varint(1).string('minecraft').string('core').string('1.21.8'));
+    if(id===0x0e){const pack=readKnownPacks(r);send(7,w=>{w.varint(1);for(const part of pack)w.string(part);});}
+    if(id===7){const registry=readRegistry(r);registries.set(registry.name,registry.entries);}
     if (id===3) { phase='play'; send(3); $('status').textContent='Loading terrain…'; }
     return;
   }
@@ -99,7 +132,9 @@ function receive(id,r) {
     }
     case 0x27: world.add(readChunk(r)); showReady(); break;
     case 0x57: world.center=[r.varint(),r.varint()]; break;
-    case 0x08: { const p=r.position(); world.set(...p,r.varint()); break; }
+    case 0x08: {const p=r.position(),old=world.get(...p),state=r.varint();world.set(...p,state);
+      if(ready&&Math.hypot(p[0]-player.x,p[1]-player.y,p[2]-player.z)<12){if(old&&!state){renderer.burst(p,old);audio.play('break');}else if(!old&&state)audio.play('place');}
+      break; }
     case 0x26: { const token=r.long(); send(0x1b,w=>w.long(token)); break; }
     case 0x14: {
       const win=r.varint(); stateId=r.varint(); const slot=r.short(),stack=readStack(r);
@@ -123,7 +158,7 @@ function receive(id,r) {
     }
     case 0x01: {
       const entityId=r.varint(); r.take(16); const type=r.varint();
-      const entity={x:r.double(),y:r.double(),z:r.double(),item:type===69};
+      const entity={x:r.double(),y:r.double(),z:r.double(),item:type===69,type};
       if (entityId!==myId && entities.size<512) entities.set(entityId,entity); break;
     }
     case 0x1f: {
@@ -136,13 +171,27 @@ function receive(id,r) {
       if(entity) {entity.x+=delta[0];entity.y+=delta[1];entity.z+=delta[2];} break;
     }
     case 0x46: { const n=r.varint(); for(let i=0;i<n;i++)entities.delete(r.varint()); break; }
-    // Other packets (sound, particles, skins, recipes, sign text) are deliberately ignored.
+    case 0x5c: {
+      const entity=entities.get(r.varint());
+      while(r.pos<r.bytes.length){const index=r.byte();if(index===255)break;const type=r.varint();
+        if(type===0||type===8)r.byte();else if(type===1)r.varint();else if(type===7){const stack=readStack(r);if(entity&&index===8){entity.itemId=stack.item;entity.itemName=items[stack.item];}}else break;
+      }break;
+    }
+    case 0x75: {r.varint();const collector=r.varint();r.varint();if(collector===myId)audio.play('collect');break;}
+    case 0x6a: {r.long();renderer.time=Number(r.long()%24000n);break;}
+    case 0x6e: {
+      if(r.varint()!==0)break;const name=r.string();if(r.byte())r.float();r.varint();
+      const p=[r.int()/8,r.int()/8,r.int()/8],volume=r.float(),pitch=r.float(),event=soundEvent(name);
+      const distance=Math.hypot(p[0]-player.x,p[1]-player.y,p[2]-player.z);
+      if(event)audio.play(event,{gain:volume*Math.max(0,1-distance/32),pitch});break;
+    }
+    // Recipes/skins/sign NBT remain compatibility-only; see client-protocol.md.
   }
 }
 function disconnected(text) {
   clearInterval(loginTimer); clearWorld(); document.exitPointerLock?.();
   $('inventory').close(); $('chat').hidden=true; $('hud').hidden=true; $('menu').hidden=false;
-  $('play').disabled=false; $('status').textContent=text;
+  $('pause-menu').close();$('settings').close();$('play').disabled=false; $('status').textContent=text;
 }
 function disconnect(text='Disconnected. You can rejoin the world.') {
   const previous=socket; socket=null; previous?.close(); disconnected(text);
@@ -151,7 +200,11 @@ $('join').onsubmit=event=>{
   event.preventDefault();
   if($('play').disabled)return;
   try {
+    const origin=serverAddress($('server-address').value,location.origin);
+    if(origin!==location.origin){location.assign(origin);return;}
+    audio.unlock();
     renderer ||= new Renderer($('world'),world);
+    applySettings();renderer.assetsReady.then(failed=>{if(failed.length)message(`Missing textures: ${failed.join(', ')}. Original fallback art is in use.`);});
     clearWorld(); slots.clear(); $('messages').replaceChildren(); windowId=0; phase='login'; sequence=0;
     const name=$('name').value;
     if(!/^[A-Za-z0-9_]{1,15}$/.test(name)) throw Error('Use 1–15 letters, numbers, or underscores.');
@@ -168,7 +221,7 @@ $('join').onsubmit=event=>{
     const stream=new PacketStream(receive);
     ws.onopen=()=>{
       if(socket!==ws)return;
-      send(0,w=>w.varint(772).string(location.hostname).short(Number(location.port)||(location.protocol==='https:'?443:80)).varint(2));
+      send(0,w=>w.varint(PROTOCOL_VERSION).string(location.hostname).short(Number(location.port)||(location.protocol==='https:'?443:80)).varint(2));
       send(0,w=>w.string(name).raw(uuid));
     };
     ws.onmessage=event=>{
@@ -184,8 +237,7 @@ $('join').onsubmit=event=>{
     loginTimer=setInterval(()=>{
       if(socket!==ws||ready)return;
       const now=performance.now();
-      if(now-lastReceived>60000)disconnect('No data received for 60 seconds. Check the server log and reconnect.');
-      else if(now-loadingStarted>300000)disconnect('Terrain loading did not finish within 5 minutes. Check the server log.');
+      const failure=connectionFailure(now,lastReceived,loadingStarted);if(failure)disconnect(failure);
     },1000);
   } catch(error) { disconnected(error.message); }
 };
@@ -203,7 +255,7 @@ document.addEventListener('pointerlockchange',()=>{
 });
 document.addEventListener('mousemove',event=>{
   if(document.pointerLockElement!==$('world'))return;
-  player.yaw+=event.movementX*.0025; player.pitch=Math.max(-1.55,Math.min(1.55,player.pitch+event.movementY*.0025));
+  player.yaw+=event.movementX*.0025*settings.sensitivity; player.pitch=Math.max(-1.55,Math.min(1.55,player.pitch+event.movementY*.0025*settings.sensitivity));
 });
 function sendAction(action,hit=target) {
   const p=hit?.p||[0,0,0]; send(0x28,w=>w.varint(action).position(...p).byte(hit?.face||0).varint(++sequence));
@@ -223,6 +275,7 @@ function entityTarget() {
 }
 function startAction(button) {
   if(!ready||player.health<=0||$('inventory').open||!$('chat').hidden)return;
+  audio.play('tool');
   if(button===0) {
     const entity=entityTarget();
     if(entity!==null)send(0x19,w=>w.varint(entity).varint(1).byte(0)); else leftDown=true;
@@ -252,10 +305,10 @@ for(const [id,name] of Object.entries(items)) if(blockNames.has(name)&&Number(id
 }
 $('give').onclick=()=>send(0x37,w=>w.short(36+player.hotbar).varint(64).varint(Number($('block').value)).varint(0).varint(0));
 document.addEventListener('keydown',event=>{
-  if(!ready || event.target.matches('input,select') || $('inventory').open)return;
+  if(!ready || event.target.matches('input,select') || $('inventory').open||$('pause-menu').open||$('settings').open)return;
   if(['Space','KeyW','KeyA','KeyS','KeyD','KeyT','KeyE'].includes(event.code))event.preventDefault();
   if(event.repeat)return;
-  if(event.code==='Escape') {document.exitPointerLock?.();keys.clear();return;}
+  if(event.code==='Escape') {pause();return;}
   if(event.code==='KeyT') { openChat(); return; }
   if(event.code==='KeyE') {windowId=0;openInventory();return;}
   if(event.code==='KeyR'&&player.health<=0){respawn();return;}
@@ -280,12 +333,12 @@ $('chat').onsubmit=event=>{
 };
 $('message').onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();$('chat').hidden=true;lockMouse();}};
 function resetInput() {
-  keys.clear(); stopAction(0); stopAction(2);
+  lastInput=-1;player.sneaking=player.sprinting=false;keys.clear(); stopAction(0); stopAction(2);
   touch.forward=touch.right=0; touch.jump=false; touch.move=touch.look=null;
   touch.buttons.clear(); $('move-stick').style.transform='';
   document.querySelectorAll('#touch-actions button').forEach(b=>b.classList.remove('pressed'));
 }
-function touchPlayable() { return touchMode&&ready&&player.health>0&&!$('inventory').open&&$('chat').hidden; }
+function touchPlayable() { return !$('pause-menu').open&&!$('settings').open&&touchMode&&ready&&player.health>0&&!$('inventory').open&&$('chat').hidden; }
 function moveStick(event) {
   const box=$('move-pad').getBoundingClientRect(), radius=box.width*.34;
   let x=event.clientX-box.left-box.width/2, y=event.clientY-box.top-box.height/2;
@@ -311,8 +364,8 @@ $('world').onpointerdown=event=>{
 };
 $('world').onpointermove=event=>{
   if(touch.look?.id!==event.pointerId)return;
-  player.yaw+=(event.clientX-touch.look.x)*.005;
-  player.pitch=Math.max(-1.55,Math.min(1.55,player.pitch+(event.clientY-touch.look.y)*.005));
+  player.yaw+=(event.clientX-touch.look.x)*.005*settings.sensitivity;
+  player.pitch=Math.max(-1.55,Math.min(1.55,player.pitch+(event.clientY-touch.look.y)*.005*settings.sensitivity));
   touch.look.x=event.clientX; touch.look.y=event.clientY;
 };
 const releaseLook=event=>{if(touch.look?.id===event.pointerId)touch.look=null;};
@@ -336,10 +389,10 @@ $('touch-inventory').onclick=()=>{if(ready){windowId=0;openInventory();}};
 $('touch-chat').onclick=openChat;
 $('touch-drop').onclick=()=>{if(touchPlayable())sendAction(4);};
 function physics(dt) {
-  if(!ready || player.health<=0)return;
+  if(!ready || player.health<=0||$('pause-menu').open||$('settings').open)return;
   const swimming=material(world.get(Math.floor(player.x),Math.floor(player.y),Math.floor(player.z))||0).water;
   const forward=Number(keys.has('KeyW'))-Number(keys.has('KeyS'))+touch.forward, right=Number(keys.has('KeyD'))-Number(keys.has('KeyA'))+touch.right;
-  const length=Math.max(1,Math.hypot(forward,right)), speed=swimming?2.5:4.3;
+  const length=Math.max(1,Math.hypot(forward,right)), speed=swimming?2.5:player.sneaking?1.3:player.sprinting?5.6:4.3;
   const dx=(-Math.sin(player.yaw)*forward-Math.cos(player.yaw)*right)/length*speed*dt;
   const dz=(Math.cos(player.yaw)*forward-Math.sin(player.yaw)*right)/length*speed*dt;
   if(!world.collides(player.x+dx,player.y,player.z))player.x+=dx;
@@ -367,15 +420,22 @@ function animate(now) {
     if(!mining||mining.key!==key){cancelMine();mining={key,hit:target,start:now};sendAction(0);}
     else if(now-mining.start>(player.mode===1?180:700)){sendAction(2,mining.hit);mining=null;}
   } else cancelMine();
+  player.sneaking=keys.has('ShiftLeft')||keys.has('ShiftRight');player.sprinting=keys.has('ControlLeft')||keys.has('ControlRight');
   const movement=[player.x,player.y,player.z,player.yaw,player.pitch,player.grounded].join(',');
   if(ready && now-lastSent>=50 && (movement!==lastMovement||now-lastSent>=1000)){
-    send(0x1e,w=>w.double(player.x).double(player.y).double(player.z).float(player.yaw*180/Math.PI).float(player.pitch*180/Math.PI).byte(player.grounded?1:0));
+    if(socket?.readyState===WebSocket.OPEN&&socket.bufferedAmount<65536)socket.send(movementPacket(player));
     lastSent=now; lastMovement=movement;
   }
   if(ready) {
-    $('vitals').textContent=`Health ${player.health}/20 · Food ${player.food}/20 · ${['Survival','Creative','Adventure','Spectator'][player.mode]||''}`;
+    const label=`Health ${player.health}/20 · Food ${player.food}/20 · ${['Survival','Creative','Adventure','Spectator'][player.mode]||''}`;
+    if($('vitals').dataset.label!==label){$('vitals').dataset.label=label;$('vitals').textContent=label;for(const [id,count] of [['heart',Math.ceil(player.health/2)],['food',Math.ceil(player.food/2)]]){const bar=document.createElement('span');bar.className='vital-bar';for(let i=0;i<count;i++){const image=document.createElement('img');image.src=textures[id].path;image.alt='';bar.append(image);}$('vitals').append(bar);}}
     $('location').textContent=`${player.x.toFixed(1)} / ${player.y.toFixed(1)} / ${player.z.toFixed(1)}${target?' · '+material(target.state).name.replaceAll('_',' '):''}`;
   }
+  const input=(keys.has('KeyW')?1:0)|(keys.has('KeyS')?2:0)|(keys.has('KeyA')?4:0)|(keys.has('KeyD')?8:0)|(keys.has('Space')||touch.jump?16:0)|(player.sneaking?32:0)|(player.sprinting?64:0);
+  if(ready&&input!==lastInput){send(0x2a,w=>w.byte(input));lastInput=input;}
+  if(ready&&player.sprinting!==lastSprint){send(0x29,w=>w.varint(myId).byte(player.sprinting?1:2).varint(0));lastSprint=player.sprinting;}
+  if(ready&&player.grounded&&Math.hypot(player.x-lastFootPosition[0],player.z-lastFootPosition[1])>.6&&now-lastStep>380){audio.play('step');lastStep=now;lastFootPosition=[player.x,player.z];}
+  if(ready&&settings.ambience&&now-lastAmbient>20000){audio.play('ambient');lastAmbient=now;}
   renderer.draw(player,entities,target);
 }
 requestAnimationFrame(animate);

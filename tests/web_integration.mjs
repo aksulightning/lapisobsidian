@@ -5,7 +5,7 @@ import {spawn} from 'node:child_process';
 import {mkdir,mkdtemp,writeFile,rm} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {EventEmitter,once} from 'node:events';
-import {packet,PacketStream,readChunk} from '../web/protocol.mjs';
+import {packet,PacketStream,readChunk,readRegistry,readKnownPacks} from '../client/src/network/protocol.mjs';
 const binary=resolve(process.argv[2]||'lapis-obsidian'), disabled=process.argv.includes('--disabled');
 const testTimeout=Number(process.env.WEB_TEST_TIMEOUT_MS||20000);
 assert.ok(Number.isFinite(testTimeout)&&testTimeout>=1000&&testTimeout<=600000);
@@ -25,12 +25,12 @@ const directory=await mkdtemp(resolve('.tests/web-world-'));
 await writeFile(`${directory}/server.txt`,`port=${port}\nweb-address=127.0.0.1\nweb-port=${webPort}\ngamemode=creative\n`);
 const server=spawn(binary,[],{cwd:directory,env:{...process.env,LAPIS_OBSIDIAN_WEB_CLIENT:disabled?'1':'0'},stdio:['pipe','pipe','pipe']});
 let logs='';server.stdout.on('data',b=>logs+=b);server.stderr.on('data',b=>logs+=b);
-const connections=[];
+const connections=[];let clientPort=webPort,proxy;
 class Client extends EventEmitter {
   constructor(uuidByte) {
-    super(); this.phase='login';this.chunks=[];this.updates=[];this.chat=[];this.slots=new Map();this.entities=new Set();this.error=null;
+    super(); this.phase='login';this.registries=new Map();this.chunks=[];this.updates=[];this.chat=[];this.slots=new Map();this.entities=new Set();this.error=null;
     this.stream=new PacketStream((id,r)=>this.packet(id,r)); this.buffer=Buffer.alloc(0);this.upgraded=false;
-    this.socket=net.connect(webPort,'127.0.0.1');connections.push(this.socket);
+    this.socket=net.connect(clientPort,'127.0.0.1');connections.push(this.socket);
     this.socket.on('error',error=>this.error=error);
     this.socket.on('data',bytes=>{
       try {
@@ -54,7 +54,7 @@ class Client extends EventEmitter {
         }
       }catch(error){this.error=error;}
     });
-    this.socket.on('connect',()=>this.socket.write(`GET /ws HTTP/1.1\r\nHost: 127.0.0.1:${webPort}\r\nOrigin: http://127.0.0.1:${webPort}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n`));
+    this.socket.on('connect',()=>this.socket.write(`GET /ws HTTP/1.1\r\nHost: 127.0.0.1:${clientPort}\r\nOrigin: http://127.0.0.1:${clientPort}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n`));
   }
   send(id,write) {
     const p=packet(id,write), h=Buffer.alloc(p.length<126?6:8),mask=Buffer.from([7,11,17,23]);
@@ -68,7 +68,8 @@ class Client extends EventEmitter {
       this.send(0,w=>w.string('en_US').byte(2).varint(0).byte(1).byte(127).varint(1).byte(0).byte(1).varint(0));return;
     }
     if(this.phase==='configuration') {
-      if(id===14)this.send(7,w=>w.varint(1).string('minecraft').string('core').string('1.21.8'));
+      if(id===14){const pack=readKnownPacks(r);this.send(7,w=>{w.varint(1);for(const part of pack)w.string(part);});}
+      if(id===7){const registry=readRegistry(r);this.registries.set(registry.name,registry.entries);}
       if(id===3){this.phase='play';this.send(3);}return;
     }
     if(id===0x27)this.chunks.push(readChunk(r));
@@ -124,13 +125,20 @@ try {
     await rejectedStartup(`port=${port}\nweb-port=${port}\n`,/web-port must differ/);
     const free=await reservePort(),freePort=free.address().port;await new Promise(resolve=>free.close(resolve));
     await rejectedStartup(`port=${freePort}\nweb-address=127.0.0.1\nweb-port=${webPort}\n`,/Cannot listen for the web client/);
-    for(const path of ['/','/style.css','/protocol.mjs','/renderer.mjs','/client.mjs','/catalog.mjs']) {
+    for(const path of ['/','/style.css','/src/network/protocol.mjs','/src/rendering/renderer.mjs','/src/core/client.mjs','/catalog.mjs','/assets/textures/terrain/rock.png','/assets/textures/original/tool.svg','/assets/audio/events.json','/assets/manifest.json']) {
       const response=await fetch(`http://127.0.0.1:${webPort}${path}`);assert.equal(response.status,200);
       assert.match(response.headers.get('content-security-policy'),/frame-ancestors 'none'/);assert.ok((await response.text()).length>100);
     }
     assert.equal((await fetch(`http://127.0.0.1:${webPort}/missing`)).status,404);
+    if(process.argv.includes('--dev-proxy')){
+      const reservation=await reservePort();clientPort=reservation.address().port;await new Promise(resolve=>reservation.close(resolve));
+      let proxyLogs='';proxy=spawn(process.execPath,['client/scripts/dev.mjs'],{env:{...process.env,CLIENT_DEV_PORT:String(clientPort),CLIENT_SERVER_ORIGIN:`http://127.0.0.1:${webPort}`},stdio:['ignore','pipe','pipe']});
+      proxy.stdout.on('data',b=>proxyLogs+=b);proxy.stderr.on('data',b=>proxyLogs+=b);
+      await until(()=>{if(proxy.exitCode!==null)throw Error(proxyLogs);return proxyLogs.includes('fixed HTTP/WebSocket backend');},'development server');
+      const response=await fetch(`http://127.0.0.1:${clientPort}/`);assert.equal(response.status,200);assert.match(await response.text(),/<title>Lapis Obsidian Client<\/title>/);
+    }
     const a=new Client(1);await a.wait(()=>a.ready,'browser login and 25 chunks');
-    assert.equal(a.chunks.length,25);const [x,y,z]=a.position.map(Math.floor);
+    assert.equal(a.chunks.length,25);assert.equal(a.registries.get("worldgen/biome")?.length,10);const [x,y,z]=a.position.map(Math.floor);
     const center=a.chunks.find(c=>c.x===Math.floor(x/16)&&c.z===Math.floor(z/16));
     assert.ok(center.data[(y-1)*256+((z%16+16)%16)*16+(x%16+16)%16]>0,'spawn ground matches decoded chunk coordinates');
     a.send(6,w=>w.string('tps'));await a.wait(()=>a.chat.some(s=>s.includes('TPS')),'chat command');
@@ -151,6 +159,7 @@ try {
   }
 } finally {
   for(const socket of connections)socket.destroy();
+  if(proxy){proxy.kill();if(proxy.exitCode===null)await once(proxy,'exit');}
   server.stdin.end('stop\n');
   const timer=setTimeout(()=>server.kill(),5000);
   if(server.exitCode===null)await once(server,'exit');clearTimeout(timer);

@@ -40,7 +40,7 @@ These settings do not enable a web listener in a binary compiled without the
 feature. See [configuration rules](server-config.md#web-listener).
 
 No proxy process is required. Assets are embedded in the executable, so it can
-run from a different world directory without a `web/` folder. The build embeds a
+run from a different world directory without a `client/` folder. The build embeds a
 catalog from the existing C registry.
 
 ## Playing
@@ -91,14 +91,16 @@ Plates, player limits and saves. Native and browser players share the same world
 Creative blocks are available only when the server grants creative mode; the
 client does not grant itself permissions. The default server mode is survival.
 
-This is an initial playable client, not full Minecraft client parity. It renders
-original flat-color voxel geometry and simple entity placeholders. It supports
-terrain streaming, walking/collision/jumping/swimming, mining/placement, item
-pickup, inventories, basic crafting, health, respawning, chat and multiplayer.
-Mining delays and collision shapes are simplified; special block state geometry
-(such as open doors and slabs), flight, skins, sound, particles and sign editing
-are not implemented. No Mojang textures, sounds or game code are
-included. Use the native client for those interfaces and full visual fidelity.
+The client is named **Lapis Obsidian Client**. It now uses an approved CC0 texture
+atlas, original multipart entity art and original synthesized audio, with settings,
+particles, biome tint, day/night lighting, transparency and item icons. Sprint
+(Ctrl), sneak (Shift) and pause/settings supplement the existing controls.
+See [architecture](client-architecture.md), [development](client-development.md),
+[protocol limits](client-protocol.md), [asset records](client-asset-sources.md),
+[code provenance](client-third-party-code.md) and [compliance](client-license-compliance.md).
+This remains a practical server-specific client with simplified special-block
+geometry, collision, mining timing and lighting; skins, full entity metadata,
+resource packs and sign editing are not implemented.
 
 ## Transport and deployment
 

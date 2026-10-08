@@ -76,3 +76,19 @@ dialog { overflow-y: auto; max-height: 90dvh; }
   .touch-mode #messages { left: 160px; bottom: 78px; max-width: calc(100vw - 320px); max-height: 22vh; }
   .touch-mode #chat { left: 150px; bottom: 80px; width: calc(100vw - 290px); }
 }
+
+#server-address { width:100%; }
+#pause { position:absolute; top:76px; right:20px; background:#132630d9; color:white; }
+.touch-mode #pause { top:68px; right:12px; padding:8px; font-size:12px; }
+.item-icon { display:block; margin:auto; width:24px; height:24px; image-rendering:pixelated; }
+#settings input[type=range] { width:100%; }
+h1 { font-size:clamp(30px,4vw,52px); }
+#menu { border-left:4px solid #7794ec; }
+#vitals { color:#f4b6cd; }
+#pause-menu button { margin:4px; }
+
+#menu, dialog { background-image:linear-gradient(#132630e8,#132630e8),url('/assets/textures/original/panel.svg'); }
+button { background-image:linear-gradient(#94dfc2ed,#94dfc2ed),url('/assets/textures/original/button.svg'); }
+.vital-bar { display:inline-flex; margin-left:8px; }
+.vital-bar img { width:10px; height:10px; image-rendering:pixelated; }
+@media (max-width:600px) { .vital-bar { display:none; } }

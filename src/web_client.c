@@ -281,12 +281,7 @@ static int http(WebClient *c) {
   }
   struct Asset { const char *request, *type; const unsigned char *data; size_t size; };
   static const struct Asset assets[] = {
-    {"GET / HTTP/1.1","text/html; charset=utf-8",web_index_html,sizeof(web_index_html)},
-    {"GET /style.css HTTP/1.1","text/css; charset=utf-8",web_style_css,sizeof(web_style_css)},
-    {"GET /protocol.mjs HTTP/1.1","text/javascript; charset=utf-8",web_protocol_mjs,sizeof(web_protocol_mjs)},
-    {"GET /renderer.mjs HTTP/1.1","text/javascript; charset=utf-8",web_renderer_mjs,sizeof(web_renderer_mjs)},
-    {"GET /catalog.mjs HTTP/1.1","text/javascript; charset=utf-8",web_catalog_mjs,sizeof(web_catalog_mjs)},
-    {"GET /client.mjs HTTP/1.1","text/javascript; charset=utf-8",web_client_mjs,sizeof(web_client_mjs)}
+    WEB_ASSET_ENTRIES
   };
   for (unsigned i=0;i<sizeof(assets)/sizeof(assets[0]);i++) if (!strcmp(request,assets[i].request))
     return response(c,"200 OK",assets[i].type,assets[i].data,assets[i].size);

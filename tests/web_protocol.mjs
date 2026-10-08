@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {Reader, Writer, PacketStream, packet, readChunk} from '../web/protocol.mjs';
+import {Reader, Writer, PacketStream, packet, readChunk} from '../client/src/network/protocol.mjs';
 const w=new Writer().varint(-1).varint(772).position(-4068,255,4068).double(-12.25).string('Lapis');
 const r=new Reader(w.finish());
 assert.equal(r.varint(),-1); assert.equal(r.varint(),772); assert.deepEqual(r.position(),[-4068,255,4068]);

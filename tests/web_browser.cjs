@@ -24,7 +24,7 @@ async function terrainVisible(page) {
   })));
 }
 (async()=>{
-  const {PacketStream,packet}=await import('../web/protocol.mjs');
+  const {PacketStream,packet}=await import('../client/src/network/protocol.mjs');
   const listener=net.createServer();listener.listen(0,'127.0.0.1');await once(listener,'listening');
   const port=listener.address().port;
   const webListener=net.createServer();webListener.listen(0,'127.0.0.1');await once(webListener,'listening');
@@ -41,6 +41,7 @@ async function terrainVisible(page) {
     while(!logs.includes('Server listening')){assert.ok(Date.now()<deadline,logs);await new Promise(r=>setTimeout(r,20));}
     browser=await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
     const page=await browser.newPage({viewport:{width:1280,height:800}});
+    const texturesSeen=new Set();page.on('response',r=>{if(r.status()===200&&r.url().includes('/assets/textures/'))texturesSeen.add(r.url());});
     page.on('pageerror',e=>errors.push(e.message));
     // The first teleport precedes terrain. Suppress the redundant second one:
     // receiving the spawn chunk must unlock the UI without another teleport.
@@ -52,10 +53,12 @@ async function terrainVisible(page) {
       });
       server.onMessage(bytes=>stream.push(new Uint8Array(bytes)));
     });
-    await page.goto(`http://127.0.0.1:${webPort}/`);await page.fill('#name','BrowserTester');await page.click('#play');
+    await page.goto(`http://127.0.0.1:${webPort}/`);await page.fill('#name','BrowserTester');
+    await page.click('#menu-settings');await page.locator('#volume').evaluate(e=>{e.value='0.25';e.dispatchEvent(new Event('input',{bubbles:true}));});await page.click('#close-settings');
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('lapis.web.settings')).volume),.25);await page.click('#play');
     await page.waitForSelector('#hud:not([hidden]) #vitals',{timeout:60000});
     await waitFor(page,()=>document.querySelector('#vitals').textContent.includes('Creative'));
-    await terrainVisible(page);
+    await terrainVisible(page);await until(()=>texturesSeen.size>=46,'all approved texture files load');
     await page.screenshot({path:'.tests/web-client.png'});
     await page.click('#resume');
     await waitFor(page,()=>document.pointerLockElement?.id==='world');
@@ -70,7 +73,7 @@ async function terrainVisible(page) {
     assert.notEqual(await page.locator('#location').textContent(),before,'jump changes player position');
     await page.keyboard.press('Escape');
     await waitFor(page,()=>document.pointerLockElement===null);
-    await page.click('#leave');
+    assert.equal(await page.locator('#pause-menu').evaluate(e=>e.open),true);await page.click('#pause-leave');
     await page.click('#play');await page.waitForSelector('#hud:not([hidden]) #vitals',{timeout:60000});
     await waitFor(page,()=>document.querySelector('#hotbar').textContent.includes('dirt ×64'));
     await page.click('#leave');
@@ -127,7 +130,7 @@ async function terrainVisible(page) {
     await phone.screenshot({path:'.tests/web-client-mobile-landscape.png'});
     await phone.tap('#leave');await context.close();
     assert.deepEqual(errors,[]);
-    console.log('Chromium: spawn-chunk readiness, terrain pixels, desktop controls, phone multitouch movement/look/jump, cancellation, mining/placement, chat, inventory and portrait/landscape passed');
+    console.log('Chromium: spawn-chunk readiness, CC0 texture loading, terrain pixels, settings/pause, desktop controls, phone multitouch movement/look/jump, cancellation, mining/placement, chat, inventory and portrait/landscape passed');
   } catch(error) {
     if(browser) {
       let index=0;

@@ -19,3 +19,6 @@ make-demo-song.exe
 /server.txt
 
 /plates/
+
+/client/dist/
+/client/node_modules/

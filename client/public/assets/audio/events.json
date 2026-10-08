@@ -1,0 +1,15 @@
+{
+ "step": {"wave":"noise","frequency":110,"duration":0.075,"gain":0.22},
+ "break": {"wave":"noise","frequency":220,"duration":0.15,"gain":0.4},
+ "place": {"wave":"triangle","frequency":170,"duration":0.07,"gain":0.3},
+ "tool": {"wave":"noise","frequency":460,"duration":0.08,"gain":0.25},
+ "collect": {"wave":"sine","frequency":780,"duration":0.13,"gain":0.24},
+ "click": {"wave":"sine","frequency":440,"duration":0.04,"gain":0.16},
+ "hurt": {"wave":"sawtooth","frequency":120,"duration":0.18,"gain":0.2},
+ "entity": {"wave":"triangle","frequency":190,"duration":0.18,"gain":0.15},
+ "ambient": {"wave":"sine","frequency":90,"duration":1.5,"gain":0.025},
+ "water": {"wave":"noise","frequency":340,"duration":0.3,"gain":0.12},
+ "door": {"wave":"triangle","frequency":230,"duration":0.13,"gain":0.2},
+ "eat": {"wave":"noise","frequency":500,"duration":0.09,"gain":0.18},
+ "note": {"wave":"sine","frequency":440,"duration":0.5,"gain":0.22}
+}

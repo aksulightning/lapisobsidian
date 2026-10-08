@@ -83,7 +83,7 @@ export function readChunk(r) {
   const x = r.int(), z = r.int();
   if (r.varint() !== 0) throw Error('Unsupported heightmap encoding');
   const sections = new Reader(r.take(r.varint()));
-  const data = new Uint16Array(16 * 16 * 320);
+  const data = new Uint16Array(16 * 16 * 320), biomes=new Uint8Array(20);
   for (let section = -4; section < 20; section++) {
     sections.short();
     const bits = sections.byte();
@@ -98,8 +98,22 @@ export function readChunk(r) {
       if (section >= 0) for (let i = 0; i < 4096; i++) data[section * 4096 + i] = palette[packed[i ^ 7]];
     } else throw Error('Unsupported chunk encoding');
     if (sections.byte() !== 0) throw Error('Unsupported biome encoding');
-    sections.varint();
+    const biome=sections.varint(); if(section>=0)biomes[section]=biome;
   }
   if (sections.pos !== sections.bytes.length) throw Error('Unexpected chunk data');
-  return {x, z, data, dirty: true};
+  return {x, z, data, biomes, dirty: true};
+}
+
+export const PROTOCOL_VERSION=772, CORE_PACK_VERSION='1.21.8';
+export function movementPacket(player){return packet(0x1e,w=>w.double(player.x).double(player.y).double(player.z).float(player.yaw*180/Math.PI).float(player.pitch*180/Math.PI).byte(player.grounded?1:0));}
+export function readKnownPacks(r){
+ const count=r.varint();if(count!==1)throw Error('Unsupported server core pack');
+ const pack=[r.string(),r.string(),r.string()];
+ if(pack.join(':')!=='minecraft:core:'+CORE_PACK_VERSION)throw Error('This client requires protocol 772 / core 1.21.8');
+ return pack;
+}
+export function readRegistry(r){
+ const name=r.string(),count=r.varint();if(count<0||count>4096)throw Error('Invalid registry size');
+ const entries=[];for(let i=0;i<count;i++){entries.push(r.string());if(r.byte()!==0)throw Error('Registry NBT is unsupported by this compact client');}
+ return {name,entries};
 }

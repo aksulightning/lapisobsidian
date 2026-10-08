@@ -22,19 +22,46 @@ Set `CC` to select a compiler. `DEBUG=1 ./build.sh` enables ASan/UBSan and addit
 conversion/shadow diagnostics. The existing MinGW `--9x` build option is retained.
 Embedded ESP-IDF support is inherited and has not been validated by this fork.
 
-## Optional HTML5 client
+## Lapis Obsidian Client
 
 ```sh
 LAPIS_OBSIDIAN_WEB_CLIENT=1 ./build.sh
 ./lapis-obsidian
 ```
 
-Open **http://localhost:8080/** to play in a desktop or mobile WebGL browser. Set `web-address`
-and `web-port` in `server.txt` to choose its bind address and port. Native clients
-use `port` (25565 by default); both clients share the world. The client is embedded only when
-compiled with the exact value `1`; a runtime environment variable cannot enable
-it in a default binary. Alpine builds support the same opt-in variable. See
-[controls, scope, deployment and tests](docs/web-client.md).
+**Lapis Obsidian Client** is an independent browser voxel client that connects to
+this server's real protocol-772 gameplay over its embedded WebSocket endpoint.
+It includes textured terrain, desktop/mobile controls, multiplayer, block actions,
+inventory/crafting, chat, original synthesized audio and settings. The client is
+embedded only when compiled with the exact value `1`; a runtime variable cannot
+enable it in a default binary. The C build requires no Node/npm or downloads.
+
+Open **http://localhost:8080/** in a WebGL browser. Configure `web-address` and
+`web-port` in `server.txt`; native clients use `port` (25565 by default). Both
+share the same authoritative world. The menu accepts the server's web address.
+AMD64, ARM64 and RISC-V C builds support the opt-in; desktop and touch browser
+rendering runs on the connecting device, independently of the server CPU.
+
+Separate development/production asset commands (Node 22+, no dependencies):
+
+```sh
+npm --prefix client run build   # client/dist
+npm --prefix client test
+npm --prefix client run dev     # loopback :8081; web-enabled C server on :8080
+```
+
+The client uses selected creator-verified CC0 terrain art and original CC0 pixel
+art/sound designs. Code retains the project's GPL license. It ships no proprietary
+game assets. See [architecture](docs/client-architecture.md),
+[development and controls](docs/client-development.md),
+[protocol coverage and limitations](docs/client-protocol.md),
+[asset provenance](docs/client-asset-sources.md),
+[third-party code](docs/client-third-party-code.md) and
+[license compliance](docs/client-license-compliance.md).
+
+> **Unofficial Project Disclaimer**
+>
+> Lapis Obsidian and Lapis Obsidian Client are independent, community-developed open-source projects. They are not affiliated with, endorsed by, sponsored by, or officially associated with Mojang Studios, Microsoft Corporation, or Minecraft. Minecraft is a trademark of Mojang Studios. All visual and audio assets distributed with Lapis Obsidian Client are independently created or sourced from verified CC0-licensed materials. No proprietary Mojang or Microsoft game assets are included.
 
 ## Configuration
 

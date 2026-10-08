@@ -86,6 +86,8 @@ jobs:
                 exit 1
               fi
               cp LICENSE NOTICE.md README.md server.txt.example "$package/"
+              cp client/public/assets/LICENSE.md "$package/CLIENT-ASSET-LICENSE.md"
+              cp client/public/assets/manifest.json "$package/CLIENT-ASSET-MANIFEST.json"
               cp -R docs "$package/docs"
               {
                 printf "Project: Lapis Obsidian\nCommit: %s\n" "$SOURCE_SHA"
@@ -128,8 +130,11 @@ jobs:
       - run: LAPIS_OBSIDIAN_WEB_CLIENT=1 ./build.sh
       - run: ./tests/web-client.sh
       - run: SANITIZE=1 ./tests/web-client.sh
+      - run: npm --prefix client run build
+      - run: npm --prefix client test
       - run: node tests/web_protocol.mjs
       - run: node tests/web_integration.mjs ./lapis-obsidian
+      - run: node tests/web_integration.mjs ./lapis-obsidian --dev-proxy
       - run: sudo apt-get update && sudo apt-get install -y musl-tools
       - run: LAPIS_OBSIDIAN_WEB_CLIENT=1 CC=musl-gcc ./build-alpine.sh --static --output .tests/lapis-alpine
       - run: node tests/web_integration.mjs .tests/lapis-alpine
