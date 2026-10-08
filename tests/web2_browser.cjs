@@ -55,7 +55,7 @@ async function port() {
       env: { ...process.env, TMPDIR: resolve(".tests/tmp") },
     });
     const page = await browser.newPage({
-      viewport: { width: 1280, height: 800 },
+      viewport: { width: 800, height: 600 },
     });
     page.on("pageerror", (e) => {
       errors.push(e.message);
@@ -68,7 +68,9 @@ async function port() {
     async function wait(predicate, argument, options = {}) {
       const deadline = Date.now() + (options.timeout || argument?.timeout || 60000);
       while (!await page.evaluate(predicate, argument)) {
-        assert.ok(Date.now() < deadline, `Browser condition timed out: ${predicate.toString()}`);
+        const detail = await page.evaluate(() => ({screen: app.currentScreen?.constructor.name, message: app.currentScreen?.message, phase: app.lapisConnection?.phase, ready: app.lapisConnection?.ready, chunks: app.world?.getChunkProvider().chunks.size}));
+        if (detail.message) throw Error(`Client error: ${detail.message}`);
+        assert.ok(Date.now() < deadline, `Browser condition timed out: ${predicate.toString()} ${JSON.stringify(detail)}`);
         await delay(50);
       }
     }
@@ -80,6 +82,7 @@ async function port() {
     console.log("Main menu initialized", await page.evaluate(() => ({ fps: app.fps, size: [app.window.width, app.window.height], canvas: [app.window.canvas.width, app.window.canvas.height] })));
     async function capture(path) {
       const data = await page.evaluate(() => {
+        app.onRender(app.timer.partialTicks);
         const canvas = document.createElement('canvas');
         canvas.width = app.window.canvas.width; canvas.height = app.window.canvas.height;
         const context = canvas.getContext('2d');
@@ -162,7 +165,7 @@ async function port() {
     await wait(
       () => app.player.inventory.getItemInSlot(0) === 3,
     );
-    await page.mouse.click(640, 400);
+    await page.mouse.click(400, 300);
     await wait(() => app.window.isLocked());
     await wait(() => app.player.onGround);
     const before = await page.evaluate(() => [

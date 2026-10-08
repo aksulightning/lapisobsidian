@@ -56,6 +56,7 @@ export default class Connection {
       const name = this.app.getSession().getProfile().getUsername();
       if (!/^[A-Za-z0-9_]{1,15}$/.test(name))
         throw Error("Name must contain 1–15 letters, digits or underscores.");
+      this.app.setSession?.(this.app.getSession(), true);
       this.socket = new WebSocket(
         `${url.protocol === "https:" ? "wss:" : "ws:"}//${url.host}/ws`,
       );

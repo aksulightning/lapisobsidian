@@ -82,16 +82,15 @@ export function createResources() {
   });
   resources["gui/font.png"] = canvas(128, 128, (ctx) => {
     ctx.fillStyle = "white";
-    ctx.font = "8px monospace";
-    ctx.textBaseline = "top";
-    for (let i = 0; i < 256; i++)
-      if (FontRenderer.CHAR_INDEX_LOOKUP[i] !== "\0")
-        ctx.fillText(
-          FontRenderer.CHAR_INDEX_LOOKUP[i],
-          (i % 16) * 8,
-          Math.floor(i / 16) * 8,
-          7,
-        );
+    ctx.font = "7px monospace";
+    ctx.textBaseline = "alphabetic";
+    for (let i = 0; i < 256; i++) {
+      const glyph = FontRenderer.CHAR_INDEX_LOOKUP[i];
+      if (glyph === "\0" || glyph === " ") continue;
+      const x = (i % 16) * 8, y = Math.floor(i / 16) * 8;
+      ctx.save(); ctx.beginPath(); ctx.rect(x, y, 8, 8); ctx.clip();
+      ctx.fillText(glyph, x, y + 7, 7); ctx.restore();
+    }
   });
   resources["misc/grasscolor.png"] = canvas(256, 256, (ctx) => {
     for (let y = 0; y < 256; y++) {
