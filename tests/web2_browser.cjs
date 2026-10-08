@@ -40,7 +40,8 @@ async function port() {
     requests = [];
   let completed = false;
   const sent = {},
-    received = {};
+    received = {},
+    digging = [];
   try {
     for (let i = 0; !logs.includes("Server listening"); i++) {
       assert.ok(i < 500, logs);
@@ -63,7 +64,13 @@ async function port() {
     });
     const { Stream } = await import("../client2/adapter/wire.mjs");
     page.on("websocket", (ws) => {
-      const output = new Stream((id) => (sent[id] = (sent[id] || 0) + 1)),
+      const output = new Stream((id, p) => {
+          sent[id] = (sent[id] || 0) + 1;
+          if (id === 0x28) {
+            digging.push({ status: p.vi(), position: p.pos(), face: p.u8() });
+            if (digging.length > 30) digging.shift();
+          }
+        }),
         input = new Stream((id) => (received[id] = (received[id] || 0) + 1));
       ws.on("framesent", (e) => {
         try {
@@ -94,6 +101,15 @@ async function port() {
           phase: app.lapisConnection?.phase,
           ready: app.lapisConnection?.ready,
           chunks: app.world?.getChunkProvider().chunks.size,
+          position: app.player && [app.player.x, app.player.y, app.player.z],
+          health: app.player?.health,
+          focus: app.hasInGameFocus(),
+          dig: app.lapisConnection?.actions.dig && {
+            position: [app.lapisConnection.actions.dig.hit.x, app.lapisConnection.actions.dig.hit.y, app.lapisConnection.actions.dig.hit.z],
+            block: app.lapisConnection.actions.dig.block,
+            duration: app.lapisConnection.actions.dig.duration,
+            finished: app.lapisConnection.actions.dig.finished,
+          },
         }));
         if (detail.message) throw Error(`Client error: ${detail.message}`);
         assert.ok(
@@ -291,6 +307,11 @@ async function port() {
         (-Math.atan2(dy, Math.hypot(dx, dz)) * 180) / Math.PI,
       );
     }, target);
+    const aim = await page.evaluate(() => {
+      const hit = app.player.rayTrace(4.5, app.timer.partialTicks);
+      return hit && [hit.x, hit.y, hit.z];
+    });
+    assert.deepEqual(aim, target, "survival fixture must be directly visible");
     await page.mouse.down();
     await wait(() => !!app.lapisConnection.actions.dig);
     await page.mouse.up();
@@ -431,7 +452,7 @@ async function port() {
     await rm(cwd, { recursive: true, force: true });
     if (!completed) {
       console.error(logs.slice(-8000));
-      console.log("Wire counters", { sent, received });
+      console.log("Wire counters", { sent, received, digging });
     }
   }
 })().catch((error) => {
