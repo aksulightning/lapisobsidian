@@ -470,6 +470,12 @@ int main (int argc, char **argv) {
       !server_config_arguments(&server_config,argc,argv,config_error,sizeof(config_error))) {
     fprintf(stderr,"Lapis Obsidian: %s\n",config_error); return EXIT_FAILURE;
   }
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+  if (server_config.web_port == server_config.port) {
+    fputs("Lapis Obsidian: web-port must differ from the Minecraft port\n",stderr);
+    return EXIT_FAILURE;
+  }
+#endif
   world_seed = server_config.seed;
   world_mirror_horizontal = server_config.mirror_horizontal ? 1 : 0;
   bool explicit_seed = server_config.seed_set;
@@ -571,7 +577,21 @@ int main (int argc, char **argv) {
   }
   printf("Server listening on port %u...\n", (unsigned)server_config.port);
 #if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
-  printf("HTML5 client: http://localhost:%u/ (also available on the server address)\n", (unsigned)server_config.port);
+  int web_fd = web_client_listen(server_config.web_address,server_config.web_port);
+  if (web_fd < 0) {
+    fprintf(stderr,"Cannot listen for the web client on %s:%u\n",server_config.web_address,(unsigned)server_config.web_port);
+#ifdef _WIN32
+    fprintf(stderr,"Web socket error: %d\n",WSAGetLastError()); closesocket(server_fd); WSACleanup();
+#else
+    perror("web listener"); close(server_fd);
+#endif
+    return EXIT_FAILURE;
+  }
+  bool web_first = false;
+  printf("HTML5 client listening on %s:%u; open http://%s:%u/\n",
+    server_config.web_address,(unsigned)server_config.web_port,
+    !strcmp(server_config.web_address,"0.0.0.0") ? "localhost" : server_config.web_address,
+    (unsigned)server_config.web_port);
 #endif
 
   // Make the socket non-blocking
@@ -614,7 +634,19 @@ int main (int argc, char **argv) {
     // Attempt to accept a new connection
     for (int i = 0; i < MAX_PLAYERS; i ++) {
       if (clients[i] != -1) continue;
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+      /* Alternate preference so a busy listener cannot starve the other. Both
+       * transports share the existing connection/player capacity. */
+      bool web_connection = web_first;
+      clients[i] = accept(web_first ? web_fd : server_fd, (struct sockaddr *)&client_addr, &addr_len);
+      if (clients[i] == -1) {
+        web_connection = !web_first;
+        clients[i] = accept(web_first ? server_fd : web_fd, (struct sockaddr *)&client_addr, &addr_len);
+      }
+      web_first = !web_first;
+#else
       clients[i] = accept(server_fd, (struct sockaddr *)&client_addr, &addr_len);
+#endif
       // If the accept was successful, make the client non-blocking too
       if (clients[i] != -1) {
         printf("New client, fd: %d\n", clients[i]);
@@ -627,7 +659,7 @@ int main (int argc, char **argv) {
       #endif
         packet_input_reset(&inputs[i],clients[i]);
 #if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
-        web_client_reset(clients[i],get_program_time());
+        if (web_connection) web_client_reset(clients[i],get_program_time());
 #endif
         client_count ++;
       }
@@ -708,8 +740,14 @@ int main (int argc, char **argv) {
 
   #ifdef _WIN32
   closesocket(server_fd);
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+  closesocket(web_fd);
+#endif
   #else
   close(server_fd);
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+  close(web_fd);
+#endif
   #endif
  
   #ifdef _WIN32 //cleanup windows socket

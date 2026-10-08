@@ -100,6 +100,29 @@ Reference: Alpine's [GCC guide](https://wiki.alpinelinux.org/wiki/GCC) documents
 `build-base`; its [package index](https://pkgs.alpinelinux.org/packages?name=build-base)
 provides packages by release and architecture.
 
+## Push and pull-request builds
+
+`.github/workflows/build.yml` builds static musl binaries for AMD64 (`amd64`,
+also called x86-64) and 64-bit RISC-V (`riscv64`) on pushes, pull requests and
+manual runs. Each target has two variants: `native` compiles with
+`LAPIS_OBSIDIAN_WEB_CLIENT=0`; `web` compiles with the value `1` and embeds the
+HTML5 client. Choose the web artifact to use `web-address` and `web-port` from
+`server.txt`; see [web-client setup](web-client.md).
+
+The jobs use `alpine:3.23.6`, running AMD64 directly and RISC-V through QEMU.
+Each verifies static linkage, executes the binary's argument validation, runs
+configuration tests, and checks that web symbols match the selected variant.
+Web variants also run HTTP/WebSocket transport tests on the target CPU/emulator.
+The existing Ubuntu jobs retain the full regression/sanitizer, live gameplay
+and Chromium tests. Emulation does not establish performance on RISC-V hardware.
+
+In a successful run's **Artifacts**, select
+`lapis-obsidian-alpine-<amd64|riscv64>-<native|web>`. Each artifact contains a
+binary tarball, the matching source archive, build metadata and SHA-256 checksums.
+Extract the binary tarball to preserve executable permissions. Artifacts are
+retained for 14 days; a failed matrix job does not upload a package or cancel the
+other targets. Builds have a 45-minute timeout and read-only repository access.
+
 ## Nightly GitHub Actions builds
 
 `.github/workflows/nightly.yml` builds at **01:23 UTC daily** (04:23 Helsinki in

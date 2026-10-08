@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include "web_client.h"
 #include "packet_input.h"
@@ -44,6 +45,13 @@ static size_t masked(unsigned char *out,unsigned op,const unsigned char *data,si
 }
 int main(void) {
   unsigned char frame[256], reply[2048], data[32]; ssize_t got;
+  int listener = web_client_listen("127.0.0.1",0); assert(listener >= 0);
+  struct sockaddr_in address; socklen_t address_size = sizeof(address);
+  assert(!getsockname(listener,(struct sockaddr *)&address,&address_size));
+  assert(address.sin_addr.s_addr == inet_addr("127.0.0.1") && address.sin_port);
+  assert(fcntl(listener,F_GETFL,0)&O_NONBLOCK);
+  assert(web_client_listen("127.0.0.1",ntohs(address.sin_port)) == -1);
+  close(listener);
   connect_client(); put("GE",2); assert(web_client_poll(pair[1],now)==0);
   const char get[]="T / HTTP/1.1\r\nHost: localhost\r\n\r\n";
   put(get,sizeof(get)-1); assert(web_client_poll(pair[1],now)==0);
@@ -52,6 +60,8 @@ int main(void) {
   assert(strstr((char *)reply,"200 OK")); assert(strstr((char *)reply,"Content-Security-Policy:")); finish();
 
   connect_client(); const unsigned char native[]={0x47,0,0x84,6}; put(native,sizeof(native));
+  assert(web_client_poll(pair[1],now)==-1); finish(); /* Native frames cannot enter the web listener. */
+  connect_client(); web_client_forget(pair[1]); put(native,sizeof(native));
   assert(web_client_poll(pair[1],now)==1 && !web_client_active(pair[1]));
   assert(recv(pair[1],data,sizeof(native),0)==(ssize_t)sizeof(native)); assert(!memcmp(data,native,sizeof(native))); finish();
 

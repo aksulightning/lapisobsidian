@@ -1,5 +1,9 @@
 # Lapis Obsidian - restart after editing.
 port=25565
+# Used only when compiled with LAPIS_OBSIDIAN_WEB_CLIENT=1.
+# Bind IPv4 address (127.0.0.1 for local access only); separate from the Minecraft port.
+web-address=0.0.0.0
+web-port=8080
 motd=Lapis Obsidian
 gamemode=survival
 # Leave empty to reuse an existing world's seed.

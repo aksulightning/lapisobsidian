@@ -1,4 +1,4 @@
-/* Optional, same-port HTTP/WebSocket transport for the protocol-772 client.
+/* Optional HTTP/WebSocket listener and transport for the protocol-772 client.
  * RFC 6455 framing. No proxy, third-party assets, TLS library or worker thread.
  * All reads/writes are nonblocking; bounded queues isolate slow browsers. */
 #include "web_client.h"
@@ -9,12 +9,15 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #ifdef ESP_PLATFORM
 #include "lwip/sockets.h"
+#include "lwip/inet.h"
 #elif defined(_WIN32)
 #include <winsock2.h>
 #else
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #endif
 #include "globals.h"
 #include "packet_input.h"
@@ -24,7 +27,7 @@
 #define WEB_OUTPUT (8u * 1024u * 1024u)
 #define WEB_STAGE 16384u
 #define WEB_TIMEOUT INT64_C(15000000)
-enum { UNKNOWN, NATIVE, HTTP, WEBSOCKET, CLOSING };
+enum { UNKNOWN, HTTP, WEBSOCKET, CLOSING };
 typedef struct {
   bool used, failed, fragmented;
   int fd, state;
@@ -33,6 +36,37 @@ typedef struct {
   unsigned char raw[WEB_INPUT], data[WEB_INPUT], stage[WEB_STAGE];
   unsigned char *out;
 } WebClient;
+int web_client_listen(const char *address, uint16_t port) {
+  int fd = (int)socket(AF_INET,SOCK_STREAM,0);
+  if (fd < 0) return -1;
+  int opt = 1;
+  struct sockaddr_in bind_address;
+  memset(&bind_address,0,sizeof(bind_address));
+  bind_address.sin_family = AF_INET;
+  bind_address.sin_addr.s_addr = inet_addr(address); /* Configuration is validated. */
+  bind_address.sin_port = htons(port);
+#ifdef _WIN32
+  if (setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,(const char *)&opt,sizeof(opt)) < 0) goto fail;
+#else
+  if (setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt)) < 0) goto fail;
+#endif
+  if (bind(fd,(struct sockaddr *)&bind_address,sizeof(bind_address)) < 0 || listen(fd,5) < 0) goto fail;
+#ifdef _WIN32
+  u_long nonblocking = 1;
+  if (ioctlsocket(fd,FIONBIO,&nonblocking) != 0) goto fail;
+#else
+  int flags = fcntl(fd,F_GETFL,0);
+  if (flags < 0 || fcntl(fd,F_SETFL,flags|O_NONBLOCK) < 0) goto fail;
+#endif
+  return fd;
+fail:
+#ifdef _WIN32
+  { int error = WSAGetLastError(); closesocket(fd); WSASetLastError(error); }
+#else
+  { int error = errno; close(fd); errno = error; }
+#endif
+  return -1;
+}
 static WebClient clients[MAX_PLAYERS];
 static WebClient *lookup(int fd) {
   for (unsigned i = 0; i < MAX_PLAYERS; i++)
@@ -280,9 +314,8 @@ static int websocket(WebClient *c) {
   return 1;
 }
 int web_client_poll(int fd, int64_t now) {
-  WebClient *c=lookup(fd); if (!c) return -1; c->now=now;
+  WebClient *c=lookup(fd); if (!c) return 1; c->now=now;
   if (c->failed || now<c->started) return -1;
-  if (c->state==NATIVE) return 1;
   int sent=flush(c); if (sent<0) return -1;
   if (c->state==CLOSING) return sent ? -1 : 0;
   if ((c->state!=WEBSOCKET && now-c->started>=WEB_TIMEOUT) ||
@@ -291,7 +324,7 @@ int web_client_poll(int fd, int64_t now) {
     char peek[4]; int n=socket_read(fd,peek,4,MSG_PEEK);
     if (n<0) return again() ? 0 : -1;
     if (!n) return -1;
-    if (memcmp(peek,"GET ",(size_t)n)) { c->state=NATIVE; return 1; }
+    if (memcmp(peek,"GET ",(size_t)n)) return -1;
     if (n<4) return 0;
     c->state=HTTP;
   }

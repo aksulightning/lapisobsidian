@@ -21,11 +21,27 @@ Opt-in builds also use the standard shell tools `mktemp`, `od`, `awk`, and `tr`
 (available in Alpine's BusyBox). No Node, npm, Java, Emscripten, downloaded assets,
 or extra link libraries are required to build or run either binary.
 
-Open **http://localhost:25565/**, or replace localhost and the port with your
-server address and `server.txt` port. HTTP and native Minecraft connections use
-the same listener; there is no additional port or proxy process to start. Assets
-are embedded in the executable, so it can run from a different world directory
-without a `web/` folder. The build embeds a catalog from the existing C registry.
+Open **http://localhost:8080/**, or use your server address and the configured
+`web-port`. The web client has a dedicated HTTP/WebSocket listener, configured in
+`server.txt`:
+
+```ini
+port=25565
+web-address=0.0.0.0
+web-port=8080
+```
+
+`web-address` is a dotted IPv4 bind address: `0.0.0.0` listens on all IPv4
+interfaces; `127.0.0.1` restricts access to the local machine. `web-port` must be
+1–65535 and differ from the native Minecraft `port`. Hostnames and IPv6 are not
+supported. A bind failure stops startup with a clear error. Existing files that
+omit the keys use the defaults above; restart after changing either setting.
+These settings do not enable a web listener in a binary compiled without the
+feature. See [configuration rules](server-config.md#web-listener).
+
+No proxy process is required. Assets are embedded in the executable, so it can
+run from a different world directory without a `web/` folder. The build embeds a
+catalog from the existing C registry.
 
 ## Playing
 
@@ -78,7 +94,8 @@ instead of growing buffers indefinitely. HTTP requests use the existing bounded
 connection slots. There is no filesystem serving or arbitrary TCP destination.
 
 Like the existing native listener, direct HTTP/WS is unencrypted. For HTTPS/WSS,
-use a TLS reverse proxy with WebSocket upgrades on `/ws`, preserving the public
+use a TLS reverse proxy targeting `web-address:web-port`, with WebSocket
+upgrades on `/ws`, preserving the public
 `Host` and browser `Origin` (including the port). The client chooses WSS on an
 HTTPS page. Use the existing trusted-network/tunnel guidance for admin commands.
 
@@ -99,7 +116,8 @@ node tests/web_integration.mjs ./lapis-obsidian
 
 The disabled-binary test deliberately sets the runtime variable to `1`; the
 web-binary test sets it to `0`. Native status requests are tested in both modes.
-The web test covers embedded assets, two clients, chunk decoding, inventory,
+The web test covers configured binds, listener isolation, startup failures,
+embedded assets, two clients, chunk decoding, inventory,
 commands, mining, placement, shared edits and reconnects. The C transport tests
 include fragmented input, the RFC handshake vector, origin rejection, malformed
 frames, deadlines and the output bound, also under ASan/UBSan.

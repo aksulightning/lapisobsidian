@@ -29,8 +29,9 @@ LAPIS_OBSIDIAN_WEB_CLIENT=1 ./build.sh
 ./lapis-obsidian
 ```
 
-Open **http://localhost:25565/** to play in a desktop browser. Native clients and
-browser players share the server port and world. The client is embedded only when
+Open **http://localhost:8080/** to play in a desktop browser. Set `web-address`
+and `web-port` in `server.txt` to choose its bind address and port. Native clients
+use `port` (25565 by default); both clients share the world. The client is embedded only when
 compiled with the exact value `1`; a runtime environment variable cannot enable
 it in a default binary. Alpine builds support the same opt-in variable. See
 [controls, scope, deployment and tests](docs/web-client.md).
@@ -59,6 +60,10 @@ for toolchain requirements and validation limits. No Java or vanilla JAR is need
 Nightly static binaries for all three targets are configured in
 [GitHub Actions](https://github.com/aksulightning/lapisobsidian/actions/workflows/nightly.yml),
 with tests, source archives and checksums; see the guide for download details.
+The [Build and test workflow](https://github.com/aksulightning/lapisobsidian/actions/workflows/build.yml)
+also builds AMD64 and RISC-V 64-bit on pushes, pull requests and manual runs.
+Download the `native` artifact for a default server or `web` for the optional
+HTML5 client; each contains a static binary, matching source and checksums.
 
 ## Tests
 

@@ -12,11 +12,15 @@ async function until(predicate,label) {
   const deadline=Date.now()+20000;
   while(!predicate()) { if(Date.now()>deadline)throw Error(`Timed out: ${label}`); await delay(10); }
 }
-const listener=net.createServer(); listener.listen(0,'127.0.0.1'); await once(listener,'listening');
-const port=listener.address().port; await new Promise(resolve=>listener.close(resolve));
+async function reservePort() {
+  const listener=net.createServer();listener.listen(0,'127.0.0.1');await once(listener,'listening');return listener;
+}
+const nativeReservation=await reservePort(),webReservation=await reservePort();
+const port=nativeReservation.address().port,webPort=webReservation.address().port;
+await Promise.all([nativeReservation,webReservation].map(s=>new Promise(resolve=>s.close(resolve))));
 await mkdir(resolve('.tests'),{recursive:true});
 const directory=await mkdtemp(resolve('.tests/web-world-'));
-await writeFile(`${directory}/server.txt`,`port=${port}\ngamemode=creative\n`);
+await writeFile(`${directory}/server.txt`,`port=${port}\nweb-address=127.0.0.1\nweb-port=${webPort}\ngamemode=creative\n`);
 const server=spawn(binary,[],{cwd:directory,env:{...process.env,LAPIS_OBSIDIAN_WEB_CLIENT:disabled?'1':'0'},stdio:['pipe','pipe','pipe']});
 let logs='';server.stdout.on('data',b=>logs+=b);server.stderr.on('data',b=>logs+=b);
 const connections=[];
@@ -24,7 +28,7 @@ class Client extends EventEmitter {
   constructor(uuidByte) {
     super(); this.phase='login';this.chunks=[];this.updates=[];this.chat=[];this.slots=new Map();this.entities=new Set();this.error=null;
     this.stream=new PacketStream((id,r)=>this.packet(id,r)); this.buffer=Buffer.alloc(0);this.upgraded=false;
-    this.socket=net.connect(port,'127.0.0.1');connections.push(this.socket);
+    this.socket=net.connect(webPort,'127.0.0.1');connections.push(this.socket);
     this.socket.on('error',error=>this.error=error);
     this.socket.on('data',bytes=>{
       try {
@@ -33,7 +37,7 @@ class Client extends EventEmitter {
           const end=this.buffer.indexOf('\r\n\r\n');if(end<0)return;
           assert.match(this.buffer.subarray(0,end).toString(),/101 Switching Protocols/);
           this.buffer=this.buffer.subarray(end+4);this.upgraded=true;
-          this.send(0,w=>w.varint(772).string('localhost').short(port).varint(2));
+          this.send(0,w=>w.varint(772).string('localhost').short(webPort).varint(2));
           this.send(0,w=>w.string(`WebTest${uuidByte}`).raw(new Uint8Array(16).fill(uuidByte)));
         }
         while(this.buffer.length>=2) {
@@ -48,7 +52,7 @@ class Client extends EventEmitter {
         }
       }catch(error){this.error=error;}
     });
-    this.socket.on('connect',()=>this.socket.write(`GET /ws HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nOrigin: http://127.0.0.1:${port}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n`));
+    this.socket.on('connect',()=>this.socket.write(`GET /ws HTTP/1.1\r\nHost: 127.0.0.1:${webPort}\r\nOrigin: http://127.0.0.1:${webPort}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n`));
   }
   send(id,write) {
     const p=packet(id,write), h=Buffer.alloc(p.length<126?6:8),mask=Buffer.from([7,11,17,23]);
@@ -76,6 +80,27 @@ class Client extends EventEmitter {
   }
   async wait(predicate,label) {await until(()=>{if(this.error)throw this.error;return predicate();},label);}
 }
+async function rejectedStartup(config,expected) {
+  const cwd=await mkdtemp(resolve('.tests/web-invalid-'));
+  await writeFile(`${cwd}/server.txt`,config);
+  const child=spawn(binary,[],{cwd,stdio:['ignore','pipe','pipe']});let output='';
+  child.stdout.on('data',b=>output+=b);child.stderr.on('data',b=>output+=b);
+  const timer=setTimeout(()=>child.kill(),5000);
+  try {const [code]=await once(child,'exit');assert.notEqual(code,0);assert.match(output,expected);}
+  finally {clearTimeout(timer);await rm(cwd,{recursive:true,force:true});}
+}
+async function refused(host,targetPort) {
+  const socket=net.connect(targetPort,host);connections.push(socket);
+  await new Promise((resolve,reject)=>{
+    socket.once('connect',()=>reject(Error(`Unexpected listener on ${host}:${targetPort}`)));
+    socket.once('error',error=>error.code==='ECONNREFUSED'?resolve():reject(error));
+  });
+}
+async function noHttpOnNativePort() {
+  const s=net.connect(port,'127.0.0.1');connections.push(s);await once(s,'connect');
+  let reply='';s.on('data',b=>reply+=b);s.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n');await delay(150);
+  assert.doesNotMatch(reply,/HTTP\/1\.[01]/);s.destroy();
+}
 async function nativeStatus() {
   const socket=net.connect(port,'127.0.0.1');connections.push(socket);await once(socket,'connect');
   let response;
@@ -86,18 +111,22 @@ async function nativeStatus() {
 try {
   await until(()=>logs.includes('Server listening'),'server startup');
   await nativeStatus();
+  await noHttpOnNativePort();
   if(disabled) {
     assert.doesNotMatch(logs,/HTML5 client/);
-    const s=net.connect(port,'127.0.0.1');connections.push(s);await once(s,'connect');
-    let reply='';s.on('data',b=>reply+=b);s.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n');await delay(150);
-    assert.doesNotMatch(reply,/HTTP\/1\.[01]/);s.destroy();
+    await refused('127.0.0.1',webPort);
     console.log('default binary: native protocol works; runtime environment cannot enable HTTP');
   } else {
+    assert.ok(logs.includes(`HTML5 client listening on 127.0.0.1:${webPort}`));
+    await refused('127.0.0.2',webPort); // Binding is restricted to the configured address.
+    await rejectedStartup(`port=${port}\nweb-port=${port}\n`,/web-port must differ/);
+    const free=await reservePort(),freePort=free.address().port;await new Promise(resolve=>free.close(resolve));
+    await rejectedStartup(`port=${freePort}\nweb-address=127.0.0.1\nweb-port=${webPort}\n`,/Cannot listen for the web client/);
     for(const path of ['/','/style.css','/protocol.mjs','/renderer.mjs','/client.mjs','/catalog.mjs']) {
-      const response=await fetch(`http://127.0.0.1:${port}${path}`);assert.equal(response.status,200);
+      const response=await fetch(`http://127.0.0.1:${webPort}${path}`);assert.equal(response.status,200);
       assert.match(response.headers.get('content-security-policy'),/frame-ancestors 'none'/);assert.ok((await response.text()).length>100);
     }
-    assert.equal((await fetch(`http://127.0.0.1:${port}/missing`)).status,404);
+    assert.equal((await fetch(`http://127.0.0.1:${webPort}/missing`)).status,404);
     const a=new Client(1);await a.wait(()=>a.ready,'browser login and 25 chunks');
     assert.equal(a.chunks.length,25);const [x,y,z]=a.position.map(Math.floor);
     const center=a.chunks.find(c=>c.x===Math.floor(x/16)&&c.z===Math.floor(z/16));
@@ -116,7 +145,7 @@ try {
     a.socket.end();await delay(100);
     const reconnected=new Client(1);await reconnected.wait(()=>reconnected.ready,'reconnect');
     assert.equal(reconnected.slots.get('0:36')?.item,28);
-    console.log('web binary: embedded assets, native coexistence, login, chunks, commands, inventory, two players, mining, placement, movement and reconnect passed');
+    console.log('web binary: configured address/port, isolated listeners, embedded assets, native coexistence, login, chunks, commands, inventory, two players, mining, placement, movement and reconnect passed');
   }
 } finally {
   for(const socket of connections)socket.destroy();

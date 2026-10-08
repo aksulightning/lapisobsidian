@@ -11,6 +11,101 @@ jobs:
       - run: ./tests/run.sh
       - run: SANITIZE=1 ./tests/run.sh
       - run: node build_registries.js --check
+  alpine:
+    name: Alpine ${{ matrix.arch }} (${{ matrix.variant }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, riscv64]
+        variant: [native, web]
+        include:
+          - variant: native
+            web_client: '0'
+          - variant: web
+            web_client: '1'
+    env:
+      ALPINE_IMAGE: alpine:3.23.6
+      TARGET_ARCH: ${{ matrix.arch }}
+      BUILD_VARIANT: ${{ matrix.variant }}
+      LAPIS_OBSIDIAN_WEB_CLIENT: ${{ matrix.web_client }}
+      SOURCE_SHA: ${{ github.sha }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Enable RISC-V emulation
+        if: matrix.arch == 'riscv64'
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        with:
+          platforms: riscv64
+      - name: Archive matching source
+        run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          mkdir -p dist
+          git archive --format=tar.gz --prefix=lapis-obsidian-source/ HEAD > dist/source.tar.gz
+      - name: Build, check and package static binaries
+        run: |
+          docker run --rm --platform "linux/$TARGET_ARCH" \
+            --volume "$GITHUB_WORKSPACE:/work" --workdir /work \
+            --env TARGET_ARCH --env BUILD_VARIANT --env LAPIS_OBSIDIAN_WEB_CLIENT \
+            --env SOURCE_SHA --env ALPINE_IMAGE \
+            "$ALPINE_IMAGE" sh -eu -c '
+              apk add --no-cache build-base bash
+              package=".tests/alpine-package"
+              mkdir -p "$package"
+              ./build-alpine.sh --arch "$TARGET_ARCH" --static \
+                --output "$package/lapis-obsidian"
+              readelf -h "$package/lapis-obsidian"
+              readelf -l "$package/lapis-obsidian" > .tests/alpine-elf.txt
+              if grep -q INTERP .tests/alpine-elf.txt; then
+                echo "Expected a static executable" >&2
+                exit 1
+              fi
+              # Execute on the target CPU/emulator, without creating a world.
+              result=0
+              timeout 30 "$package/lapis-obsidian" --ci-abi-check > .tests/alpine-smoke.log 2>&1 || result=$?
+              test "$result" -eq 1
+              grep -F "Usage: lapis-obsidian" .tests/alpine-smoke.log
+              cc -std=c11 -O2 -Wall -Wextra -Wconversion -Wshadow -Werror -Iinclude \
+                tests/server_config.c tests/sanitizer.c src/server_config.c src/beta173_rng.c \
+                -o .tests/alpine-config
+              .tests/alpine-config
+              nm "$package/lapis-obsidian" > .tests/alpine-symbols.txt
+              if [ "$LAPIS_OBSIDIAN_WEB_CLIENT" = 1 ]; then
+                grep -q "web_client_listen" .tests/alpine-symbols.txt
+                ./tests/web-client.sh
+              elif grep -q "web_client_" .tests/alpine-symbols.txt; then
+                echo "Default binary unexpectedly includes the web client" >&2
+                exit 1
+              fi
+              cp LICENSE NOTICE.md README.md server.txt.example "$package/"
+              cp -R docs "$package/docs"
+              {
+                printf "Project: Lapis Obsidian\nCommit: %s\n" "$SOURCE_SHA"
+                printf "Architecture: %s\nVariant: %s\n" "$TARGET_ARCH" "$BUILD_VARIANT"
+                printf "LAPIS_OBSIDIAN_WEB_CLIENT=%s\n" "$LAPIS_OBSIDIAN_WEB_CLIENT"
+                printf "Container: %s\nAlpine release: " "$ALPINE_IMAGE"; cat /etc/alpine-release
+                printf "Compiler: "; cc --version | head -n 1
+                printf "Linkage: static musl\n"
+                apk info -v build-base gcc musl musl-dev binutils
+              } > "$package/BUILDINFO.txt"
+              cp "$package/BUILDINFO.txt" dist/BUILDINFO.txt
+              archive="lapis-obsidian-alpine-$TARGET_ARCH-$BUILD_VARIANT.tar.gz"
+              tar -czf "dist/$archive" -C "$package" .
+              cd dist
+              sha256sum "$archive" source.tar.gz > SHA256SUMS
+            '
+      - name: Upload architecture artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: lapis-obsidian-alpine-${{ matrix.arch }}-${{ matrix.variant }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
   web-client:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
