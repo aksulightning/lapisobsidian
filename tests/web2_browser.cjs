@@ -102,8 +102,10 @@ async function port() {
           ready: app.lapisConnection?.ready,
           chunks: app.world?.getChunkProvider().chunks.size,
           position: app.player && [app.player.x, app.player.y, app.player.z],
+          rotation: app.player && [app.player.rotationYaw, app.player.rotationPitch],
           health: app.player?.health,
           focus: app.hasInGameFocus(),
+          held: [...(app.lapisConnection?.actions.held || [])],
           dig: app.lapisConnection?.actions.dig && {
             position: [app.lapisConnection.actions.dig.hit.x, app.lapisConnection.actions.dig.hit.y, app.lapisConnection.actions.dig.hit.z],
             block: app.lapisConnection.actions.dig.block,
@@ -282,10 +284,10 @@ async function port() {
       target,
     );
     await wait(([x, y, z]) => app.world.getBlockAt(x, y, z) === 3, target);
-    // Generated surface cover can occlude a block below the player's feet.
-    // Clear the fixture's sightline through authoritative creative actions.
-    for (const dy of [1, 2]) {
-      const above = [target[0], target[1] + dy, target[2]];
+    // Clear the full sightline, including cover in the intervening column,
+    // through authoritative creative actions while keeping the dirt fixture.
+    for (const [dy, dz] of [[0, -1], [1, -1], [2, -1], [1, 0], [2, 0]]) {
+      const above = [target[0], target[1] + dy, target[2] + dz];
       await page.evaluate(([x, y, z]) => {
         const c = app.lapisConnection;
         c.send(0x28, (p) => p.vi(0).pos(x, y, z).u8(1).vi(++c.sequence));
@@ -360,6 +362,7 @@ async function port() {
           ),
       ),
     );
+    console.log("Held/canceled survival mining and item model passed");
     await page.keyboard.press("KeyE");
     await wait(() => app.currentScreen?.constructor.name === "Inventory");
     assert.equal(
@@ -411,6 +414,7 @@ async function port() {
           ?.renderer.group.children.length >= 8,
     );
     await capture(".tests/web-client2-entities.png");
+    console.log("Survival inventory and cow model passed");
     // Measure Web Audio signal after the positional listener, even in muted CI.
     await page.evaluate(async () => {
       const sound = app.soundManager,
