@@ -228,6 +228,7 @@ document.addEventListener('keydown',event=>{
   if(!ready || event.target.matches('input,select') || $('inventory').open)return;
   if(['Space','KeyW','KeyA','KeyS','KeyD','KeyT','KeyE'].includes(event.code))event.preventDefault();
   if(event.repeat)return;
+  if(event.code==='Escape') {document.exitPointerLock?.();keys.clear();return;}
   if(event.code==='KeyT') { document.exitPointerLock?.(); $('chat').hidden=false; $('message').focus(); return; }
   if(event.code==='KeyE') {windowId=0;openInventory();return;}
   if(event.code==='KeyR'&&player.health<=0){clearWorld();send(0x0b,w=>w.varint(0));return;}

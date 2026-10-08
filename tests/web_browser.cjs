@@ -36,7 +36,9 @@ const {chromium}=require('../.tests/browser/node_modules/playwright');
     const before=await page.locator('#location').textContent();
     await page.keyboard.down('Space');await page.waitForTimeout(250);await page.keyboard.up('Space');
     assert.notEqual(await page.locator('#location').textContent(),before,'jump changes player position');
-    await page.keyboard.press('Escape');await page.click('#leave');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(()=>document.pointerLockElement===null);
+    await page.click('#leave');
     await page.click('#play');await page.waitForSelector('#hud:not([hidden]) #vitals',{timeout:60000});
     await page.waitForFunction(()=>document.querySelector('#hotbar').textContent.includes('dirt ×64'));
     assert.deepEqual(errors,[]);
@@ -47,6 +49,7 @@ const {chromium}=require('../.tests/browser/node_modules/playwright');
       if(page) {
         console.error('Browser status:',await page.locator('#status').textContent());
         console.error('Browser errors:',errors);
+        console.error('Pointer lock:',await page.evaluate(()=>document.pointerLockElement?.id||null));
         await page.screenshot({path:'.tests/web-client.png'});
       }
     }
