@@ -18,7 +18,7 @@ const player = {x:8.5,y:80,z:8.5,yaw:0,pitch:0,vy:0,grounded:false,health:20,foo
 let renderer, socket, phase='login', ready=false, sequence=0, windowId=0, stateId=0;
 let target=null, mining=null, leftDown=false, lastSent=0, lastFrame=performance.now(), myId=-1;
 let loginTimer, heldUse=false, hasPosition=false, lastReceived=0, loadingStarted=0, receivedBytes=0, lastMovement='';
-let touchMode=false;
+let touchMode=false,hadPointerLock=false;
 const touch={forward:0,right:0,jump:false,move:null,look:null,buttons:new Map()};
 const storage = {
   get(key) { try { return localStorage.getItem(key); } catch { return null; } },
@@ -250,6 +250,9 @@ function lockMouse() {
 $('resume').onclick=lockMouse;
 $('world').onclick=()=>{if(document.pointerLockElement!==$('world'))lockMouse();};
 document.addEventListener('pointerlockchange',()=>{
+  const locked=document.pointerLockElement===$('world');
+  if(hadPointerLock&&!locked&&ready&&!touchMode&&!$('inventory').open&&$('chat').hidden&&!$('settings').open&&!$('pause-menu').open)pause();
+  hadPointerLock=locked;
   $('resume').hidden=touchMode||!ready||document.pointerLockElement===$('world');
   resetInput();
 });
@@ -308,7 +311,7 @@ document.addEventListener('keydown',event=>{
   if(!ready || event.target.matches('input,select') || $('inventory').open||$('pause-menu').open||$('settings').open)return;
   if(['Space','KeyW','KeyA','KeyS','KeyD','KeyT','KeyE'].includes(event.code))event.preventDefault();
   if(event.repeat)return;
-  if(event.code==='Escape') {pause();return;}
+  if(event.code==='Escape') {event.preventDefault();pause();return;}
   if(event.code==='KeyT') { openChat(); return; }
   if(event.code==='KeyE') {windowId=0;openInventory();return;}
   if(event.code==='KeyR'&&player.health<=0){respawn();return;}

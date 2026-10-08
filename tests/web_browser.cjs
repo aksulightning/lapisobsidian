@@ -73,7 +73,7 @@ async function terrainVisible(page) {
     assert.notEqual(await page.locator('#location').textContent(),before,'jump changes player position');
     await page.keyboard.press('Escape');
     await waitFor(page,()=>document.pointerLockElement===null);
-    assert.equal(await page.locator('#pause-menu').evaluate(e=>e.open),true);await page.click('#pause-leave');
+    await waitFor(page,()=>document.querySelector('#pause-menu').open);assert.equal(await page.locator('#pause-menu').evaluate(e=>e.open),true);await page.click('#pause-leave');
     await page.click('#play');await page.waitForSelector('#hud:not([hidden]) #vitals',{timeout:60000});
     await waitFor(page,()=>document.querySelector('#hotbar').textContent.includes('dirt ×64'));
     await page.click('#leave');
