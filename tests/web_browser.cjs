@@ -9,10 +9,11 @@ const {chromium}=require('../.tests/browser/node_modules/playwright');
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function until(predicate,label) {
   const deadline=Date.now()+20000;
-  while(!predicate()){assert.ok(Date.now()<deadline,label);await delay(25);}
+  while(!await predicate()){assert.ok(Date.now()<deadline,label);await delay(25);}
 }
+async function waitFor(page,predicate) { await until(()=>page.evaluate(predicate),'browser condition'); }
 async function terrainVisible(page) {
-  await page.waitForFunction(()=>new Promise(resolve=>requestAnimationFrame(()=>{
+  await waitFor(page,()=>new Promise(resolve=>requestAnimationFrame(()=>{
     const canvas=document.querySelector('#world'),gl=canvas.getContext('webgl');
     const pixel=new Uint8Array(4),colors=new Set();
     for(let x=1;x<8;x++)for(let y=1;y<8;y++) {
@@ -53,25 +54,25 @@ async function terrainVisible(page) {
     });
     await page.goto(`http://127.0.0.1:${webPort}/`);await page.fill('#name','BrowserTester');await page.click('#play');
     await page.waitForSelector('#hud:not([hidden]) #vitals',{timeout:60000});
-    await page.waitForFunction(()=>document.querySelector('#vitals').textContent.includes('Creative'));
+    await waitFor(page,()=>document.querySelector('#vitals').textContent.includes('Creative'));
     await terrainVisible(page);
     await page.screenshot({path:'.tests/web-client.png'});
     await page.click('#resume');
-    await page.waitForFunction(()=>document.pointerLockElement?.id==='world');
+    await waitFor(page,()=>document.pointerLockElement?.id==='world');
     await page.keyboard.press('KeyT');await page.fill('#message','/tps');await page.keyboard.press('Enter');
-    await page.waitForFunction(()=>document.querySelector('#messages').textContent.includes('TPS'));
+    await waitFor(page,()=>document.querySelector('#messages').textContent.includes('TPS'));
     await page.keyboard.press('KeyE');assert.equal(await page.locator('#inventory').evaluate(e=>e.open),true);
     await page.selectOption('#block',{label:'dirt'});await page.click('#give');
-    await page.waitForFunction(()=>document.querySelector('#hotbar').textContent.includes('dirt ×64'));
+    await waitFor(page,()=>document.querySelector('#hotbar').textContent.includes('dirt ×64'));
     await page.click('#close-inventory');
     const before=await page.locator('#location').textContent();
     await page.keyboard.down('Space');await page.waitForTimeout(250);await page.keyboard.up('Space');
     assert.notEqual(await page.locator('#location').textContent(),before,'jump changes player position');
     await page.keyboard.press('Escape');
-    await page.waitForFunction(()=>document.pointerLockElement===null);
+    await waitFor(page,()=>document.pointerLockElement===null);
     await page.click('#leave');
     await page.click('#play');await page.waitForSelector('#hud:not([hidden]) #vitals',{timeout:60000});
-    await page.waitForFunction(()=>document.querySelector('#hotbar').textContent.includes('dirt ×64'));
+    await waitFor(page,()=>document.querySelector('#hotbar').textContent.includes('dirt ×64'));
     await page.click('#leave');
     const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1});
     const phone=await context.newPage();phone.on('pageerror',e=>errors.push(e.message));
@@ -88,7 +89,7 @@ async function terrainVisible(page) {
     await phone.waitForSelector('#touch-controls:not([hidden]) #move-pad',{timeout:60000});
     assert.equal(await phone.evaluate(()=>document.pointerLockElement),null);
     await phone.tap('#touch-chat');await phone.fill('#message','/tps');await phone.tap('#send-message');
-    await phone.waitForFunction(()=>document.querySelector('#messages').textContent.includes('TPS'));
+    await waitFor(phone,()=>document.querySelector('#messages').textContent.includes('TPS'));
     await until(()=>position!==null,'phone sends its position');
     const cdp=await context.newCDPSession(phone);
     const center=async selector=>{const b=await phone.locator(selector).boundingBox();assert.ok(b);return {x:b.x+b.width/2,y:b.y+b.height/2};};
@@ -107,10 +108,10 @@ async function terrainVisible(page) {
     await touch('touchStart',[{id:4,...jump}]);await delay(300);await touch('touchEnd');
     assert.ok(position[1]>height+.1,'touch jump raises the player');await delay(900);
     await phone.tap('#touch-inventory');await phone.selectOption('#block',{label:'dirt'});await phone.tap('#give');
-    await phone.waitForFunction(()=>document.querySelector('#hotbar').textContent.includes('dirt ×64'));
+    await waitFor(phone,()=>document.querySelector('#hotbar').textContent.includes('dirt ×64'));
     await phone.tap('#close-inventory');
     await touch('touchStart',[{id:5,x:220,y:250}]);await touch('touchMove',[{id:5,x:220,y:370}]);await touch('touchEnd');
-    await phone.waitForFunction(()=>document.querySelector('#location').textContent.includes(' · '));
+    await waitFor(phone,()=>document.querySelector('#location').textContent.includes(' · '));
     const mined=updates.length,mine=await center('#touch-mine');
     await touch('touchStart',[{id:6,...mine}]);await delay(250);await touch('touchEnd');
     await until(()=>updates.slice(mined).some(p=>p[3]===0),'touch mining changes a block');

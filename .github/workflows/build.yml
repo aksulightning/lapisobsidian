@@ -47,7 +47,7 @@ jobs:
       - name: Archive matching source
         run: |
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          mkdir -p dist
+          mkdir -p dist .tests
           git archive --format=tar.gz --prefix=lapis-obsidian-source/ HEAD > dist/source.tar.gz
       - name: Build, check and package static binaries
         run: |
