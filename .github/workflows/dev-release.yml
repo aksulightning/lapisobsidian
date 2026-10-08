@@ -76,24 +76,35 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh api "repos/$GH_REPO/git/refs" --method POST \
-            -f "ref=refs/tags/$RELEASE_TAG" -f "sha=$SOURCE_SHA"
-          gh release create "$RELEASE_TAG" dist/* \
-            --target "$SOURCE_SHA" --title "Lapis Obsidian $RELEASE_TAG" \
-            --notes-file ".github/releases/$RELEASE_TAG.md" \
-            --verify-tag --draft --prerelease --latest=false
+          # The tag endpoint excludes draft releases. List releases so a retry
+          # can verify the already uploaded draft without replacing any assets.
+          gh api "repos/$GH_REPO/releases?per_page=100" > releases.json
+          release_id=$(jq -r --arg tag "$RELEASE_TAG" '.[] | select(.tag_name == $tag) | .id' releases.json)
+          if [ -z "$release_id" ]; then
+            gh api "repos/$GH_REPO/git/refs" --method POST \
+              -f "ref=refs/tags/$RELEASE_TAG" -f "sha=$SOURCE_SHA"
+            gh release create "$RELEASE_TAG" dist/* \
+              --target "$SOURCE_SHA" --title "Lapis Obsidian $RELEASE_TAG" \
+              --notes-file ".github/releases/$RELEASE_TAG.md" \
+              --verify-tag --draft --prerelease --latest=false
+            gh api "repos/$GH_REPO/releases?per_page=100" > releases.json
+            release_id=$(jq -r --arg tag "$RELEASE_TAG" '.[] | select(.tag_name == $tag) | .id' releases.json)
+          fi
+          [[ "$release_id" =~ ^[0-9]+$ ]]
+          gh api "repos/$GH_REPO/releases/$release_id" > release.json
       - name: Verify uploaded assets and publish prerelease
         shell: bash
         run: |
           set -euo pipefail
           test "$(gh api "repos/$GH_REPO/git/ref/tags/$RELEASE_TAG" --jq .object.sha)" = "$SOURCE_SHA"
-          gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" > release.json
           python3 - <<'PY'
           import hashlib, json, os
           from pathlib import Path
           release = json.loads(Path('release.json').read_text())
           assert release['draft'] and release['prerelease']
           assert release['tag_name'] == os.environ['RELEASE_TAG']
+          assert release['target_commitish'] == os.environ['SOURCE_SHA']
+          assert release['body'].strip() == Path('.github/releases/' + os.environ['RELEASE_TAG'] + '.md').read_text().strip()
           assets = {asset['name']: asset for asset in release['assets']}
           files = list(Path('dist').iterdir())
           assert len(files) == len(assets) == 10
