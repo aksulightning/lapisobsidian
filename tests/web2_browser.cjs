@@ -174,7 +174,7 @@ async function port() {
       () => app.player.inventory.getItemInSlot(0) === 3,
     );
     await page.mouse.click(400, 300);
-    await wait(() => app.window.isLocked());
+    await wait(() => document.pointerLockElement === app.window.canvas);
     await wait(() => app.player.onGround);
     const before = await page.evaluate(() => [
       app.player.x,
@@ -254,8 +254,10 @@ async function port() {
     );
   } finally {
     await browser?.close();
-    server.kill("SIGTERM");
+    server.stdin.end("stop\n");
+    const stopTimer=setTimeout(()=>server.kill(),5000);
     if (server.exitCode === null) await once(server, "exit").catch(() => {});
+    clearTimeout(stopTimer);
     await rm(cwd, { recursive: true, force: true });
     if (!completed) { console.error(logs.slice(-4000)); console.log("Wire counters", {sent,received}); }
   }
