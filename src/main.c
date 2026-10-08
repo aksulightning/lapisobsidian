@@ -13,6 +13,7 @@
 #include "server_console.h"
 #include "server_stats.h"
 #include "world_border.h"
+#include "web_client.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -569,6 +570,9 @@ int main (int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
   printf("Server listening on port %u...\n", (unsigned)server_config.port);
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+  printf("HTML5 client: http://localhost:%u/ (also available on the server address)\n", (unsigned)server_config.port);
+#endif
 
   // Make the socket non-blocking
   // This is necessary to not starve the idle task during slow connections
@@ -622,6 +626,9 @@ int main (int argc, char **argv) {
         fcntl(clients[i], F_SETFL, flags | O_NONBLOCK);
       #endif
         packet_input_reset(&inputs[i],clients[i]);
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+        web_client_reset(clients[i],get_program_time());
+#endif
         client_count ++;
       }
       break;
@@ -661,6 +668,11 @@ int main (int argc, char **argv) {
     int client_fd = clients[client_index];
     plates_select_for_fd(client_fd);
 
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+    int transport = web_client_poll(client_fd,get_program_time());
+    if (transport < 0) { disconnectClient(&clients[client_index],2); continue; }
+    if (!transport) continue;
+#endif
     int ready = packet_input_poll(&inputs[client_index],get_program_time());
     if (ready < 0) { disconnectClient(&clients[client_index],2); continue; }
     if (!ready) continue;

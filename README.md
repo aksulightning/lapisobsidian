@@ -22,6 +22,19 @@ Set `CC` to select a compiler. `DEBUG=1 ./build.sh` enables ASan/UBSan and addit
 conversion/shadow diagnostics. The existing MinGW `--9x` build option is retained.
 Embedded ESP-IDF support is inherited and has not been validated by this fork.
 
+## Optional HTML5 client
+
+```sh
+LAPIS_OBSIDIAN_WEB_CLIENT=1 ./build.sh
+./lapis-obsidian
+```
+
+Open **http://localhost:25565/** to play in a desktop browser. Native clients and
+browser players share the server port and world. The client is embedded only when
+compiled with the exact value `1`; a runtime environment variable cannot enable
+it in a default binary. Alpine builds support the same opt-in variable. See
+[controls, scope, deployment and tests](docs/web-client.md).
+
 ## Configuration
 
 The first startup creates `server.txt` in the working directory. Edit it and

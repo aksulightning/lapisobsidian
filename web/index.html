@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lapis Obsidian · Play</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/client.mjs"></script>
+</head>
+<body>
+  <canvas id="world" aria-label="First-person voxel world"></canvas>
+  <main id="menu">
+    <p class="eyebrow">LAPIS OBSIDIAN / EXPERIMENTAL WEB CLIENT</p>
+    <h1>A world to<br>make your own.</h1>
+    <p>Explore, mine, and build together on this server.</p>
+    <form id="join">
+      <label for="name">Player name</label>
+      <div class="row"><input id="name" maxlength="15" pattern="[A-Za-z0-9_]{1,15}" value="WebPlayer" required autocomplete="off"><button id="play">Enter world →</button></div>
+    </form>
+    <p id="status" role="status">Requires a desktop browser with WebGL, a keyboard, and a mouse.</p>
+    <p class="controls">W A S D to move · Mouse to look · Space to jump/swim<br>Hold left mouse to mine · Right mouse to place/use · 1–9 hotbar<br>T to chat · E inventory · R respawn · Esc release mouse</p>
+  </main>
+  <section id="hud" hidden>
+    <div id="vitals"></div><div id="location"></div>
+    <div id="crosshair" aria-hidden="true">+</div>
+    <div id="messages" aria-live="polite"></div>
+    <form id="chat" hidden><input id="message" maxlength="200" placeholder="Message or /command" aria-label="Chat message"></form>
+    <div id="hotbar" aria-label="Hotbar"></div>
+    <button id="resume" hidden>Click to resume</button>
+    <button id="leave">Disconnect</button>
+  </section>
+  <dialog id="inventory">
+    <h2>Inventory</h2><p id="inventory-help">Click a slot to pick up or place its stack.</p>
+    <div id="slots"></div><p id="cursor"></p>
+    <div id="creative" hidden><label for="block">Creative block</label><select id="block"></select><button id="give">Put in selected hotbar slot</button></div>
+    <button id="close-inventory">Back to world</button>
+  </dialog>
+</body>
+</html>

@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #endif
 #include "packet_input.h"
+#include "web_client.h"
 
 /* One shared frame, no per-client payload allocation or per-packet heap churn. */
 static uint8_t frame[PACKET_INPUT_LIMIT+3u];
@@ -22,6 +23,9 @@ static bool would_block (void) {
 #endif
 }
 static int receive (int fd, size_t size, int flags) {
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+  if (web_client_active(fd)) return (int)web_client_receive(fd,frame,size,flags);
+#endif
 #ifdef _WIN32
   return recv(fd,(char *)frame,(int)size,flags);
 #else

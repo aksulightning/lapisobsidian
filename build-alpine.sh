@@ -18,6 +18,7 @@ READELF selects an ELF inspection executable (default: readelf).
 --static links musl statically; --debug enables ASan/UBSan (not with --static).
 Relative --output paths are resolved from your invocation directory.
 The script downloads nothing and never executes the target binary.
+LAPIS_OBSIDIAN_WEB_CLIENT=1 embeds the optional HTML5 client (requires awk/od/tr).
 HELP
 }
 fail() { printf '%s\n' "Error: $*" >&2; exit 1; }
@@ -91,6 +92,10 @@ if [ "$debug" = 1 ]; then
     -fsanitize=address,undefined -fno-omit-frame-pointer
 fi
 [ "$static" = 0 ] || set -- "$@" -static
+if [ "${LAPIS_OBSIDIAN_WEB_CLIENT:-0}" = 1 ]; then
+  sh tools/embed-web.sh > "$work/web_assets.h"
+  set -- "$@" -DLAPIS_OBSIDIAN_WEB_CLIENT=1 "-I$work"
+fi
 printf 'Building Lapis Obsidian for Alpine %s using %s\n' "$arch" "$triple"
 "$compiler" src/*.c "$@" -o "$work/lapis-obsidian" -lm
 mkdir -p "$(dirname "$output")"

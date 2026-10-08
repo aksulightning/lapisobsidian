@@ -10,6 +10,7 @@
 #include "signs.h"
 #include "commands.h"
 #include "world_border.h"
+#include "web_client.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -233,6 +234,9 @@ void disconnectClient (int *client_fd, int cause) {
   client_count --;
   setClientState(*client_fd, STATE_NONE);
   handlePlayerDisconnect(*client_fd);
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+  web_client_forget(*client_fd);
+#endif
   #ifdef _WIN32
   closesocket(*client_fd);
   printf("Disconnected client %d, cause: %d, errno: %d\n", *client_fd, cause, WSAGetLastError());

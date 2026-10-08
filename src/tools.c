@@ -27,6 +27,7 @@
 #include "procedures.h"
 #include "tools.h"
 #include "packet_input.h"
+#include "web_client.h"
 
 #ifndef htonll
   static uint64_t htonll (uint64_t value) {
@@ -99,6 +100,11 @@ ssize_t recv_all (int client_fd, void *buf, size_t n, uint8_t require_first) {
 ssize_t send_all (int client_fd, const void *buf, ssize_t len) {
   /* Defence in depth for world-scoped broadcasts from inherited packet code. */
   if (!plates_fd_active(client_fd)) return len;
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+  if (web_client_active(client_fd)) {
+    return len < 0 ? -1 : web_client_send(client_fd,buf,(size_t)len);
+  }
+#endif
   // Treat any input buffer as *uint8_t for simplicity
   const uint8_t *p = (const uint8_t *)buf;
   ssize_t sent = 0;

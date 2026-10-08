@@ -11,3 +11,27 @@ jobs:
       - run: ./tests/run.sh
       - run: SANITIZE=1 ./tests/run.sh
       - run: node build_registries.js --check
+  web-client:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: ./build.sh
+      - run: node tests/web_integration.mjs ./lapis-obsidian --disabled
+      - run: LAPIS_OBSIDIAN_WEB_CLIENT=1 ./build.sh
+      - run: ./tests/web-client.sh
+      - run: SANITIZE=1 ./tests/web-client.sh
+      - run: node tests/web_protocol.mjs
+      - run: node tests/web_integration.mjs ./lapis-obsidian
+      - run: npm install --prefix .tests/browser --no-save --no-package-lock playwright@1.51.1
+      - run: node .tests/browser/node_modules/playwright/cli.js install --with-deps chromium
+      - run: node tests/web_browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-client-screenshot
+          path: .tests/web-client.png
+          if-no-files-found: ignore

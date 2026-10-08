@@ -7,6 +7,7 @@ world.meta
 cc*.s
 
 .alpine-build.*/
+.web-build.*/
 lapis-obsidian-alpine-*
 
 # Server-owned songs and the optional demo generator executable.

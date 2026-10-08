@@ -48,4 +48,10 @@ if [[ "${DEBUG:-0}" == 1 ]]; then
   flags=(-O1 -g -Wall -Wextra -Wconversion -Wshadow -fsanitize=address,undefined -fno-omit-frame-pointer)
 fi
 # Disable contraction so density vectors do not depend on FMA availability.
+if [[ "${LAPIS_OBSIDIAN_WEB_CLIENT:-0}" == 1 ]]; then
+  web_build=$(mktemp -d .web-build.XXXXXX)
+  trap 'rm -rf "$web_build"' EXIT
+  sh tools/embed-web.sh > "$web_build/web_assets.h"
+  flags+=(-DLAPIS_OBSIDIAN_WEB_CLIENT=1 "-I$web_build")
+fi
 "$compiler" src/*.c "${flags[@]}" -ffp-contract=off -Iinclude -o "lapis-obsidian$exe" $windows_linker -lm
