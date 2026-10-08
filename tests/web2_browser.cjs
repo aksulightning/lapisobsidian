@@ -254,8 +254,8 @@ async function port() {
     await wait(() => app.player.onGround);
     const target = await page.evaluate(() => [
       Math.floor(app.player.x),
-      Math.floor(app.player.y) - 1,
-      Math.floor(app.player.z) + 1,
+      Math.floor(app.player.y),
+      Math.floor(app.player.z) + 2,
     ]);
     await page.evaluate(
       ([x, y, z]) =>
@@ -270,8 +270,8 @@ async function port() {
         app.lapisConnection.send(0x3f, (p) =>
           p
             .vi(0)
-            .pos(x, y, z - 1)
-            .vi(3)
+            .pos(x, y - 1, z)
+            .vi(1)
             .f32(0.5)
             .f32(0.5)
             .f32(0.5)
@@ -307,7 +307,12 @@ async function port() {
       app.playerController.sendChatMessage("/gamemode survival"),
     );
     await wait(() => app.lapisConnection.mode === 0);
-    await page.evaluate(([x, y, z]) => {
+    async function aimAtFixture() {
+      await page.evaluate(([x, y, z]) => {
+      // CDP mouse button dispatch under pointer lock can enqueue motion. Apply
+      // the test's fixed aim after that dispatch, before exercising held input.
+      app.window.pullMouseMotionX();
+      app.window.pullMouseMotionY();
       const p = app.player,
         dx = x + 0.5 - p.x,
         dy = y + 0.5 - p.y - p.getEyeHeight(),
@@ -317,13 +322,19 @@ async function port() {
         (-Math.atan2(dy, Math.hypot(dx, dz)) * 180) / Math.PI,
       );
     }, target);
+    }
+    await aimAtFixture();
     const aim = await page.evaluate(() => {
       const hit = app.player.rayTrace(4.5, app.timer.partialTicks);
       return hit && [hit.x, hit.y, hit.z];
     });
     assert.deepEqual(aim, target, "survival fixture must be directly visible");
     await page.mouse.down();
-    await wait(() => !!app.lapisConnection.actions.dig);
+    await aimAtFixture();
+    await wait(([x, y, z]) => {
+      const hit = app.lapisConnection.actions.dig?.hit;
+      return hit?.x === x && hit?.y === y && hit?.z === z;
+    }, target);
     await page.mouse.up();
     await delay(1100);
     assert.equal(
@@ -332,6 +343,7 @@ async function port() {
       "mouse release cancels digging",
     );
     await page.mouse.down();
+    await aimAtFixture();
     await wait(([x, y, z]) => app.world.getBlockAt(x, y, z) === 0, target);
     await page.mouse.up();
     await wait(() =>
@@ -462,7 +474,7 @@ async function port() {
     await rm(cwd, { recursive: true, force: true });
     if (!completed) {
       console.error(logs.slice(-8000));
-      console.log("Wire counters", { sent, received, digging });
+      console.log("Wire counters", JSON.stringify({ sent, received, digging }));
     }
   }
 })().catch((error) => {
