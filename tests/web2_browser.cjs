@@ -65,12 +65,19 @@ async function port() {
     page.on("console", (m) => {
       if (m.type() === "error") console.error("CONSOLE:", m.text());
     });
+    async function wait(predicate, argument, options = {}) {
+      const deadline = Date.now() + (options.timeout || argument?.timeout || 60000);
+      while (!await page.evaluate(predicate, argument)) {
+        assert.ok(Date.now() < deadline, `Browser condition timed out: ${predicate.toString()}`);
+        await delay(50);
+      }
+    }
     await page.goto(`http://127.0.0.1:${web}/`);
-    await page.waitForFunction(
+    await wait(
       () => window.app?.currentScreen?.constructor.name === "GuiMainMenu",
     );
     assert.equal(await page.title(), "Lapis Obsidian Client");
-    console.log("Main menu initialized");
+    console.log("Main menu initialized", await page.evaluate(() => ({ fps: app.fps, size: [app.window.width, app.window.height], canvas: [app.window.canvas.width, app.window.canvas.height] })));
     async function capture(path) {
       const data = await page.evaluate(() => {
         const canvas = document.createElement('canvas');
@@ -98,7 +105,7 @@ async function port() {
     }
     console.log("Connecting through GUI");
     await clickButton("Multiplayer");
-    await page.waitForFunction(
+    await wait(
       () => app.currentScreen?.constructor.name === "GuiDirectConnect",
     );
     await page.evaluate(() => {
@@ -106,14 +113,15 @@ async function port() {
       app.currentScreen.fieldAddress.text = location.host;
     });
     await clickButton("Connect");
-    await page.waitForFunction(
+    console.log("Connection started", await page.evaluate(() => ({ screen: app.currentScreen?.constructor.name, address: app.currentScreen?.address, phase: app.lapisConnection?.phase, closed: app.lapisConnection?.closed })));
+    await wait(
       () =>
         app.lapisConnection?.ready &&
         app.world.getChunkProvider().chunks.size >= 25,
       null,
       { timeout: 90000 },
     );
-    await page.waitForFunction(
+    await wait(
       () =>
         [...app.world.getChunkProvider().chunks.values()].some((chunk) =>
           chunk.sections.some((section) =>
@@ -143,7 +151,7 @@ async function port() {
     await capture('.tests/web-client2-world.png');
     console.log("World:", state);
     await page.evaluate(() => app.playerController.sendChatMessage("/tps"));
-    await page.waitForFunction(
+    await wait(
       () =>
         app.ingameOverlay.chatOverlay.messages.some((m) =>
           (typeof m === "string" ? m : m.message || "").includes("TPS"),
@@ -151,19 +159,19 @@ async function port() {
       { timeout: 10000 },
     );
     await page.evaluate(() => app.lapisConnection.creative(3));
-    await page.waitForFunction(
+    await wait(
       () => app.player.inventory.getItemInSlot(0) === 3,
     );
     await page.mouse.click(640, 400);
-    await page.waitForFunction(() => app.window.isLocked());
-    await page.waitForFunction(() => app.player.onGround);
+    await wait(() => app.window.isLocked());
+    await wait(() => app.player.onGround);
     const before = await page.evaluate(() => [
       app.player.x,
       app.player.y,
       app.player.z,
     ]);
     await page.keyboard.down("Space");
-    await page.waitForFunction(before => Math.abs(app.player.y-before[1])>.05, before);
+    await wait(before => Math.abs(app.player.y-before[1])>.05, before);
     await page.keyboard.up("Space");
     const after = await page.evaluate(() => [
       app.player.x,
@@ -176,12 +184,12 @@ async function port() {
       "keyboard jumping moves the upstream player",
     );
     await page.keyboard.press("KeyE");
-    await page.waitForFunction(
+    await wait(
       () => app.currentScreen?.constructor.name === "Inventory",
     );
     await page.keyboard.press("KeyE");
     // Observe authoritative edits in the application world using its codec.
-    await page.waitForFunction(() => app.player.onGround);
+    await wait(() => app.player.onGround);
     const target = await page.evaluate(() => [
       Math.floor(app.player.x),
       Math.floor(app.player.y) - 1,
@@ -194,7 +202,7 @@ async function port() {
         ),
       target,
     );
-    await page.waitForFunction(
+    await wait(
       ([x, y, z]) => app.world.getBlockAt(x, y, z) === 0,
       target,
     );
@@ -214,12 +222,12 @@ async function port() {
         ),
       target,
     );
-    await page.waitForFunction(
+    await wait(
       ([x, y, z]) => app.world.getBlockAt(x, y, z) === 3,
       target,
     );
     await page.evaluate(() => app.loadWorld(null));
-    await page.waitForFunction(() => !app.world);
+    await wait(() => !app.world);
     assert.equal(errors.length, 0, errors.join("\n"));
     assert.ok(
       requests.every((url) => url.startsWith(`http://127.0.0.1:${web}/`)),
