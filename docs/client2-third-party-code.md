@@ -17,7 +17,7 @@ screenshots are copied. The source README is consulted but not distributed.
 
 Modified files in the machine-readable inventory cover bootstrap, branding,
 Direct Connect, Connecting, multiplayer actions/loading/readiness/texture cache,
-health/food overlay, 320-block chunks/world, world timer cleanup, independent logo layout, removal of costly backdrop blur, sound buffer
+cached tinted glyph sheets replacing per-glyph Canvas filters, health/food overlay, 320-block chunks/world, world timer cleanup, independent logo layout, removal of costly backdrop blur, sound buffer
 synthesis and survival flight restrictions. The original renderer, mesher,
 models, GUI widgets, player controller and movement/collision code otherwise
 remain upstream code. Fresh MIT adapter modules translate the existing server

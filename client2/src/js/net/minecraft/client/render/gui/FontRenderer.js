@@ -14,6 +14,7 @@ export default class FontRenderer {
 
     constructor(minecraft) {
         this.charWidths = [];
+        this.coloredTextures = new Map();
 
         this.isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         this.texture = minecraft.resources["gui/font.png"];
@@ -61,10 +62,9 @@ export default class FontRenderer {
     drawStringRaw(stack, string, x, y, color = -1, isShadow = false) {
         stack.save();
 
-        // Set color
-        if (color !== -1 || isShadow) {
-            this.setColor(stack, color, isShadow);
-        }
+        // Cache tinted bitmap sheets instead of running six Canvas filters for
+        // every glyph. This preserves the upstream font layout/color behavior.
+        let texture = color !== -1 || isShadow ? this.setColor(stack, color, isShadow) : this.texture;
 
         let alpha = ((color & 0xFF000000) >>> 24) / 255;
 
@@ -80,7 +80,7 @@ export default class FontRenderer {
                 let nextCharacter = string[i + 1];
 
                 // Change color of string
-                this.setColor(stack, this.getColorOfCharacter(nextCharacter), isShadow);
+                texture = this.setColor(stack, this.getColorOfCharacter(nextCharacter), isShadow);
 
                 // Skip the color code for rendering
                 i += 1;
@@ -94,7 +94,7 @@ export default class FontRenderer {
             // Draw character
             Gui.drawSprite(
                 stack,
-                this.texture,
+                texture,
                 textureOffsetX, textureOffsetY,
                 FontRenderer.FIELD_SIZE, FontRenderer.FIELD_SIZE,
                 Math.floor(x), Math.floor(y),
@@ -103,7 +103,7 @@ export default class FontRenderer {
             );
 
             // Increase drawing cursor
-            x += this.charWidths[code];
+            x += this.charWidths[index] ?? 4;
         }
 
         stack.restore();
@@ -149,31 +149,21 @@ export default class FontRenderer {
     }
 
     setColor(stack, color, isShadow = false) {
-        if (isShadow) {
-            color = (color & 0xFCFCFC) >> 2;
-        }
-
-        let r = (color & 0xFF0000) >> 16;
-        let g = (color & 0x00FF00) >> 8;
-        let b = (color & 0x0000FF);
-        let hsv = MathHelper.rgb2hsv(r, g, b);
-        let hue = hsv[0] + 270;
-        let saturation = hsv[1];
-        let brightness = hsv[2] / 255 * 100;
-
-        // TODO fix colors
-        let saturate1 = saturation * 1000;
-        let saturate2 = saturation * 5000;
-        let saturate3 = saturation * 100;
-
-        if (!this.isSafari) { // TODO Fix filter on Safari
-            stack.filter = "sepia()"
-                + " saturate(" + saturate1 + "%)"
-                + " hue-rotate(" + hue + "deg)"
-                + " saturate(" + saturate2 + "%)"
-                + " brightness(" + brightness + "%)"
-                + " saturate(" + saturate3 + "%)";
-        }
+        let rgb = color & 0xFFFFFF;
+        if (isShadow) rgb = (rgb & 0xFCFCFC) >> 2;
+        if (rgb === 0xFFFFFF) return this.texture;
+        if (this.coloredTextures.has(rgb)) return this.coloredTextures.get(rgb);
+        const canvas = document.createElement('canvas');
+        canvas.width = this.texture.width;
+        canvas.height = this.texture.height;
+        const context = canvas.getContext('2d');
+        context.drawImage(this.texture, 0, 0);
+        context.globalCompositeOperation = 'source-in';
+        context.fillStyle = '#' + rgb.toString(16).padStart(6, '0');
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        if (this.coloredTextures.size >= 64) this.coloredTextures.delete(this.coloredTextures.keys().next().value);
+        this.coloredTextures.set(rgb, canvas);
+        return canvas;
     }
 
     listFormattedStringToWidth(text, wrapWidth) {

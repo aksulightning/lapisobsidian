@@ -616,8 +616,8 @@
       "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/gui/FontRenderer.js",
       "commit": "468f942c4984578a03e472c49646198680489723",
       "sourceSha256": "68bc5431921c2b6a50fa7658f1561d34b52f9cb6839e0d236fea24cbfeedf14c",
-      "sha256": "68bc5431921c2b6a50fa7658f1561d34b52f9cb6839e0d236fea24cbfeedf14c",
-      "modified": false,
+      "sha256": "e1cf91056b713292343880f09f374f5a3baadac4ff5e05d91a57f982032f7bb7",
+      "modified": true,
       "author": "LabyStudio and contributors",
       "license": "CC-BY-NC-4.0"
     },
