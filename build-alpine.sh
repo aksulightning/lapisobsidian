@@ -14,6 +14,7 @@ Install prerequisites on Alpine: apk add --no-cache build-base
 
 CC selects one compiler executable (default: cc).
 READELF selects an ELF inspection executable (default: readelf).
+LAPIS_WORLD_EDIT=1 and LAPIS_TREE_CHOPPER=1 enable optional gameplay at compile time.
 --arch checks the compiler target; it does not install/select a cross compiler.
 --static links musl statically; --debug enables ASan/UBSan (not with --static).
 Relative --output paths are resolved from your invocation directory.
@@ -91,6 +92,8 @@ if [ "$debug" = 1 ]; then
     -fsanitize=address,undefined -fno-omit-frame-pointer
 fi
 [ "$static" = 0 ] || set -- "$@" -static
+[ "${LAPIS_WORLD_EDIT:-0}" != 1 ] || set -- "$@" -DLAPIS_WORLD_EDIT=1
+[ "${LAPIS_TREE_CHOPPER:-0}" != 1 ] || set -- "$@" -DLAPIS_TREE_CHOPPER=1
 printf 'Building Lapis Obsidian for Alpine %s using %s\n' "$arch" "$triple"
 "$compiler" src/*.c "$@" -o "$work/lapis-obsidian" -lm
 mkdir -p "$(dirname "$output")"

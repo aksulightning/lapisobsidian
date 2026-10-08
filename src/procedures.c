@@ -9,6 +9,7 @@
 #include "musicbox.h"
 #include "signs.h"
 #include "commands.h"
+#include "optional_features.h"
 #include "world_border.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -1134,6 +1135,10 @@ void handlePlayerAction (PlayerData *player, int action, short x, short y, short
   // If this is a "start mining" packet, the block must be instamine
   if (action == 0 && block == B_note_block) circuits_strike(x,y,z);
   if (action == 0 && !isInstantlyMined(player, block)) return;
+
+#if LAPIS_TREE_CHOPPER == 1
+  if (tree_chopper_try(player,x,y,z)) return;
+#endif
 
   uint16_t held_item = player->inventory_items[player->hotbar];
   uint16_t item = circuits_drop(x,y,z,getMiningResult(held_item, block));

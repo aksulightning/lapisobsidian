@@ -46,6 +46,15 @@ The default is a dynamically linked release build at `<repository>/lapis-obsidia
 those sanitizer runtimes for the target and cannot be combined with `--static`.
 Inherited core conversion warnings may still appear in debug builds.
 
+Optional gameplay is selected at compile time, independently and off by default:
+
+```sh
+LAPIS_WORLD_EDIT=1 LAPIS_TREE_CHOPPER=1 ./build-alpine.sh --static
+```
+
+Only an exact environment value of `1` enables each feature. These also work
+with cross compilers and `--debug`. See [commands and limits](optional-features.md).
+
 Relative `--output` paths are relative to the directory from which you invoke
 the script. Output directories are created after compilation. A failed compiler
 or libc check leaves the previous output intact. `CC` is one compiler executable

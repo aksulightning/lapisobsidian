@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include "commands.h"
+#include "optional_features.h"
 #include "packets.h"
 #include "procedures.h"
 #include "registries.h"
@@ -61,17 +62,19 @@ int main (void) {
   setup(); assert(cs_chatCommand(sockets[1],1000000,false) != 0); cleanup();
   /* Decode the complete advertised command graph independently. */
   setup(); assert(sc_commands(sockets[1]) == 0); uint8_t wire[512]; size_t length = frame(wire,sizeof(wire)), at = 0;
-  assert(value(wire,length,&at) == 0x10); assert(value(wire,length,&at) == 25);
-  const char *names[] = {"help","seed","worldinfo","spawn","tp","time","gamemode","admin","spawnmob","music","plate","tps"};
-  for (unsigned i = 0; i < 25; i ++) {
+  assert(value(wire,length,&at) == 0x10);
+  const unsigned count = LAPIS_WORLD_EDIT == 1 ? 13u : 12u;
+  assert(value(wire,length,&at) == 1+2*count);
+  const char *names[] = {"help","seed","worldinfo","spawn","tp","time","gamemode","admin","spawnmob","music","plate","tps","we"};
+  for (unsigned i = 0; i < 1+2*count; i ++) {
     unsigned flags = value(wire,length,&at), children = value(wire,length,&at);
-    assert(flags == (i == 0 ? 0u : i < 13 ? 5u : 6u)); assert(children == (i == 0 ? 12u : i < 13 ? 1u : 0u));
-    for (unsigned j = 0; j < children; j ++) assert(value(wire,length,&at) == (i == 0 ? j+1 : i+12));
+    assert(flags == (i == 0 ? 0u : i <= count ? 5u : 6u)); assert(children == (i == 0 ? count : i <= count ? 1u : 0u));
+    for (unsigned j = 0; j < children; j ++) assert(value(wire,length,&at) == (i == 0 ? j+1 : i+count));
     if (i) {
-      const char *name = i < 13 ? names[i-1] : "arguments";
+      const char *name = i <= count ? names[i-1] : "arguments";
       unsigned n = value(wire,length,&at); assert(n == strlen(name) && n <= length-at);
       assert(!memcmp(wire+at,name,n)); at += n;
-      if (i >= 13) { assert(value(wire,length,&at) == 5); assert(value(wire,length,&at) == 2); }
+      if (i > count) { assert(value(wire,length,&at) == 5); assert(value(wire,length,&at) == 2); }
     }
   }
   assert(value(wire,length,&at) == 0 && at == length); cleanup();
