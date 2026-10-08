@@ -7,9 +7,11 @@ import {resolve} from 'node:path';
 import {EventEmitter,once} from 'node:events';
 import {packet,PacketStream,readChunk} from '../web/protocol.mjs';
 const binary=resolve(process.argv[2]||'lapis-obsidian'), disabled=process.argv.includes('--disabled');
+const testTimeout=Number(process.env.WEB_TEST_TIMEOUT_MS||20000);
+assert.ok(Number.isFinite(testTimeout)&&testTimeout>=1000&&testTimeout<=600000);
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function until(predicate,label) {
-  const deadline=Date.now()+20000;
+  const deadline=Date.now()+testTimeout;
   while(!predicate()) { if(Date.now()>deadline)throw Error(`Timed out: ${label}`); await delay(10); }
 }
 async function reservePort() {

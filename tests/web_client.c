@@ -38,10 +38,13 @@ static void opened(void) {
   assert(strstr((char *)reply,"s3pPLMBiTxaQ9kYGzzhZRbK+xOo="));
 }
 static size_t masked(unsigned char *out,unsigned op,const unsigned char *data,size_t size) {
-  assert(size<126); out[0]=(unsigned char)op; out[1]=(unsigned char)(128u|size);
-  const unsigned char mask[4]={3,11,29,41}; memcpy(out+2,mask,4);
-  for(size_t i=0;i<size;i++)out[6+i]=data[i]^mask[i%4];
-  return size+6;
+  assert(size<=8192); out[0]=(unsigned char)op;
+  size_t header=size<126 ? 6u : 8u;
+  out[1]=(unsigned char)(128u|(size<126 ? size : 126u));
+  if(size>=126){out[2]=(unsigned char)(size>>8);out[3]=(unsigned char)size;}
+  const unsigned char mask[4]={3,11,29,41}; memcpy(out+header-4,mask,4);
+  for(size_t i=0;i<size;i++)out[header+i]=data[i]^mask[i%4];
+  return size+header;
 }
 int main(void) {
   unsigned char frame[256], reply[2048], data[32]; ssize_t got;
@@ -97,6 +100,32 @@ int main(void) {
   opened(); put("\202",1); assert(web_client_poll(pair[1],now)==1);
   assert(web_client_poll(pair[1],now+15000000)==-1); finish();
   connect_client(); assert(web_client_poll(pair[1],now+15000000)==-1); finish();
+  /* Slow terrain generation is not a stalled peer: a writable socket must get
+   * its first send attempt even after more than one output timeout has elapsed. */
+  opened(); unsigned char terrain[16384]={0};
+  assert(web_client_send(pair[1],terrain,sizeof(terrain))==(ssize_t)sizeof(terrain));
+  assert(web_client_poll(pair[1],now+60000000)==1);
+  assert(drain(reply,sizeof(reply))>0 && reply[0]==0x82); finish();
+  /* Generation-time pumping emits partial output without polling input. */
+  opened(); assert(web_client_send(pair[1],payload,sizeof(payload))==2);
+  assert(web_client_flush(pair[1],now+60000000)==1);
+  assert(drain(reply,sizeof(reply))==4); finish();
+  /* A peer that really stops reading still expires after its first EAGAIN. */
+  opened();
+  for (unsigned i=0;i<128;i++) {
+    assert(web_client_send(pair[1],terrain,sizeof(terrain))==(ssize_t)sizeof(terrain));
+    assert(web_client_flush(pair[1],now)>=0);
+  }
+  assert(web_client_flush(pair[1],now+15000000)==-1); finish();
+  /* Buffered game input is drained before a second TCP burst is read. */
+  opened(); unsigned char burst[6000]={0}, encoded[6008];
+  burst[0]=0xee; burst[1]=0x2e; /* One complete game packet: 5998-byte body. */
+  n=masked(encoded,0x82,burst,sizeof(burst)); put(encoded,n);
+  assert(web_client_poll(pair[1],now)==1); put(encoded,n);
+  assert(web_client_poll(pair[1],now)==1);
+  assert(web_client_receive(pair[1],burst,sizeof(burst),0)==(ssize_t)sizeof(burst));
+  assert(web_client_poll(pair[1],now)==1);
+  assert(web_client_receive(pair[1],burst,sizeof(burst),0)==(ssize_t)sizeof(burst)); finish();
   /* Bounded output: a stalled browser cannot allocate without a limit. */
   opened(); unsigned char large[16384]={0}; unsigned count=0;
   while(web_client_send(pair[1],large,sizeof(large))>0)assert(++count<=512);

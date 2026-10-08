@@ -14,6 +14,9 @@ void web_client_forget(int fd);
 /* -1: close; 0: HTTP/upgrade pending; 1: game transport ready (or native fd). */
 int web_client_poll(int fd, int64_t now);
 int web_client_active(int fd);
+/* Bounded nonblocking output pump during expensive terrain generation.
+ * Does not read input or re-enter packet handling; native sockets are a no-op. */
+int web_client_flush(int fd, int64_t now);
 ssize_t web_client_receive(int fd, void *buffer, size_t size, int flags);
 ssize_t web_client_send(int fd, const void *buffer, size_t size);
 #endif

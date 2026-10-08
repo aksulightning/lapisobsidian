@@ -86,8 +86,8 @@ preservation of an existing output after failure.
 
 These checks ran on an Ubuntu host using musl built locally for verification;
 they are not a native Alpine OS test. No compiler or musl sources are included
-in Lapis Obsidian. ARM64 and RISC-V builds/runtime have not been exercised in
-this environment; native validation on those machines remains required. Existing
+in Lapis Obsidian. RISC-V builds and gameplay are checked under QEMU in CI;
+native ARM64/RISC-V hardware validation remains required. Existing
 world/player files use the inherited raw layouts; cross-architecture save-file
 portability is not established by providing a build script.
 
@@ -112,7 +112,9 @@ HTML5 client. Choose the web artifact to use `web-address` and `web-port` from
 The jobs use `alpine:3.23.6`, running AMD64 directly and RISC-V through QEMU.
 Each verifies static linkage, executes the binary's argument validation, runs
 configuration tests, and checks that web symbols match the selected variant.
-Web variants also run HTTP/WebSocket transport tests on the target CPU/emulator.
+Web variants also run HTTP/WebSocket transport tests and the full live-server
+integration (login, terrain, two players, gameplay and reconnect) on the target
+CPU/emulator, with a longer test deadline for emulated terrain generation.
 The existing Ubuntu jobs retain the full regression/sanitizer, live gameplay
 and Chromium tests. Emulation does not establish performance on RISC-V hardware.
 

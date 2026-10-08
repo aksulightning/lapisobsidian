@@ -33,7 +33,7 @@ typedef struct {
   int fd, state;
   int64_t started, partial_since, output_since, now;
   size_t raw_size, data_size, message_size, staged, out_pos, out_size, capacity;
-  unsigned char raw[WEB_INPUT], data[WEB_INPUT], stage[WEB_STAGE];
+  unsigned char raw[WEB_INPUT], data[2u*WEB_INPUT], stage[WEB_STAGE];
   unsigned char *out;
 } WebClient;
 int web_client_listen(const char *address, uint16_t port) {
@@ -114,7 +114,7 @@ static bool queue(WebClient *c, const void *p, size_t n) {
     if (!out) { c->failed = true; return false; }
     c->out = out; c->capacity = size;
   }
-  if (!pending) c->output_since = c->now;
+  if (!pending) c->output_since = 0;
   memcpy(c->out+c->out_size,p,n); c->out_size += n;
   return true;
 }
@@ -144,7 +144,6 @@ ssize_t web_client_send(int fd, const void *buffer, size_t size) {
 static int flush(WebClient *c) {
   if (!stage_flush(c)) return -1;
   if (c->out_pos == c->out_size) return 1;
-  if (c->now-c->output_since >= WEB_TIMEOUT) return -1;
   size_t n = c->out_size-c->out_pos;
   if (n > 65536) n = 65536;
 #ifdef _WIN32
@@ -152,11 +151,26 @@ static int flush(WebClient *c) {
 #else
   int sent = (int)send(c->fd,c->out+c->out_pos,n,MSG_NOSIGNAL);
 #endif
-  if (sent < 0) return again() ? 0 : -1;
+  if (sent < 0) {
+    if (!again()) return -1;
+    /* Start the deadline only when the socket actually blocks. CPU time spent
+     * generating chunks before attempting a send is not network backpressure. */
+    if (!c->output_since) c->output_since = c->now;
+    return c->now-c->output_since >= WEB_TIMEOUT ? -1 : 0;
+  }
   if (!sent) return -1;
-  c->out_pos += (size_t)sent; c->output_since = c->now;
+  c->out_pos += (size_t)sent; c->output_since = 0;
   if (c->out_pos != c->out_size) return 0;
   c->out_pos = c->out_size = 0; return 1;
+}
+int web_client_flush(int fd, int64_t now) {
+  WebClient *c = lookup(fd);
+  if (!c) return 1;
+  if (c->failed || now<c->started) return -1;
+  c->now = now;
+  int result = flush(c);
+  if (result < 0) c->failed = true;
+  return result;
 }
 
 /* SHA-1 is used only for the public WebSocket handshake, never authentication.
@@ -313,6 +327,16 @@ static int websocket(WebClient *c) {
   if (!c->raw_size && !c->fragmented) c->partial_since=0;
   return 1;
 }
+static bool game_packet_ready(const WebClient *c) {
+  /* Leave incomplete game packets readable across WS message boundaries. One
+   * extra WS message may complete that packet and contain part of the next. */
+  unsigned length=0;
+  for (unsigned i=0;i<3 && i<c->data_size;i++) {
+    unsigned byte=c->data[i]; length|=(byte&127u)<<(7u*i);
+    if (!(byte&128u)) return !length || length>PACKET_INPUT_LIMIT || c->data_size>=i+1u+length;
+  }
+  return c->data_size>=3; /* Invalid length prefix: let the game parser reject it. */
+}
 int web_client_poll(int fd, int64_t now) {
   WebClient *c=lookup(fd); if (!c) return 1; c->now=now;
   if (c->failed || now<c->started) return -1;
@@ -320,6 +344,9 @@ int web_client_poll(int fd, int64_t now) {
   if (c->state==CLOSING) return sent ? -1 : 0;
   if ((c->state!=WEBSOCKET && now-c->started>=WEB_TIMEOUT) ||
       (c->partial_since && now-c->partial_since>=WEB_TIMEOUT)) return -1;
+  /* Let the game parser consume buffered bytes before reading another burst.
+   * A client can accumulate input while a slow CPU is generating terrain. */
+  if (c->state==WEBSOCKET && game_packet_ready(c)) return 1;
   if (c->state==UNKNOWN) {
     char peek[4]; int n=socket_read(fd,peek,4,MSG_PEEK);
     if (n<0) return again() ? 0 : -1;

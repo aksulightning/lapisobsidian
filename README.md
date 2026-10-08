@@ -29,7 +29,7 @@ LAPIS_OBSIDIAN_WEB_CLIENT=1 ./build.sh
 ./lapis-obsidian
 ```
 
-Open **http://localhost:8080/** to play in a desktop browser. Set `web-address`
+Open **http://localhost:8080/** to play in a desktop or mobile WebGL browser. Set `web-address`
 and `web-port` in `server.txt` to choose its bind address and port. Native clients
 use `port` (25565 by default); both clients share the world. The client is embedded only when
 compiled with the exact value `1`; a runtime environment variable cannot enable

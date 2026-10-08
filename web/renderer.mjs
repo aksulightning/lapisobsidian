@@ -35,7 +35,7 @@ export class World {
     if (!c) return undefined;
     return c.data[y*256 + ((z%16+16)%16)*16 + (x%16+16)%16];
   }
-  dirty(x,z) { const c=this.chunks.get(this.key(x,z)); if (c) c.dirty=true; }
+  dirty(x,z) { const c=this.chunks.get(this.key(x,z)); if (c) {c.dirty=true;c.build=null;} }
   add(chunk) {
     const old = this.chunks.get(this.key(chunk.x,chunk.z));
     if (old) chunk.mesh = old.mesh;
@@ -45,7 +45,7 @@ export class World {
   set(x,y,z,state) {
     const cx=Math.floor(x/16), cz=Math.floor(z/16), c=this.chunks.get(this.key(cx,cz));
     if (!c || y<0 || y>=320) return;
-    c.data[y*256+((z%16+16)%16)*16+(x%16+16)%16]=state; c.dirty=true;
+    c.data[y*256+((z%16+16)%16)*16+(x%16+16)%16]=state; this.dirty(cx,cz);
     for (const [dx,dz] of [[0,1],[0,-1],[1,0],[-1,0]]) this.dirty(cx+dx,cz+dz);
   }
   collides(x,y,z) {
@@ -126,9 +126,12 @@ export class Renderer {
     for (const chunk of this.world.chunks.values()) if (chunk.mesh) this.gl.deleteBuffer(chunk.mesh.buffer);
     this.world.chunks.clear();
   }
-  mesh(chunk) {
-    const vertices=[], {world,gl}=this;
-    for (let y=0;y<256;y++) for (let z=0;z<16;z++) for (let x=0;x<16;x++) {
+  mesh(chunk,deadline) {
+    // Yield between layers so slow mobile CPUs keep handling network/input.
+    const build=chunk.build ||= {vertices:[],y:0}, vertices=build.vertices, {world,gl}=this;
+    while(build.y<256) {
+      const y=build.y++;
+      for (let z=0;z<16;z++) for (let x=0;x<16;x++) {
       const state=chunk.data[y*256+z*16+x]; if (!state) continue;
       const m=material(state), wx=chunk.x*16+x, wz=chunk.z*16+z;
       const jitter=((wx*13+y*7+wz*19)&7)*.006;
@@ -136,10 +139,12 @@ export class Renderer {
         const next=world.get(wx+n[0],y+n[1],wz+n[2]);
         return next!==undefined && (!next || (!material(next).solid && next!==state));
       },m.plant ? [.35,.55,.35] : [1,1,1],m.plant ? [.325,0,.325] : [0,0,0]);
+      }
+      if(performance.now()>=deadline)return;
     }
     if (!chunk.mesh) chunk.mesh={buffer:gl.createBuffer(),count:0};
     gl.bindBuffer(gl.ARRAY_BUFFER,chunk.mesh.buffer); gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.STATIC_DRAW);
-    chunk.mesh.count=vertices.length/6; chunk.dirty=false;
+    chunk.mesh.count=vertices.length/6; chunk.dirty=false; chunk.build=null;
   }
   drawBuffer(buffer,count) {
     const gl=this.gl;
@@ -158,12 +163,13 @@ export class Renderer {
     const up=[-Math.sin(player.yaw)*Math.sin(player.pitch),Math.cos(player.pitch),Math.cos(player.yaw)*Math.sin(player.pitch)];
     for (const [name,value] of [['eye',[player.x,player.y+1.62,player.z]],['right',right],['up',up],['forward',forward]]) gl.uniform3fv(this.uniforms[name],value);
     gl.uniform1f(this.uniforms.aspect,width/height);
-    let rebuilt=0;
-    for (const [key,chunk] of world.chunks) {
+    const deadline=performance.now()+5;
+    const chunks=[...world.chunks].sort(([,a],[,b])=>Math.hypot(a.x*16-player.x,a.z*16-player.z)-Math.hypot(b.x*16-player.x,b.z*16-player.z));
+    for (const [key,chunk] of chunks) {
       if (Math.abs(chunk.x-world.center[0])>3 || Math.abs(chunk.z-world.center[1])>3) {
         if (chunk.mesh) gl.deleteBuffer(chunk.mesh.buffer); world.chunks.delete(key); continue;
       }
-      if (chunk.dirty && rebuilt<2) { this.mesh(chunk); rebuilt++; }
+      if (chunk.dirty && performance.now()<deadline) this.mesh(chunk,deadline);
       if (chunk.mesh) this.drawBuffer(chunk.mesh.buffer,chunk.mesh.count);
     }
     const vertices=[];

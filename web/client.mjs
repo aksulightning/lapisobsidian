@@ -7,12 +7,25 @@ const world = new World(), entities = new Map(), keys = new Set(), slots = new M
 const player = {x:8.5,y:80,z:8.5,yaw:0,pitch:0,vy:0,grounded:false,health:20,food:20,mode:0,hotbar:0};
 let renderer, socket, phase='login', ready=false, sequence=0, windowId=0, stateId=0;
 let target=null, mining=null, leftDown=false, lastSent=0, lastFrame=performance.now(), myId=-1;
-let loginTimer, heldUse=false;
+let loginTimer, heldUse=false, hasPosition=false, lastReceived=0, loadingStarted=0, receivedBytes=0, lastMovement='';
+let touchMode=false;
+const touch={forward:0,right:0,jump:false,move:null,look:null,buttons:new Map()};
 const storage = {
   get(key) { try { return localStorage.getItem(key); } catch { return null; } },
   set(key,value) { try { localStorage.setItem(key,value); } catch { /* Private storage may be unavailable. */ } }
 };
 $('name').value=storage.get('lapis.web.name')||'WebPlayer';
+$('touch-mode').checked=storage.get('lapis.web.touch')===null ? navigator.maxTouchPoints>0 : storage.get('lapis.web.touch')==='true';
+function setTouchMode() {
+  touchMode=$('touch-mode').checked; document.body.classList.toggle('touch-mode',touchMode);
+  document.querySelector('.touch-help').hidden=!touchMode;
+  document.querySelector('.desktop-help').hidden=touchMode;
+  $('touch-controls').hidden=!touchMode||!ready;
+  $('resume').hidden=touchMode||!ready||document.pointerLockElement===$('world');
+  resetInput();
+}
+$('touch-mode').onchange=()=>{storage.set('lapis.web.touch',String($('touch-mode').checked));setTouchMode();};
+setTouchMode();
 function send(id,write) {
   if (socket?.readyState===WebSocket.OPEN) {
     if (socket.bufferedAmount>65536) { disconnect('Connection is too slow. Please reconnect.'); return; }
@@ -38,7 +51,7 @@ function refreshInventory() {
     const button=document.createElement('button'); button.className='slot';
     const label=windowId===0 && i<=4 ? (i===0?'Output':`Craft ${i}`) : `Slot ${i}`;
     button.textContent=`${label} · ${itemLabel(slots.get(`${windowId}:${i}`))}`;
-    button.onclick=event=>send(0x11,w=>w.varint(windowId).varint(stateId).short(i).byte(0).varint(event.shiftKey?1:0).varint(0).byte(0));
+    button.onclick=event=>send(0x11,w=>w.varint(windowId).varint(stateId).short(i).byte($('split-stack').checked?1:0).varint(event.shiftKey?1:0).varint(0).byte(0));
     button.oncontextmenu=event=>{ event.preventDefault(); send(0x11,w=>w.varint(windowId).varint(stateId).short(i).byte(1).varint(0).varint(0).byte(0)); };
     $('slots').append(button);
   }
@@ -51,12 +64,14 @@ function readStack(r) {
   if (added || removed) throw Error('Unsupported item components');
   return {count,item};
 }
-function clearWorld() { renderer?.clear(); entities.clear(); ready=false; keys.clear(); cancelMine(); player.vy=0; }
+function clearWorld() { renderer?.clear(); entities.clear(); ready=false; hasPosition=false; resetInput(); player.vy=0; lastMovement=''; }
 function showReady() {
-  if (ready) return;
-  ready=true; clearTimeout(loginTimer); send(0x2b);
-  $('menu').hidden=true; $('hud').hidden=false; $('resume').hidden=document.pointerLockElement===$('world');
-  message('Connected. Click to capture the mouse. T: chat · E: inventory · /help: commands');
+  if (ready || !hasPosition || !world.chunks.has(world.key(Math.floor(player.x/16),Math.floor(player.z/16)))) return;
+  ready=true; clearInterval(loginTimer); send(0x2b);
+  $('menu').hidden=true; $('hud').hidden=false;
+  $('touch-controls').hidden=!touchMode;
+  $('resume').hidden=touchMode||document.pointerLockElement===$('world');
+  message(touchMode?'Connected. Left stick: move · Drag: look · Mine / Use / Jump':'Connected. Click to capture the mouse. T: chat · E: inventory · /help: commands');
 }
 function receive(id,r) {
   if (phase==='login') {
@@ -79,11 +94,10 @@ function receive(id,r) {
       const teleport=r.varint(); player.x=r.double(); player.y=r.double(); player.z=r.double();
       r.take(24); player.yaw=r.float()*Math.PI/180; player.pitch=r.float()*Math.PI/180;
       if (r.int()!==0) throw Error('Unsupported relative teleport');
-      player.vy=0; send(0,w=>w.varint(teleport));
-      if (world.chunks.has(world.key(Math.floor(player.x/16),Math.floor(player.z/16)))) showReady();
+      player.vy=0; hasPosition=true; send(0,w=>w.varint(teleport)); showReady();
       break;
     }
-    case 0x27: world.add(readChunk(r)); break;
+    case 0x27: world.add(readChunk(r)); showReady(); break;
     case 0x57: world.center=[r.varint(),r.varint()]; break;
     case 0x08: { const p=r.position(); world.set(...p,r.varint()); break; }
     case 0x26: { const token=r.long(); send(0x1b,w=>w.long(token)); break; }
@@ -95,7 +109,8 @@ function receive(id,r) {
     case 0x62: player.hotbar=r.byte(); refreshInventory(); break;
     case 0x61:
       player.health=r.float(); player.food=r.varint();
-      if (player.health<=0) { keys.clear(); cancelMine(); message('You died. Press R to respawn.'); }
+      $('respawn').hidden=player.health>0;
+      if (player.health<=0) { resetInput(); message('You died. Tap Respawn or press R.'); }
       break;
     case 0x72: {
       if (r.byte()===8) message(new TextDecoder().decode(r.take(r.short()))); break;
@@ -125,7 +140,7 @@ function receive(id,r) {
   }
 }
 function disconnected(text) {
-  clearTimeout(loginTimer); clearWorld(); document.exitPointerLock?.();
+  clearInterval(loginTimer); clearWorld(); document.exitPointerLock?.();
   $('inventory').close(); $('chat').hidden=true; $('hud').hidden=true; $('menu').hidden=false;
   $('play').disabled=false; $('status').textContent=text;
 }
@@ -134,6 +149,7 @@ function disconnect(text='Disconnected. You can rejoin the world.') {
 }
 $('join').onsubmit=event=>{
   event.preventDefault();
+  if($('play').disabled)return;
   try {
     renderer ||= new Renderer($('world'),world);
     clearWorld(); slots.clear(); $('messages').replaceChildren(); windowId=0; phase='login'; sequence=0;
@@ -148,6 +164,7 @@ $('join').onsubmit=event=>{
     const uuid=Uint8Array.from(identity.match(/../g),n=>parseInt(n,16));
     const ws=new WebSocket(`${location.protocol==='https:'?'wss:':'ws:'}//${location.host}/ws`);
     socket=ws; ws.binaryType='arraybuffer'; $('play').disabled=true; $('status').textContent='Connecting…';
+    lastReceived=loadingStarted=performance.now(); receivedBytes=0;
     const stream=new PacketStream(receive);
     ws.onopen=()=>{
       if(socket!==ws)return;
@@ -156,25 +173,33 @@ $('join').onsubmit=event=>{
     };
     ws.onmessage=event=>{
       if(socket!==ws)return;
-      try { stream.push(new Uint8Array(event.data)); } catch(error) { disconnect(error.message); }
+      lastReceived=performance.now(); receivedBytes+=event.data.byteLength;
+      try {
+        stream.push(new Uint8Array(event.data));
+        if(!ready&&phase==='play') $('status').textContent=`Loading terrain… ${world.chunks.size} chunks · ${Math.round(receivedBytes/1024)} KiB received`;
+      } catch(error) { disconnect(error.message); }
     };
     ws.onclose=()=>{if(socket===ws){socket=null;disconnected('Connection closed. The server may be full or unavailable.');}};
     ws.onerror=()=>{if(socket===ws)disconnect('Could not connect to this server.');};
-    loginTimer=setTimeout(()=>{if(socket===ws)disconnect('Login timed out. Please reconnect.');},60000);
+    loginTimer=setInterval(()=>{
+      if(socket!==ws||ready)return;
+      const now=performance.now();
+      if(now-lastReceived>60000)disconnect('No data received for 60 seconds. Check the server log and reconnect.');
+      else if(now-loadingStarted>300000)disconnect('Terrain loading did not finish within 5 minutes. Check the server log.');
+    },1000);
   } catch(error) { disconnected(error.message); }
 };
 $('leave').onclick=()=>disconnect();
 function lockMouse() {
-  if(!ready)return;
+  if(!ready||touchMode)return;
   try { const promise=$('world').requestPointerLock(); promise?.catch(()=>message('Click the world again to capture the mouse.')); }
   catch { message('Pointer lock is unavailable in this browser.'); }
 }
 $('resume').onclick=lockMouse;
 $('world').onclick=()=>{if(document.pointerLockElement!==$('world'))lockMouse();};
 document.addEventListener('pointerlockchange',()=>{
-  $('resume').hidden=!ready||document.pointerLockElement===$('world');
-  keys.clear(); cancelMine(); leftDown=false;
-  if(heldUse){sendAction(5);heldUse=false;}
+  $('resume').hidden=touchMode||!ready||document.pointerLockElement===$('world');
+  resetInput();
 });
 document.addEventListener('mousemove',event=>{
   if(document.pointerLockElement!==$('world'))return;
@@ -196,26 +221,28 @@ function entityTarget() {
   }
   return best;
 }
-document.addEventListener('mousedown',event=>{
-  if(document.pointerLockElement!==$('world')||!ready||player.health<=0)return;
-  if(event.button===0) {
+function startAction(button) {
+  if(!ready||player.health<=0||$('inventory').open||!$('chat').hidden)return;
+  if(button===0) {
     const entity=entityTarget();
     if(entity!==null)send(0x19,w=>w.varint(entity).varint(1).byte(0)); else leftDown=true;
     send(0x3c,w=>w.varint(0));
   }
-  if(event.button===2) {
+  if(button===2) {
     const item=items[slots.get(`0:${36+player.hotbar}`)?.item]||'';
     if(!target || /bucket|apple|bread|porkchop|beef|chicken|mutton|stew/.test(item)) {
       send(0x40,w=>w.varint(0).varint(++sequence).float(player.yaw*180/Math.PI).float(player.pitch*180/Math.PI)); heldUse=true;
     } else send(0x3f,w=>w.varint(0).position(...target.p).varint(target.face).float(.5).float(.5).float(.5).byte(0).byte(0).varint(++sequence));
   }
-});
-document.addEventListener('mouseup',event=>{
-  if(event.button===0){leftDown=false;cancelMine();}
-  if(event.button===2&&heldUse){sendAction(5);heldUse=false;}
-});
+}
+function stopAction(button) {
+  if(button===0){leftDown=false;cancelMine();}
+  if(button===2&&heldUse){sendAction(5);heldUse=false;}
+}
+document.addEventListener('mousedown',event=>{if(document.pointerLockElement===$('world'))startAction(event.button);});
+document.addEventListener('mouseup',event=>stopAction(event.button));
 $('world').oncontextmenu=event=>event.preventDefault();
-function openInventory() { document.exitPointerLock?.(); keys.clear(); $('inventory').showModal(); refreshInventory(); }
+function openInventory() { document.exitPointerLock?.(); resetInput(); $('inventory').showModal(); refreshInventory(); }
 function closeInventory() { send(0x12,w=>w.varint(windowId)); windowId=0; $('inventory').close(); lockMouse(); }
 $('close-inventory').onclick=closeInventory;
 $('inventory').oncancel=event=>{event.preventDefault();closeInventory();};
@@ -229,16 +256,21 @@ document.addEventListener('keydown',event=>{
   if(['Space','KeyW','KeyA','KeyS','KeyD','KeyT','KeyE'].includes(event.code))event.preventDefault();
   if(event.repeat)return;
   if(event.code==='Escape') {document.exitPointerLock?.();keys.clear();return;}
-  if(event.code==='KeyT') { document.exitPointerLock?.(); $('chat').hidden=false; $('message').focus(); return; }
+  if(event.code==='KeyT') { openChat(); return; }
   if(event.code==='KeyE') {windowId=0;openInventory();return;}
-  if(event.code==='KeyR'&&player.health<=0){clearWorld();send(0x0b,w=>w.varint(0));return;}
+  if(event.code==='KeyR'&&player.health<=0){respawn();return;}
   if(document.pointerLockElement!==$('world'))return;
   keys.add(event.code);
   if(/^Digit[1-9]$/.test(event.code))selectSlot(Number(event.code.at(-1))-1);
   if(event.code==='KeyQ')sendAction(event.ctrlKey?3:4);
 });
 document.addEventListener('keyup',event=>keys.delete(event.code));
-window.addEventListener('blur',()=>{keys.clear();leftDown=false;cancelMine();});
+window.addEventListener('blur',resetInput);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)resetInput();});
+function openChat() { document.exitPointerLock?.(); resetInput(); $('chat').hidden=false; $('message').focus(); }
+$('close-chat').onclick=()=>{$('chat').hidden=true;lockMouse();};
+function respawn() { if(player.health>0)return;clearWorld();$('respawn').hidden=true;send(0x0b,w=>w.varint(0)); }
+$('respawn').onclick=respawn;
 $('chat').onsubmit=event=>{
   event.preventDefault(); const text=$('message').value.trim();
   if(new TextEncoder().encode(text).length>224) {message('Message is too long (maximum 224 UTF-8 bytes).');return;}
@@ -247,16 +279,72 @@ $('chat').onsubmit=event=>{
   $('message').value=''; $('chat').hidden=true; lockMouse();
 };
 $('message').onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();$('chat').hidden=true;lockMouse();}};
+function resetInput() {
+  keys.clear(); stopAction(0); stopAction(2);
+  touch.forward=touch.right=0; touch.jump=false; touch.move=touch.look=null;
+  touch.buttons.clear(); $('move-stick').style.transform='';
+  document.querySelectorAll('#touch-actions button').forEach(b=>b.classList.remove('pressed'));
+}
+function touchPlayable() { return touchMode&&ready&&player.health>0&&!$('inventory').open&&$('chat').hidden; }
+function moveStick(event) {
+  const box=$('move-pad').getBoundingClientRect(), radius=box.width*.34;
+  let x=event.clientX-box.left-box.width/2, y=event.clientY-box.top-box.height/2;
+  const length=Math.max(radius,Math.hypot(x,y)); x=x/length*radius; y=y/length*radius;
+  touch.right=x/radius; touch.forward=-y/radius;
+  $('move-stick').style.transform=`translate(${x}px,${y}px)`;
+}
+$('move-pad').onpointerdown=event=>{
+  if(!touchPlayable()||touch.move!==null)return;
+  event.preventDefault(); touch.move=event.pointerId;
+  $('move-pad').setPointerCapture(event.pointerId); moveStick(event);
+};
+$('move-pad').onpointermove=event=>{if(touch.move===event.pointerId)moveStick(event);};
+const releaseStick=event=>{
+  if(touch.move!==event.pointerId)return;
+  touch.move=null; touch.forward=touch.right=0; $('move-stick').style.transform='';
+};
+for(const type of ['pointerup','pointercancel','lostpointercapture'])$('move-pad').addEventListener(type,releaseStick);
+$('world').onpointerdown=event=>{
+  if(!touchPlayable()||touch.look!==null)return;
+  event.preventDefault(); touch.look={id:event.pointerId,x:event.clientX,y:event.clientY};
+  $('world').setPointerCapture(event.pointerId);
+};
+$('world').onpointermove=event=>{
+  if(touch.look?.id!==event.pointerId)return;
+  player.yaw+=(event.clientX-touch.look.x)*.005;
+  player.pitch=Math.max(-1.55,Math.min(1.55,player.pitch+(event.clientY-touch.look.y)*.005));
+  touch.look.x=event.clientX; touch.look.y=event.clientY;
+};
+const releaseLook=event=>{if(touch.look?.id===event.pointerId)touch.look=null;};
+for(const type of ['pointerup','pointercancel','lostpointercapture'])$('world').addEventListener(type,releaseLook);
+for(const [id,button] of [['touch-mine',0],['touch-use',2],['touch-jump',null]]) {
+  const element=$(id);
+  element.onpointerdown=event=>{
+    if(!touchPlayable()||touch.buttons.has(id))return;
+    event.preventDefault(); touch.buttons.set(id,event.pointerId); element.setPointerCapture(event.pointerId);
+    element.classList.add('pressed');
+    if(button===null)touch.jump=true;else startAction(button);
+  };
+  const release=event=>{
+    if(touch.buttons.get(id)!==event.pointerId)return;
+    touch.buttons.delete(id); element.classList.remove('pressed');
+    if(button===null)touch.jump=false;else stopAction(button);
+  };
+  for(const type of ['pointerup','pointercancel','lostpointercapture'])element.addEventListener(type,release);
+}
+$('touch-inventory').onclick=()=>{if(ready){windowId=0;openInventory();}};
+$('touch-chat').onclick=openChat;
+$('touch-drop').onclick=()=>{if(touchPlayable())sendAction(4);};
 function physics(dt) {
   if(!ready || player.health<=0)return;
   const swimming=material(world.get(Math.floor(player.x),Math.floor(player.y),Math.floor(player.z))||0).water;
-  const forward=Number(keys.has('KeyW'))-Number(keys.has('KeyS')), right=Number(keys.has('KeyD'))-Number(keys.has('KeyA'));
-  const length=Math.hypot(forward,right)||1, speed=swimming?2.5:4.3;
+  const forward=Number(keys.has('KeyW'))-Number(keys.has('KeyS'))+touch.forward, right=Number(keys.has('KeyD'))-Number(keys.has('KeyA'))+touch.right;
+  const length=Math.max(1,Math.hypot(forward,right)), speed=swimming?2.5:4.3;
   const dx=(-Math.sin(player.yaw)*forward-Math.cos(player.yaw)*right)/length*speed*dt;
   const dz=(Math.cos(player.yaw)*forward-Math.sin(player.yaw)*right)/length*speed*dt;
   if(!world.collides(player.x+dx,player.y,player.z))player.x+=dx;
   if(!world.collides(player.x,player.y,player.z+dz))player.z+=dz;
-  if(keys.has('Space')&&(player.grounded||swimming))player.vy=swimming?3:7;
+  if((keys.has('Space')||touch.jump)&&(player.grounded||swimming))player.vy=swimming?3:7;
   player.vy=Math.max(swimming?-3:-35,player.vy-(swimming?7:22)*dt);
   const dy=player.vy*dt;
   if(!world.collides(player.x,player.y+dy,player.z)) {player.y+=dy;player.grounded=false;}
@@ -279,9 +367,10 @@ function animate(now) {
     if(!mining||mining.key!==key){cancelMine();mining={key,hit:target,start:now};sendAction(0);}
     else if(now-mining.start>(player.mode===1?180:700)){sendAction(2,mining.hit);mining=null;}
   } else cancelMine();
-  if(ready && now-lastSent>=50){
+  const movement=[player.x,player.y,player.z,player.yaw,player.pitch,player.grounded].join(',');
+  if(ready && now-lastSent>=50 && (movement!==lastMovement||now-lastSent>=1000)){
     send(0x1e,w=>w.double(player.x).double(player.y).double(player.z).float(player.yaw*180/Math.PI).float(player.pitch*180/Math.PI).byte(player.grounded?1:0));
-    lastSent=now;
+    lastSent=now; lastMovement=movement;
   }
   if(ready) {
     $('vitals').textContent=`Health ${player.health}/20 · Food ${player.food}/20 · ${['Survival','Creative','Adventure','Spectator'][player.mode]||''}`;

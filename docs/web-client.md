@@ -45,8 +45,10 @@ catalog from the existing C registry.
 
 ## Playing
 
-Use a desktop browser with WebGL, a keyboard and a mouse. Enter a player name,
-then click to capture the mouse. The browser remembers a random player UUID per
+Use a WebGL browser with touch controls or a keyboard and mouse. Enter a player
+name; desktop players then click to capture the mouse. Touch controls are enabled
+automatically on touch-capable devices and can be toggled on the join screen.
+The browser remembers a random player UUID per
 name in local storage so reconnects reuse the server's player record. As with the
 native server, this is an offline identity, not account authentication. Do not
 connect multiple tabs using the same saved identity.
@@ -67,6 +69,22 @@ connect multiple tabs using the same saved identity.
 | R after death | Respawn |
 | Escape | Release mouse or close a dialog |
 
+On phones and tablets, drag the left stick to move and drag the world to look.
+Use separate fingers to move/look/jump together. Hold **Mine** to mine or attack,
+tap **Use** to place/use, and hold **Jump** to jump or swim. Tap hotbar slots to
+select items; the bar scrolls horizontally on narrow screens. **Inventory**,
+**Chat**, **Drop** and **Respawn** provide the remaining basic actions without
+pointer lock. In inventory, enable **Split stack / place one item** to perform
+the secondary slot action. The layout adapts to portrait and landscape; landscape
+offers more space. Input is released when touches are cancelled or the page loses
+focus. Native mobile devices still need WebGL support.
+
+Terrain streams while the server generates it, with byte/chunk progress shown
+during loading. The client enters when the spawn position and its chunk are both
+available, without waiting for a redundant final teleport. Mesh generation yields
+between layers to keep mobile input responsive. Loading fails with a visible
+message after 60 seconds without data or five minutes without a usable spawn.
+
 Gameplay uses the normal protocol-772 login/configuration and game handlers,
 including server-owned inventories, game modes, command permissions, world edits,
 Plates, player limits and saves. Native and browser players share the same world.
@@ -78,8 +96,8 @@ original flat-color voxel geometry and simple entity placeholders. It supports
 terrain streaming, walking/collision/jumping/swimming, mining/placement, item
 pickup, inventories, basic crafting, health, respawning, chat and multiplayer.
 Mining delays and collision shapes are simplified; special block state geometry
-(such as open doors and slabs), flight, skins, sound, particles, sign editing and
-touch controls are not implemented. No Mojang textures, sounds or game code are
+(such as open doors and slabs), flight, skins, sound, particles and sign editing
+are not implemented. No Mojang textures, sounds or game code are
 included. Use the native client for those interfaces and full visual fidelity.
 
 ## Transport and deployment
@@ -120,7 +138,9 @@ The web test covers configured binds, listener isolation, startup failures,
 embedded assets, two clients, chunk decoding, inventory,
 commands, mining, placement, shared edits and reconnects. The C transport tests
 include fragmented input, the RFC handshake vector, origin rejection, malformed
-frames, deadlines and the output bound, also under ASan/UBSan.
+frames, deadlines and the output bound, also under ASan/UBSan. A regression test
+simulates a minute of generation before sending queued output; a writable peer
+must survive, while a peer that actually stops reading still times out.
 
 The optional browser smoke test installs development-only dependencies:
 
@@ -130,5 +150,10 @@ node .tests/browser/node_modules/playwright/cli.js install --with-deps chromium
 node tests/web_browser.cjs
 ```
 
-CI runs the Chromium smoke test and keeps `.tests/web-client.png` as an artifact.
-It exercises rendering, pointer lock, chat, inventory, jumping and reconnects.
+CI runs the Chromium smoke test and retains desktop and phone screenshots. It
+checks terrain pixels, login without the redundant teleport, pointer lock,
+reconnects, and phone multitouch movement/look/jump, cancellation, mining/placement,
+chat, inventory and portrait/landscape layouts. The Alpine web jobs also run the
+full live-server integration on both AMD64 and RISC-V (QEMU), including 25 chunks,
+two players and reconnects. Emulation does not establish physical device speed
+or compatibility with every mobile browser.

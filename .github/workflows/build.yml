@@ -41,6 +41,9 @@ jobs:
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
         with:
           platforms: riscv64
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Archive matching source
         run: |
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
@@ -99,6 +102,11 @@ jobs:
               cd dist
               sha256sum "$archive" source.tar.gz > SHA256SUMS
             '
+      - name: Exercise web gameplay on the shipped architecture
+        if: matrix.variant == 'web'
+        env:
+          WEB_TEST_TIMEOUT_MS: '180000'
+        run: node tests/web_integration.mjs .tests/alpine-package/lapis-obsidian
       - name: Upload architecture artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -132,6 +140,6 @@ jobs:
         if: always()
         with:
           name: web-client-screenshot
-          path: .tests/web-client.png
+          path: .tests/web-client*.png
           if-no-files-found: ignore
           include-hidden-files: true

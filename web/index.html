@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Lapis Obsidian · Play</title>
   <link rel="stylesheet" href="/style.css">
   <script type="module" src="/client.mjs"></script>
@@ -17,20 +17,29 @@
       <label for="name">Player name</label>
       <div class="row"><input id="name" maxlength="15" pattern="[A-Za-z0-9_]{1,15}" value="WebPlayer" required autocomplete="off"><button id="play">Enter world →</button></div>
     </form>
-    <p id="status" role="status">Requires a desktop browser with WebGL, a keyboard, and a mouse.</p>
-    <p class="controls">W A S D to move · Mouse to look · Space to jump/swim<br>Hold left mouse to mine · Right mouse to place/use · 1–9 hotbar<br>T to chat · E inventory · R respawn · Esc release mouse</p>
+    <label class="toggle"><input id="touch-mode" type="checkbox"> Touch controls</label>
+    <p id="status" role="status">Play with touch controls or a keyboard and mouse. WebGL is required.</p>
+    <p class="controls desktop-help">W A S D to move · Mouse to look · Space to jump/swim<br>Hold left mouse to mine · Right mouse to place/use · 1–9 hotbar<br>T to chat · E inventory · R respawn · Esc release mouse</p>
+    <p class="controls touch-help" hidden>Left stick to move · Drag the world to look<br>Hold Mine or Jump · Tap Use to place a block<br>Tap a hotbar slot to select it · Landscape gives you more room</p>
   </main>
   <section id="hud" hidden>
     <div id="vitals"></div><div id="location"></div>
     <div id="crosshair" aria-hidden="true">+</div>
     <div id="messages" aria-live="polite"></div>
-    <form id="chat" hidden><input id="message" maxlength="200" placeholder="Message or /command" aria-label="Chat message"></form>
+    <form id="chat" hidden><input id="message" maxlength="200" placeholder="Message or /command" aria-label="Chat message"><button id="send-message">Send</button><button id="close-chat" type="button">Close</button></form>
     <div id="hotbar" aria-label="Hotbar"></div>
     <button id="resume" hidden>Click to resume</button>
     <button id="leave">Disconnect</button>
+    <button id="respawn" hidden>Respawn</button>
+    <div id="touch-controls" hidden>
+      <div id="touch-menu"><button id="touch-inventory">Inventory</button><button id="touch-chat">Chat</button><button id="touch-drop">Drop</button></div>
+      <div id="move-pad" role="group" aria-label="Movement joystick"><span id="move-stick"></span><span class="stick-label">MOVE</span></div>
+      <div id="touch-actions"><button id="touch-mine">Mine</button><button id="touch-use">Use</button><button id="touch-jump">Jump</button></div>
+    </div>
   </section>
   <dialog id="inventory">
     <h2>Inventory</h2><p id="inventory-help">Click a slot to pick up or place its stack.</p>
+    <label class="toggle"><input id="split-stack" type="checkbox"> Split stack / place one item</label>
     <div id="slots"></div><p id="cursor"></p>
     <div id="creative" hidden><label for="block">Creative block</label><select id="block"></select><button id="give">Put in selected hotbar slot</button></div>
     <button id="close-inventory">Back to world</button>
