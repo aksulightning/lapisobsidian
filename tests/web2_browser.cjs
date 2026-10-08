@@ -282,6 +282,16 @@ async function port() {
       target,
     );
     await wait(([x, y, z]) => app.world.getBlockAt(x, y, z) === 3, target);
+    // Generated surface cover can occlude a block below the player's feet.
+    // Clear the fixture's sightline through authoritative creative actions.
+    for (const dy of [1, 2]) {
+      const above = [target[0], target[1] + dy, target[2]];
+      await page.evaluate(([x, y, z]) => {
+        const c = app.lapisConnection;
+        c.send(0x28, (p) => p.vi(0).pos(x, y, z).u8(1).vi(++c.sequence));
+      }, above);
+      await wait(([x, y, z]) => app.world.getBlockAt(x, y, z) === 0, above);
+    }
     // Test the actual held-input path; a released mouse must never finish mining.
     await page.evaluate(() =>
       app.playerController.sendChatMessage(
