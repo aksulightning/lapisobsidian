@@ -71,7 +71,18 @@ async function port() {
     );
     assert.equal(await page.title(), "Lapis Obsidian Client");
     console.log("Main menu initialized");
-    await page.screenshot({ path: ".tests/web-client2-menu.png", timeout: 60000 });
+    async function capture(path) {
+      const data = await page.evaluate(() => {
+        const canvas = document.createElement('canvas');
+        canvas.width = app.window.canvas.width; canvas.height = app.window.canvas.height;
+        const context = canvas.getContext('2d');
+        context.drawImage(app.window.canvasWorld, 0, 0, canvas.width, canvas.height);
+        context.drawImage(app.window.canvas, 0, 0);
+        return canvas.toDataURL('image/png').split(',')[1];
+      });
+      await writeFile(path, Buffer.from(data, 'base64'));
+    }
+    await capture('.tests/web-client2-menu.png');
     async function clickButton(label) {
       const point = await page.evaluate((label) => {
         const button = app.currentScreen.buttonList.find(
@@ -129,7 +140,7 @@ async function port() {
     assert.ok(state.chunks >= 25);
     assert.ok(state.blocks > 1000);
     assert.ok(state.registry > 0);
-    await page.screenshot({ path: ".tests/web-client2-world.png" });
+    await capture('.tests/web-client2-world.png');
     console.log("World:", state);
     await page.evaluate(() => app.playerController.sendChatMessage("/tps"));
     await page.waitForFunction(
@@ -145,13 +156,14 @@ async function port() {
     );
     await page.mouse.click(640, 400);
     await page.waitForFunction(() => app.window.isLocked());
+    await page.waitForFunction(() => app.player.onGround);
     const before = await page.evaluate(() => [
       app.player.x,
       app.player.y,
       app.player.z,
     ]);
     await page.keyboard.down("Space");
-    await delay(180);
+    await page.waitForFunction(before => Math.abs(app.player.y-before[1])>.05, before);
     await page.keyboard.up("Space");
     const after = await page.evaluate(() => [
       app.player.x,

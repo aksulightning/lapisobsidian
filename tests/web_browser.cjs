@@ -68,8 +68,9 @@ async function terrainVisible(page) {
     await page.selectOption('#block',{label:'dirt'});await page.click('#give');
     await waitFor(page,()=>document.querySelector('#hotbar').textContent.includes('dirt ×64'));
     await page.click('#close-inventory');
+    await waitFor(page,()=>document.pointerLockElement?.id==='world');
     const before=await page.locator('#location').textContent();
-    await page.keyboard.down('Space');await page.waitForTimeout(250);await page.keyboard.up('Space');
+    await page.keyboard.down('Space');await until(async()=>await page.locator('#location').textContent()!==before,'jump changes player position');await page.keyboard.up('Space');
     assert.notEqual(await page.locator('#location').textContent(),before,'jump changes player position');
     await page.keyboard.press('Escape');
     await waitFor(page,()=>document.pointerLockElement===null);

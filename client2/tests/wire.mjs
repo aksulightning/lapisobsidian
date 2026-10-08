@@ -136,3 +136,15 @@ test("missing images use cached original fallback; absent audio stays silent bef
     globalThis.document = previous;
   }
 });
+
+test('connection validates origin, encodes real login and reports socket failure', async () => {
+  const {default: Connection}=await import('../adapter/connection.mjs');
+  const previousLocation=globalThis.location,previousSocket=globalThis.WebSocket;
+  let socket;const screens=[];
+  globalThis.location={origin:'http://127.0.0.1:8080',protocol:'http:',assign(){throw Error('Unexpected navigation');}};
+  globalThis.WebSocket=class {static OPEN=1;constructor(url){this.url=url;this.readyState=0;this.bufferedAmount=0;this.sent=[];socket=this;}send(data){this.sent.push(data);}close(){this.readyState=3;}};
+  const app={getSession:()=>({getProfile:()=>({getUsername:()=> 'TestPlayer',getCompactUUID:()=> '12345678901234567890123456789012'})}),loadWorld(){},displayScreen(screen){screens.push(screen);}};
+  try {const invalid=new Connection(app);invalid.connect('ftp://127.0.0.1');assert.equal(invalid.closed,true);assert.match(screens.at(-1).message,/HTTP/);
+    const connection=new Connection(app);connection.connect('127.0.0.1:8080');assert.equal(socket.url,'ws://127.0.0.1:8080/ws');socket.readyState=1;socket.onopen();const messages=[];const stream=new Stream((id,p)=>messages.push([id,p]));for(const bytes of socket.sent)stream.push(bytes);assert.equal(messages[0][1].vi(),772);assert.equal(messages[0][1].str(),'127.0.0.1');assert.equal(messages[0][1].u16(),25565);assert.equal(messages[0][1].vi(),2);assert.equal(messages[1][1].str(),'TestPlayer');assert.equal(messages[1][1].bytes(16).length,16);socket.onerror();assert.equal(connection.closed,true);assert.match(screens.at(-1).message,/Cannot connect/);
+  } finally {globalThis.location=previousLocation;globalThis.WebSocket=previousSocket;}
+});

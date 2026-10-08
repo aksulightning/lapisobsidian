@@ -33,7 +33,7 @@ export default class Inventory extends GuiScreen {
         label = `${value.slot === undefined ? "" : value.slot + ": "}${items[value.item] || "Empty"} ${value.count || ""}`;
       this.buttonList.push(
         new GuiButton(
-          label.slice(0, 23),
+          label.slice(0, 12),
           this.width / 2 - 180 + (n % 4) * 90,
           65 + Math.floor(n / 4) * 22,
           88,
