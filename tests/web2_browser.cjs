@@ -223,18 +223,14 @@ async function port() {
       app.player.z,
     ]);
     await page.keyboard.down("Space");
-    await wait((before) => Math.abs(app.player.y - before[1]) > 0.05, before);
-    await page.keyboard.up("Space");
-    const after = await page.evaluate(() => [
-      app.player.x,
-      app.player.y,
-      app.player.z,
-    ]);
-    assert.notDeepEqual(
-      after,
+    // Assert the jump while airborne. Under software rendering the player can
+    // land between separate browser calls, so a later position is not evidence
+    // of whether the jump happened.
+    await wait(
+      (before) => app.player.y > before[1] + 0.05 && !app.player.onGround,
       before,
-      "keyboard jumping moves the upstream player",
     );
+    await page.keyboard.up("Space");
     await page.keyboard.press("KeyE");
     await wait(() => app.currentScreen?.constructor.name === "Inventory");
     await page.keyboard.press("KeyE");
