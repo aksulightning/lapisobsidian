@@ -108,3 +108,5 @@ gesture and a nonzero volume setting. WebGL errors explain hardware requirements
 Use [protocol limitations](client-protocol.md) to distinguish unsupported native
 interfaces from connection errors. This implementation does not provide full
 native-client parity.
+
+The separately licensed mode 2 client is documented in [client2-development.md](client2-development.md). Mode 1 behavior remains unchanged.

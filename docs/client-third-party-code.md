@@ -39,3 +39,5 @@ Apache attribution if redistributing test tooling. Browser downloads are test
 executables, not game assets. Node's standard-library tools require no npm package.
 
 Assets are separately inventoried in [client-asset-sources](client-asset-sources.md).
+
+The separately licensed mode 2 client is documented in [client2-third-party-code.md](client2-third-party-code.md). Mode 1 behavior remains unchanged.

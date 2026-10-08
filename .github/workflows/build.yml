@@ -148,3 +148,30 @@ jobs:
           path: .tests/web-client*.png
           if-no-files-found: ignore
           include-hidden-files: true
+
+  web-client-alternative:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm --prefix client2 run build
+      - run: git diff --exit-code client2/routes.list
+      - run: npm --prefix client2 test
+      - run: node client2/scripts/audit.mjs
+      - run: LAPIS_OBSIDIAN_WEB_CLIENT=2 ./build.sh
+      - run: LAPIS_OBSIDIAN_WEB_CLIENT=2 ./tests/web-client.sh
+      - run: SANITIZE=1 LAPIS_OBSIDIAN_WEB_CLIENT=2 ./tests/web-client.sh
+      - run: node tests/web_integration.mjs ./lapis-obsidian --client2
+      - run: npm install --prefix .tests/browser --no-save --no-package-lock playwright@1.51.1
+      - run: node .tests/browser/node_modules/playwright/cli.js install --with-deps chromium
+      - run: node tests/web2_browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-client2-screenshots
+          path: .tests/web-client2*.png
+          if-no-files-found: ignore
+          include-hidden-files: true

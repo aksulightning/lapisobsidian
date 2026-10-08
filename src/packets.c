@@ -417,7 +417,7 @@ int sc_chunkDataAndUpdateLight (int client_fd, int _x, int _z) {
     // biome data
     writeByte(client_fd, 0); // bits per entry
     writeByte(client_fd, biome); // biome palette
-#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && (LAPIS_OBSIDIAN_WEB_CLIENT == 1 || LAPIS_OBSIDIAN_WEB_CLIENT == 2)
     /* Stream sections while a slow CPU generates the rest of the view. */
     if (web_client_flush(client_fd,get_program_time()) < 0) return 1;
 #endif
@@ -468,7 +468,7 @@ int sc_chunkDataAndUpdateLight (int client_fd, int _x, int _z) {
   doors_send_chunk(client_fd, _x, _z);
   circuits_send_chunk(client_fd,_x,_z);
   farming_send_chunk(client_fd,_x,_z);
-#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && (LAPIS_OBSIDIAN_WEB_CLIENT == 1 || LAPIS_OBSIDIAN_WEB_CLIENT == 2)
   if (web_client_flush(client_fd,get_program_time()) < 0) return 1;
 #endif
   return 0;

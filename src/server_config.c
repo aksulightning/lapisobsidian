@@ -107,7 +107,7 @@ static bool create_defaults (const char *path, const ServerConfig *c) {
     "# Lapis Obsidian - edit and restart the server to apply changes.\n"
     "# Lines beginning with # are comments. Values are literal, without quotes.\n"
     "port=%u\nmotd=%s\ngamemode=%u\n"
-    "# Used only when compiled with LAPIS_OBSIDIAN_WEB_CLIENT=1.\n"
+    "# Used only when compiled with LAPIS_OBSIDIAN_WEB_CLIENT=1 or 2.\n"
     "web-address=%s\nweb-port=%u\n"
     "# Empty seed uses the saved world seed, or the default for a new world.\n"
     "seed=\nmirror-horizontal=false\nwheat-growth-seconds=%u\nexperimental_enable_plates=false\n",

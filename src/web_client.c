@@ -2,7 +2,7 @@
  * RFC 6455 framing. No proxy, third-party assets, TLS library or worker thread.
  * All reads/writes are nonblocking; bounded queues isolate slow browsers. */
 #include "web_client.h"
-#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && (LAPIS_OBSIDIAN_WEB_CLIENT == 1 || LAPIS_OBSIDIAN_WEB_CLIENT == 2)
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -279,12 +279,38 @@ static int http(WebClient *c) {
     c->partial_since = c->raw_size ? c->now : 0;
     return 1;
   }
+#if LAPIS_OBSIDIAN_WEB_CLIENT == 2
+  struct Asset { const char *request, *type, *path; };
+  static const struct Asset assets[] = { WEB_ASSET_ENTRIES };
+  for (unsigned i=0;i<sizeof(assets)/sizeof(assets[0]);i++) if (!strcmp(request,assets[i].request)) {
+    const char *root = getenv("LAPIS_OBSIDIAN_CLIENT2_DIR");
+    if (!root || !*root) root = "client2/dist";
+    char path[4096];
+    int length = snprintf(path,sizeof(path),"%s/%s",root,assets[i].path);
+    if (length < 0 || (size_t)length >= sizeof(path)) return -1;
+    FILE *file = fopen(path,"rb");
+    if (!file) {
+      static const char missing[] = "Lapis Obsidian Client files missing. Run npm --prefix client2 run build and set LAPIS_OBSIDIAN_CLIENT2_DIR to client2/dist.\n";
+      return response(c,"503 Service Unavailable","text/plain",missing,sizeof(missing)-1);
+    }
+    /* Paths come exclusively from the compiled whitelist, never from the URL.
+     * This trusted directory holds a separate program with a separate license. */
+    long size = -1;
+    if (fseek(file,0,SEEK_END) == 0) size = ftell(file);
+    if (size < 0 || size > 2 * 1024 * 1024 || fseek(file,0,SEEK_SET) != 0) { fclose(file); return -1; }
+    unsigned char *body = malloc((size_t)size+1);
+    if (!body) { fclose(file); return -1; }
+    size_t read = fread(body,1,(size_t)size,file);
+    int error = ferror(file); fclose(file);
+    int result = read == (size_t)size && !error ? response(c,"200 OK",assets[i].type,body,read) : -1;
+    free(body); return result;
+  }
+#else
   struct Asset { const char *request, *type; const unsigned char *data; size_t size; };
-  static const struct Asset assets[] = {
-    WEB_ASSET_ENTRIES
-  };
+  static const struct Asset assets[] = { WEB_ASSET_ENTRIES };
   for (unsigned i=0;i<sizeof(assets)/sizeof(assets[0]);i++) if (!strcmp(request,assets[i].request))
     return response(c,"200 OK",assets[i].type,assets[i].data,assets[i].size);
+#endif
   return response(c,"404 Not Found","text/plain","Not found.\n",11);
 }
 static int websocket(WebClient *c) {

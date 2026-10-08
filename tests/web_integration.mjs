@@ -6,6 +6,7 @@ import {mkdir,mkdtemp,writeFile,rm} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {EventEmitter,once} from 'node:events';
 import {packet,PacketStream,readChunk,readRegistry,readKnownPacks} from '../client/src/network/protocol.mjs';
+if(process.argv.includes('--client2'))process.env.LAPIS_OBSIDIAN_CLIENT2_DIR=resolve('client2/dist');
 const binary=resolve(process.argv[2]||'lapis-obsidian'), disabled=process.argv.includes('--disabled');
 const testTimeout=Number(process.env.WEB_TEST_TIMEOUT_MS||20000);
 assert.ok(Number.isFinite(testTimeout)&&testTimeout>=1000&&testTimeout<=600000);
@@ -101,7 +102,7 @@ async function refused(host,targetPort) {
 }
 async function noHttpOnNativePort() {
   const s=net.connect(port,'127.0.0.1');connections.push(s);await once(s,'connect');
-  let reply='';s.on('data',b=>reply+=b);s.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n');await delay(150);
+  let reply='';s.on('error',error=>{if(error.code!=='ECONNRESET')throw error;});s.on('data',b=>reply+=b);s.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n');await delay(150);
   assert.doesNotMatch(reply,/HTTP\/1\.[01]/);s.destroy();
 }
 async function nativeStatus() {
@@ -125,7 +126,7 @@ try {
     await rejectedStartup(`port=${port}\nweb-port=${port}\n`,/web-port must differ/);
     const free=await reservePort(),freePort=free.address().port;await new Promise(resolve=>free.close(resolve));
     await rejectedStartup(`port=${freePort}\nweb-address=127.0.0.1\nweb-port=${webPort}\n`,/Cannot listen for the web client/);
-    for(const path of ['/','/style.css','/src/network/protocol.mjs','/src/rendering/renderer.mjs','/src/core/client.mjs','/catalog.mjs','/assets/textures/terrain/rock.png','/assets/textures/original/tool.svg','/assets/audio/events.json','/assets/manifest.json']) {
+    for(const path of process.argv.includes('--client2') ? ['/','/style.css','/src/js/Start.js','/adapter/wire.mjs','/libraries/three.module.js','/provenance.json'] : ['/','/style.css','/src/network/protocol.mjs','/src/rendering/renderer.mjs','/src/core/client.mjs','/catalog.mjs','/assets/textures/terrain/rock.png','/assets/textures/original/tool.svg','/assets/audio/events.json','/assets/manifest.json']) {
       const response=await fetch(`http://127.0.0.1:${webPort}${path}`);assert.equal(response.status,200);
       assert.match(response.headers.get('content-security-policy'),/frame-ancestors 'none'/);assert.ok((await response.text()).length>100);
     }

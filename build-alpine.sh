@@ -92,9 +92,9 @@ if [ "$debug" = 1 ]; then
     -fsanitize=address,undefined -fno-omit-frame-pointer
 fi
 [ "$static" = 0 ] || set -- "$@" -static
-if [ "${LAPIS_OBSIDIAN_WEB_CLIENT:-0}" = 1 ]; then
+if [ "${LAPIS_OBSIDIAN_WEB_CLIENT:-0}" = 1 ] || [ "${LAPIS_OBSIDIAN_WEB_CLIENT:-0}" = 2 ]; then
   sh tools/embed-web.sh > "$work/web_assets.h"
-  set -- "$@" -DLAPIS_OBSIDIAN_WEB_CLIENT=1 "-I$work"
+  set -- "$@" -DLAPIS_OBSIDIAN_WEB_CLIENT="$LAPIS_OBSIDIAN_WEB_CLIENT" "-I$work"
 fi
 printf 'Building Lapis Obsidian for Alpine %s using %s\n' "$arch" "$triple"
 "$compiler" src/*.c "$@" -o "$work/lapis-obsidian" -lm

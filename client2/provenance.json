@@ -1,0 +1,1291 @@
+{
+  "upstreamCommit": "468f942c4984578a03e472c49646198680489723",
+  "files": [
+    {
+      "path": "libraries/long.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/libraries/long.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "13a5a38386f8be8a23f5dd535e7a49a82653fa7a965f346363b532c959e90005",
+      "sha256": "13a5a38386f8be8a23f5dd535e7a49a82653fa7a965f346363b532c959e90005",
+      "modified": false,
+      "author": "Closure Library Authors; Daniel Wirtz / long.js Authors",
+      "license": "Apache-2.0"
+    },
+    {
+      "path": "libraries/three.module.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/libraries/three.module.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "57cefc1c1bdcf924dce38bfbeb45aed05363ccd38def24498c3aa42b59eeb5c0",
+      "sha256": "57cefc1c1bdcf924dce38bfbeb45aed05363ccd38def24498c3aa42b59eeb5c0",
+      "modified": false,
+      "author": "Three.js Authors",
+      "license": "MIT"
+    },
+    {
+      "path": "src/js/Start.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/Start.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "96a38836ffc9efcfdc8439201347016f550b62cd3c2ab1d8f47298e352d321ab",
+      "sha256": "3bfdef12c971a72b09ae468dfc2a681f45394e8d55a69ff9d497749ddcfecc44",
+      "modified": true,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/GameSettings.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/GameSettings.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "eeda483ef5a49684db39142468b4ea84a408ee04f5eb1be56f5a38e35c63f75c",
+      "sha256": "fdf5a121ae5bc82650230009323e74cf07ce94cde1abe753571b31d5294b9e45",
+      "modified": true,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/GameWindow.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/GameWindow.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "22dd7953f726097f2d9c46befbdc26821dbb9f4c792a8f2788d84980024ac7ed",
+      "sha256": "22dd7953f726097f2d9c46befbdc26821dbb9f4c792a8f2788d84980024ac7ed",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/Minecraft.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/Minecraft.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "db263a7472113eda162ecaee4804cb9e59338d411156d0659a79a02228a6f9ce",
+      "sha256": "35b44f7615e1607c2ab3e3f3d15140ce03c540c1a5fe69ba2beb6c50fc4008c2",
+      "modified": true,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/command/Command.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/command/Command.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "b29d38c037fb4a412e36d182ed1d6f0dc9d0aceef28f245828b32cafa9ebe437",
+      "sha256": "b29d38c037fb4a412e36d182ed1d6f0dc9d0aceef28f245828b32cafa9ebe437",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/command/CommandHandler.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/command/CommandHandler.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "089e9e7c98fb47da7e87c2447f51ed3d86c6bcc214212441051c6d9c3e4f875a",
+      "sha256": "089e9e7c98fb47da7e87c2447f51ed3d86c6bcc214212441051c6d9c3e4f875a",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/command/command/HelpCommand.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/command/command/HelpCommand.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "f0514ce8e1905dd2296566abea4e3c7f56c9f781d8850fcb6fc61cee43710669",
+      "sha256": "f0514ce8e1905dd2296566abea4e3c7f56c9f781d8850fcb6fc61cee43710669",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/command/command/TeleportCommand.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/command/command/TeleportCommand.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "39b8520d844b849fa217e8ceca0a3b6d20a8b745fc7094001c5076b733a08389",
+      "sha256": "39b8520d844b849fa217e8ceca0a3b6d20a8b745fc7094001c5076b733a08389",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/command/command/TimeCommand.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/command/command/TimeCommand.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "5e193d56595fb0d978bad3efaf260b3f9f946fdbf1fb87f2549b3744c663d6a5",
+      "sha256": "5e193d56595fb0d978bad3efaf260b3f9f946fdbf1fb87f2549b3744c663d6a5",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/entity/Entity.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/entity/Entity.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "942c177662e88a8476a0161952b356564da51359f86af8e129223f89f816bf60",
+      "sha256": "942c177662e88a8476a0161952b356564da51359f86af8e129223f89f816bf60",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/entity/EntityLiving.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/entity/EntityLiving.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "efd0a393cebd1e950b9215e9a003279acfb80786284077096a7feec631ba3aff",
+      "sha256": "efd0a393cebd1e950b9215e9a003279acfb80786284077096a7feec631ba3aff",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/entity/PlayerEntity.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/entity/PlayerEntity.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "699f850e27c95aeb06309a8bb82ebb91bc15b281fc9c8fe66c5d7ec1cb7cbfab",
+      "sha256": "017640826fc288a0dca15b14d2ca919cf356cfe3f0e7f678c508b48e8d261af5",
+      "modified": true,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/entity/PlayerEntityMultiplayer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/entity/PlayerEntityMultiplayer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "003d773e4358b1e050ce9190215666b757a091ed32af334dd5e57d3ca55c73a1",
+      "sha256": "003d773e4358b1e050ce9190215666b757a091ed32af334dd5e57d3ca55c73a1",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/Gui.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/Gui.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "e3d13a6f7088e6a9fd97c296579944ba2d2302b816a6e57c1f8fc832eb6d961e",
+      "sha256": "e3d13a6f7088e6a9fd97c296579944ba2d2302b816a6e57c1f8fc832eb6d961e",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/GuiScreen.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/GuiScreen.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "9881bed8ea6d44873b21fe1cf8a5077f630aad98fd401c645d6dece97d6e6245",
+      "sha256": "9881bed8ea6d44873b21fe1cf8a5077f630aad98fd401c645d6dece97d6e6245",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/overlay/ChatOverlay.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/overlay/ChatOverlay.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "18a539ccb6ccc5f7c4e0f9c2533734c7611e389db2c76ddd5ebd105cc365606c",
+      "sha256": "18a539ccb6ccc5f7c4e0f9c2533734c7611e389db2c76ddd5ebd105cc365606c",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/overlay/IngameOverlay.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/overlay/IngameOverlay.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "a0de1bedd76fd08843253d24a92e412b4f92dbfb27cfab2921540fa73b2849d7",
+      "sha256": "e5163eec3c3f2f2a9caeb3343591911ab1b514ae5f1a3befb7c0cb0ad55e067f",
+      "modified": true,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/overlay/PlayerListOverlay.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/overlay/PlayerListOverlay.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "b900b25fe791212523984ec2d976faed9c5d808f2dcd171ccd5e3c9dc3a00d9d",
+      "sha256": "b900b25fe791212523984ec2d976faed9c5d808f2dcd171ccd5e3c9dc3a00d9d",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/screens/GuiChat.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/screens/GuiChat.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "cf7ef642f8052510e65b9b39e64c6e2d675f4425b39b1b723451ba1c8e9db520",
+      "sha256": "cf7ef642f8052510e65b9b39e64c6e2d675f4425b39b1b723451ba1c8e9db520",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/screens/GuiConnecting.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/screens/GuiConnecting.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "d5c56cf0a9756799cde25e4ad70e0b63d53f9baafb974f761a686eb8e9ad2878",
+      "sha256": "6448879d6dc5c2928c3ed22fa07560ed065257415d6509779ae543f29c4089fe",
+      "modified": true,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/screens/GuiContainer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/screens/GuiContainer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "8c616616882917f6758c34002a21c3d156fb701e2ebf865b05b23060ec7dbccc",
+      "sha256": "8c616616882917f6758c34002a21c3d156fb701e2ebf865b05b23060ec7dbccc",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/screens/GuiControls.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/screens/GuiControls.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "b71fe8766cf1b146b17d3a51c556a50a22b907cbfafe02291b25686c6b5f18da",
+      "sha256": "b71fe8766cf1b146b17d3a51c556a50a22b907cbfafe02291b25686c6b5f18da",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/screens/GuiCreateWorld.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/screens/GuiCreateWorld.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "ea81afea4be19fe2adfe0c49eb39a60f86083cd6bd872fe26728ddd47cd6e4f5",
+      "sha256": "ea81afea4be19fe2adfe0c49eb39a60f86083cd6bd872fe26728ddd47cd6e4f5",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/screens/GuiDirectConnect.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/screens/GuiDirectConnect.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "a8b4e24ec305e59323f455bd6b694eeee3da173b2519371a4136f05f76feca96",
+      "sha256": "ea4f10a0cc6976c9f80e092c6c12728875ff1cb391065f89b1ca0ea0fe6f24e2",
+      "modified": true,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/screens/GuiDisconnected.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/screens/GuiDisconnected.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "6951f6a9c9cd7b92978e1e541b03bbb40b30e15cf2264678d7fccf2a4514801c",
+      "sha256": "6951f6a9c9cd7b92978e1e541b03bbb40b30e15cf2264678d7fccf2a4514801c",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/screens/GuiIngameMenu.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/screens/GuiIngameMenu.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "07b48202457d49732195561d7a317c6592fc345496675ac5b76d32f83c190779",
+      "sha256": "07b48202457d49732195561d7a317c6592fc345496675ac5b76d32f83c190779",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/screens/GuiLoadingScreen.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/screens/GuiLoadingScreen.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "9f935106538110546b224335351099e0628147d3de43d8367dbb28a2da5d8729",
+      "sha256": "9f935106538110546b224335351099e0628147d3de43d8367dbb28a2da5d8729",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/screens/GuiMainMenu.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/screens/GuiMainMenu.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "91c0ac5e57595ff2f74765af637447daad58703b8319ca590158ea9768b84207",
+      "sha256": "8df8ac32316e79d9ff376b7ff803ac5a3a5f768522f3beda6d987ced7423190c",
+      "modified": true,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/screens/GuiOptions.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/screens/GuiOptions.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "9b6b5c509d58bfe39c02fc2a21f487d9381941c7679724e99c243a48c9e111ce",
+      "sha256": "9b6b5c509d58bfe39c02fc2a21f487d9381941c7679724e99c243a48c9e111ce",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/screens/container/GuiContainerCreative.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/screens/container/GuiContainerCreative.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "56cc4479effc22931c53b4925543691a3ac2c9d1a009debc837f2cdda14d49a1",
+      "sha256": "56cc4479effc22931c53b4925543691a3ac2c9d1a009debc837f2cdda14d49a1",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/widgets/GuiButton.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/widgets/GuiButton.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "bdb017449e4b0e9218614b651254fb836517d5a34aa4c5aa18c2ed8e285528f0",
+      "sha256": "bdb017449e4b0e9218614b651254fb836517d5a34aa4c5aa18c2ed8e285528f0",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/widgets/GuiKeyButton.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/widgets/GuiKeyButton.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "fd3a381044bec3722ba693c4347272958dd6a59f1ee76d834ec123683f7690a4",
+      "sha256": "fd3a381044bec3722ba693c4347272958dd6a59f1ee76d834ec123683f7690a4",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/widgets/GuiSliderButton.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/widgets/GuiSliderButton.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "b334b557eaafa9d878b798feb16b9bd66e0feca039d2e71a2e6c17fe5ff250d3",
+      "sha256": "b334b557eaafa9d878b798feb16b9bd66e0feca039d2e71a2e6c17fe5ff250d3",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/widgets/GuiSwitchButton.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/widgets/GuiSwitchButton.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "791cbf7aa387cb137973d244d3b0a755760c6df15662b74a8986faddd4cf0b8d",
+      "sha256": "791cbf7aa387cb137973d244d3b0a755760c6df15662b74a8986faddd4cf0b8d",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/gui/widgets/GuiTextField.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/widgets/GuiTextField.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "8c341e4d3f7f3dcc9cab2be67c3d7929e58357b42c509f00b69e7b6b32b4036d",
+      "sha256": "8c341e4d3f7f3dcc9cab2be67c3d7929e58357b42c509f00b69e7b6b32b4036d",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/inventory/Container.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/inventory/Container.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "bd1c93262088a022323a6f6fd26b705f09a41d18e9b25778bef8adc403d82f01",
+      "sha256": "bd1c93262088a022323a6f6fd26b705f09a41d18e9b25778bef8adc403d82f01",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/inventory/Inventory.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/inventory/Inventory.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "edafa567e54d13682e7a879179b6ba5399c881bf062e3e0022f3727b15e9b4d9",
+      "sha256": "edafa567e54d13682e7a879179b6ba5399c881bf062e3e0022f3727b15e9b4d9",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/inventory/Slot.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/inventory/Slot.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "91e613b716408a32204b7e1b9e3b2eb12ad00a17c43690225935443e05c7b8ae",
+      "sha256": "91e613b716408a32204b7e1b9e3b2eb12ad00a17c43690225935443e05c7b8ae",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/inventory/container/ContainerCreative.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/inventory/container/ContainerCreative.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "a4ce3eb2eb82c587cd690368b068f67f38c0bf3f92778a140df707511de7bca4",
+      "sha256": "a4ce3eb2eb82c587cd690368b068f67f38c0bf3f92778a140df707511de7bca4",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/inventory/inventory/InventoryBasic.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/inventory/inventory/InventoryBasic.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "ed7c4c49939f25fa503b2cf2536394c16eb9e590810e33b5b53267594b7ce5ea",
+      "sha256": "ed7c4c49939f25fa503b2cf2536394c16eb9e590810e33b5b53267594b7ce5ea",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/inventory/inventory/InventoryPlayer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/inventory/inventory/InventoryPlayer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "b19a80dc080b515f21cfb93404d6327fd1da1976d79be6c94f73fb427bb07fd0",
+      "sha256": "b19a80dc080b515f21cfb93404d6327fd1da1976d79be6c94f73fb427bb07fd0",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/network/Packet.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/network/Packet.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "cb5dbf96e94892324811f985363afe04c57ba8335d1d8dd07129955773cd581a",
+      "sha256": "cb5dbf96e94892324811f985363afe04c57ba8335d1d8dd07129955773cd581a",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/network/ProtocolState.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/network/ProtocolState.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "e837d5242a9aa01c9d70dee6800b736020d1ea0c9ae93185bc8494e75e2dc200",
+      "sha256": "e837d5242a9aa01c9d70dee6800b736020d1ea0c9ae93185bc8494e75e2dc200",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/network/controller/PlayerController.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/network/controller/PlayerController.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "a4b2ed0f544eaf1cb10cbfddcc55d4fcd46054028a7f0862296f7a5e1c9a92a3",
+      "sha256": "a4b2ed0f544eaf1cb10cbfddcc55d4fcd46054028a7f0862296f7a5e1c9a92a3",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/network/controller/PlayerControllerMultiplayer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/network/controller/PlayerControllerMultiplayer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "37cd15b8b0a11ba599add2e2b9276b5793c517093a8e53061c10fe764116d7c0",
+      "sha256": "37cd15b8b0a11ba599add2e2b9276b5793c517093a8e53061c10fe764116d7c0",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/network/packet/play/client/ClientChatPacket.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/network/packet/play/client/ClientChatPacket.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "c72325ba43bcb989705a832161c282df7a1e1836096bbbbb1f80bbdcc2a5fe4b",
+      "sha256": "c72325ba43bcb989705a832161c282df7a1e1836096bbbbb1f80bbdcc2a5fe4b",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/network/packet/play/client/ClientPlayerMovementPacket.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/network/packet/play/client/ClientPlayerMovementPacket.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "6649d7f63a2340d76875b4ebb8a9b13ebf19f06dba6872b3d95f6ad1b72f5445",
+      "sha256": "6649d7f63a2340d76875b4ebb8a9b13ebf19f06dba6872b3d95f6ad1b72f5445",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/network/packet/play/client/ClientPlayerPositionPacket.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/network/packet/play/client/ClientPlayerPositionPacket.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "559447bc9863a5fc5c8d9a904ec98f9d297b107f6d2c90539c539d0f8e9e83c0",
+      "sha256": "559447bc9863a5fc5c8d9a904ec98f9d297b107f6d2c90539c539d0f8e9e83c0",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/network/packet/play/client/ClientPlayerPositionRotationPacket.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/network/packet/play/client/ClientPlayerPositionRotationPacket.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "58eb4c272022b423f640f5f664de2a1f8191e2bb96780fdb8ad938de9edded8f",
+      "sha256": "58eb4c272022b423f640f5f664de2a1f8191e2bb96780fdb8ad938de9edded8f",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/network/packet/play/client/ClientPlayerRotationPacket.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/network/packet/play/client/ClientPlayerRotationPacket.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "789d80db039f871ea1c8949ebca9033e929823612cad087dd8e0fdc9aa977f7b",
+      "sha256": "789d80db039f871ea1c8949ebca9033e929823612cad087dd8e0fdc9aa977f7b",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/network/packet/play/client/ClientPlayerStatePacket.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/network/packet/play/client/ClientPlayerStatePacket.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "e0da5a2c3db7f38d6942d6b135dc4f7fa20a4a6186637b2388d93b79f98b74a8",
+      "sha256": "e0da5a2c3db7f38d6942d6b135dc4f7fa20a4a6186637b2388d93b79f98b74a8",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/network/packet/play/client/ClientSwingArmPacket.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/network/packet/play/client/ClientSwingArmPacket.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "b31be54ea47ad8c39ea7222b0c039fcf9f05a3760fca3bc8c6fcb6eadee929b0",
+      "sha256": "b31be54ea47ad8c39ea7222b0c039fcf9f05a3760fca3bc8c6fcb6eadee929b0",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/BlockRenderer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/BlockRenderer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "3a92913b38c801e93cd72af44f442bf254633ce4bc362cf03840186f381d6307",
+      "sha256": "3a92913b38c801e93cd72af44f442bf254633ce4bc362cf03840186f381d6307",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/GrassColorizer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/GrassColorizer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "5e0283fbf30efe87759e68d914c377322e6aba64b12cbf60132364a0739ce0ba",
+      "sha256": "5e0283fbf30efe87759e68d914c377322e6aba64b12cbf60132364a0739ce0ba",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/Tessellator.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/Tessellator.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "ac2eb79d723dfa466652a6dce0ad96dd2c8b6dfd5b8a6bc330a3b5a4f54f0e4a",
+      "sha256": "ac2eb79d723dfa466652a6dce0ad96dd2c8b6dfd5b8a6bc330a3b5a4f54f0e4a",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/WorldRenderer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/WorldRenderer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "a40df739a23fc2920787d7a7c260f8612f3c9242a1ec6d867801288c19b2b5df",
+      "sha256": "a40df739a23fc2920787d7a7c260f8612f3c9242a1ec6d867801288c19b2b5df",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/entity/EntityRenderManager.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/entity/EntityRenderManager.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "372363ddf939dcb336bc3dddf0c42c3d0016eb69e408754b2e94f3c6305656ec",
+      "sha256": "372363ddf939dcb336bc3dddf0c42c3d0016eb69e408754b2e94f3c6305656ec",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/entity/EntityRenderer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/entity/EntityRenderer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "d35611fc0cd88d97223b4d985b47db4781b9939a2e87f70bd7711ac4f4f49f6d",
+      "sha256": "d35611fc0cd88d97223b4d985b47db4781b9939a2e87f70bd7711ac4f4f49f6d",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/entity/entity/PlayerRenderer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/entity/entity/PlayerRenderer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "a27a8868d5738c6ab23b492ecf59a887476a57bff5652b972f5bc70ab91f39c8",
+      "sha256": "a27a8868d5738c6ab23b492ecf59a887476a57bff5652b972f5bc70ab91f39c8",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/gui/FontRenderer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/gui/FontRenderer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "68bc5431921c2b6a50fa7658f1561d34b52f9cb6839e0d236fea24cbfeedf14c",
+      "sha256": "68bc5431921c2b6a50fa7658f1561d34b52f9cb6839e0d236fea24cbfeedf14c",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/gui/ItemRenderer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/gui/ItemRenderer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "aa4062175ab133677bf8ce7361a9aa505a86b704a05a53b251811bc1e666b266",
+      "sha256": "aa4062175ab133677bf8ce7361a9aa505a86b704a05a53b251811bc1e666b266",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/gui/ScreenRenderer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/gui/ScreenRenderer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "85cab19e8f3232a7462ad4d125ca5e940e024d228425ab0f94f9fc193b89e568",
+      "sha256": "85cab19e8f3232a7462ad4d125ca5e940e024d228425ab0f94f9fc193b89e568",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/isometric/IsometricRenderer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/isometric/IsometricRenderer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "f5304607d4a9fa63d6ec9149565178befff0459aed39c08b449708e454049fb7",
+      "sha256": "f5304607d4a9fa63d6ec9149565178befff0459aed39c08b449708e454049fb7",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/isometric/Point.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/isometric/Point.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "b1dc66cbf2e6a490b4bcb1eb5475933af026220efeff3867cf94a4ff43333034",
+      "sha256": "b1dc66cbf2e6a490b4bcb1eb5475933af026220efeff3867cf94a4ff43333034",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/isometric/TextCoord.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/isometric/TextCoord.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "92bcaecfb1eb7a73aa86964810b195dc508b4433b57aac65332ae2caebcfbd05",
+      "sha256": "92bcaecfb1eb7a73aa86964810b195dc508b4433b57aac65332ae2caebcfbd05",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/isometric/Triangle.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/isometric/Triangle.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "93163405c8738ddd6479bcbcddcbefe4acce209126afd4fb29a258441e4d291f",
+      "sha256": "93163405c8738ddd6479bcbcddcbefe4acce209126afd4fb29a258441e4d291f",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/model/ModelBase.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/model/ModelBase.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "90843ba3021a1ad424abc2b98fd814a6b95b97343d0b760db14c87000dd736ba",
+      "sha256": "90843ba3021a1ad424abc2b98fd814a6b95b97343d0b760db14c87000dd736ba",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/model/model/ModelPlayer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/model/model/ModelPlayer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "64d035e7db497f398efef66e903dcbb639b839328bbaff2a848b87a07658370a",
+      "sha256": "64d035e7db497f398efef66e903dcbb639b839328bbaff2a848b87a07658370a",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/model/renderer/ModelRenderer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/model/renderer/ModelRenderer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "e5644576f85a234731cbe7dfbedbe3e251c9d5c3656814a7f6b2cfcd1f5cc2f7",
+      "sha256": "e5644576f85a234731cbe7dfbedbe3e251c9d5c3656814a7f6b2cfcd1f5cc2f7",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/model/renderer/Polygon.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/model/renderer/Polygon.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "7cc976cc9a38d4185a44e91f0c6f811a9ff027177e3f6bcda3d8277e526aa64c",
+      "sha256": "7cc976cc9a38d4185a44e91f0c6f811a9ff027177e3f6bcda3d8277e526aa64c",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/model/renderer/Vertex.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/model/renderer/Vertex.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "ec15cb626a27d6f619ca54ec8ae7f3069a6ac7bc868a48e98636280b532692fb",
+      "sha256": "ec15cb626a27d6f619ca54ec8ae7f3069a6ac7bc868a48e98636280b532692fb",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/particle/Particle.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/particle/Particle.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "4c0dc8d159d4e775d1719974712baf89db907b92b4b51426bc110ce33c369fbe",
+      "sha256": "4c0dc8d159d4e775d1719974712baf89db907b92b4b51426bc110ce33c369fbe",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/particle/ParticleRenderer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/particle/ParticleRenderer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "57c8e737f92ab3eafc758d07d5b057202e13ff5bd23f6461127fa71ef9e6b5e3",
+      "sha256": "57c8e737f92ab3eafc758d07d5b057202e13ff5bd23f6461127fa71ef9e6b5e3",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/render/particle/particle/ParticleDigging.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/render/particle/particle/ParticleDigging.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "2571af61ef553971df4990abeeaa43a4dc363ce207815df93fc802434300a0ed",
+      "sha256": "2571af61ef553971df4990abeeaa43a4dc363ce207815df93fc802434300a0ed",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/sound/SoundManager.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/sound/SoundManager.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "fc50c4ee9e4ff0f7f85d4fbaa1868f5b134483bdbd0df3bc96ef6a0af9d5fef5",
+      "sha256": "dcf1f837e087edfed5a81fa9ea52f40e1b8703c27ba07ede55acd55db9504798",
+      "modified": true,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/Chunk.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/Chunk.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "05f99b629da76babebfcc388b1fb0663fe6a57f005e6dcf8a27bcf267a0be7e7",
+      "sha256": "8a41be0ec9fd80d7e07567615aee55737f5be17e49022a1a0ee953a3fcac9f58",
+      "modified": true,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/ChunkSection.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/ChunkSection.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "a9393fc127d27e1aacc93e2b03e913870cc06764541097d362e6e075cc4f5ac8",
+      "sha256": "a9393fc127d27e1aacc93e2b03e913870cc06764541097d362e6e075cc4f5ac8",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/World.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/World.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "9631b2e219077a355cf03b51910f8c9f8aac60ef9a4d2f28f75db6b28d39b1a8",
+      "sha256": "2266217e30ee5b99803ee20f838c32e325f2c2e8a116129a49db9221fcc30b94",
+      "modified": true,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/WorldClient.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/WorldClient.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "e25a550fe2062f56ac5b20178077b55bb55f39480c92be46e9cf828cdaf72c45",
+      "sha256": "e25a550fe2062f56ac5b20178077b55bb55f39480c92be46e9cf828cdaf72c45",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/Block.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/Block.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "292f23e85e07d5512d50261f542959584fbd597c5ac30ae468b33712e7b1e117",
+      "sha256": "292f23e85e07d5512d50261f542959584fbd597c5ac30ae468b33712e7b1e117",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/BlockRegistry.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/BlockRegistry.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "6e5a170718f91672a38c25a4b000f028b8d2e0b4980864d9ebf2e22de24a4289",
+      "sha256": "6e5a170718f91672a38c25a4b000f028b8d2e0b4980864d9ebf2e22de24a4289",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/sound/Sound.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/sound/Sound.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "b952df13316ef7c4a0f86559b44cea90831effccda5846fa31c4e500956b9d55",
+      "sha256": "b952df13316ef7c4a0f86559b44cea90831effccda5846fa31c4e500956b9d55",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/sound/SoundGlass.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/sound/SoundGlass.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "6eb5bac94385c5300dd77ea9e0570e9b10c6e1cc826f3adc6bf313f41f8bc027",
+      "sha256": "6eb5bac94385c5300dd77ea9e0570e9b10c6e1cc826f3adc6bf313f41f8bc027",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/type/BlockBedrock.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/type/BlockBedrock.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "f30738fdf851f1c7bf4b58c6da0367b2c83000c5a30ea0e95d2ac3d558555074",
+      "sha256": "f30738fdf851f1c7bf4b58c6da0367b2c83000c5a30ea0e95d2ac3d558555074",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/type/BlockCobblestone.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/type/BlockCobblestone.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "ba6691026bb6d7c25cfd282d47e2102d8baf81dff6d6a138bcc17f3c4c344d5f",
+      "sha256": "ba6691026bb6d7c25cfd282d47e2102d8baf81dff6d6a138bcc17f3c4c344d5f",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/type/BlockDirt.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/type/BlockDirt.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "8ac0cd9a05fa8fb3f57e38bea2ef0af0b4399f93c1c024e752d90b5fb8931359",
+      "sha256": "8ac0cd9a05fa8fb3f57e38bea2ef0af0b4399f93c1c024e752d90b5fb8931359",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/type/BlockGlass.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/type/BlockGlass.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "1a49ff36f7dcc4dbdae52f37c3fdca25431c6c36344fd8a23622a77ba0fd8bd5",
+      "sha256": "1a49ff36f7dcc4dbdae52f37c3fdca25431c6c36344fd8a23622a77ba0fd8bd5",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/type/BlockGrass.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/type/BlockGrass.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "9f7bcd1b1575cf5f29994fc00069eb198ea46c69454f20ad32c7dbaf925f98e1",
+      "sha256": "9f7bcd1b1575cf5f29994fc00069eb198ea46c69454f20ad32c7dbaf925f98e1",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/type/BlockGravel.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/type/BlockGravel.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "49be723f944e83cd4285c4340e4feac57da1a7d8f7b9bdc1cb74c5333033e384",
+      "sha256": "49be723f944e83cd4285c4340e4feac57da1a7d8f7b9bdc1cb74c5333033e384",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/type/BlockLeave.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/type/BlockLeave.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "aebd9fd92aae861ab48495786f5839ef010f206ca27d9ebdd6f5001f0e8c5f22",
+      "sha256": "aebd9fd92aae861ab48495786f5839ef010f206ca27d9ebdd6f5001f0e8c5f22",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/type/BlockLog.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/type/BlockLog.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "165f12766826ecbb7651257bd13502a2302d9a5bdb446ae57e00bb6c2cb1c493",
+      "sha256": "165f12766826ecbb7651257bd13502a2302d9a5bdb446ae57e00bb6c2cb1c493",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/type/BlockSand.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/type/BlockSand.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "5ddc8523c72fdfaa83aee371be0bb17898d2262d38e8f7654737d36d8aa8dfba",
+      "sha256": "5ddc8523c72fdfaa83aee371be0bb17898d2262d38e8f7654737d36d8aa8dfba",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/type/BlockStone.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/type/BlockStone.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "11f2cb5c78a41bb998f9ee90109950197b33d5a743055d630d06976f327c7903",
+      "sha256": "11f2cb5c78a41bb998f9ee90109950197b33d5a743055d630d06976f327c7903",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/type/BlockTorch.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/type/BlockTorch.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "bba27968cc11ee0352a8f7b089f4d8188b54ba749aa4a271e7e250f3f087d543",
+      "sha256": "bba27968cc11ee0352a8f7b089f4d8188b54ba749aa4a271e7e250f3f087d543",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/type/BlockWater.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/type/BlockWater.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "f209554ae59be316b6bdf28be0f3a9df9cd5b691f091cc22f75817a4f0acd188",
+      "sha256": "f209554ae59be316b6bdf28be0f3a9df9cd5b691f091cc22f75817a4f0acd188",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/block/type/BlockWood.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/block/type/BlockWood.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "a19319b12e3ec5de756899868c1544c8d40dedc0ff0bf01199ac996d280cc0b0",
+      "sha256": "a19319b12e3ec5de756899868c1544c8d40dedc0ff0bf01199ac996d280cc0b0",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/generator/Generator.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/generator/Generator.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "24f0e61c28e68210ff86897e4019971d54317bafe3f67a9ef870a6ce9b8ce92c",
+      "sha256": "24f0e61c28e68210ff86897e4019971d54317bafe3f67a9ef870a6ce9b8ce92c",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/generator/NoiseGenerator.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/generator/NoiseGenerator.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "92094a4b0ff424a508c3be9d617fc478b21f350ee1e1ea35db0a2e6ccaa16885",
+      "sha256": "92094a4b0ff424a508c3be9d617fc478b21f350ee1e1ea35db0a2e6ccaa16885",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/generator/Primer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/generator/Primer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "8475b3a245ae184d1f42917e13ac3a4f5d93851b5afd3e00940aa7b606e13faa",
+      "sha256": "8475b3a245ae184d1f42917e13ac3a4f5d93851b5afd3e00940aa7b606e13faa",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/generator/WorldGenerator.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/generator/WorldGenerator.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "d3072a4dd51f7d450b784151f8d45e5ecbf1b31e335d075d6dc51619929418dd",
+      "sha256": "d3072a4dd51f7d450b784151f8d45e5ecbf1b31e335d075d6dc51619929418dd",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/generator/noise/NoiseGeneratorOctaves.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/generator/noise/NoiseGeneratorOctaves.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "c7a3f9aa064c20261c3db0a0cd1296c8146935e1aa04503515b3dfd998f7577f",
+      "sha256": "c7a3f9aa064c20261c3db0a0cd1296c8146935e1aa04503515b3dfd998f7577f",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/generator/noise/NoiseGeneratorPerlin.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/generator/noise/NoiseGeneratorPerlin.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "71bbd33b575b63d8ef4fb01d3df447c3b33a4dd57ad42d347a84b9dc6db30a82",
+      "sha256": "71bbd33b575b63d8ef4fb01d3df447c3b33a4dd57ad42d347a84b9dc6db30a82",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/generator/structure/BigTreeGenerator.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/generator/structure/BigTreeGenerator.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "8bbdcc4573dc337ee90453dc6685502b287d7896fea7f05fc2350bb8cd9be899",
+      "sha256": "8bbdcc4573dc337ee90453dc6685502b287d7896fea7f05fc2350bb8cd9be899",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/generator/structure/CaveGenerator.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/generator/structure/CaveGenerator.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "62b0dd97d0db005b5c36b6e6821f55b3c42170eaeebdf8a27947cc8a7438621a",
+      "sha256": "62b0dd97d0db005b5c36b6e6821f55b3c42170eaeebdf8a27947cc8a7438621a",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/generator/structure/TreeGenerator.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/generator/structure/TreeGenerator.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "6c7d85e6e2795128986b5c483a0a08ca2bc90e410a75988c9e07f48594f91ec8",
+      "sha256": "6c7d85e6e2795128986b5c483a0a08ca2bc90e410a75988c9e07f48594f91ec8",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/provider/ChunkProvider.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/provider/ChunkProvider.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "d0f921d9321aa241bea083f54e03a8df60210b7a12fc81cb8e66e116f769663c",
+      "sha256": "d0f921d9321aa241bea083f54e03a8df60210b7a12fc81cb8e66e116f769663c",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/provider/ChunkProviderClient.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/provider/ChunkProviderClient.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "9ad1936e6b15aebc2303077f0d20837957453145a4771788c5e028d53fbcc407",
+      "sha256": "9ad1936e6b15aebc2303077f0d20837957453145a4771788c5e028d53fbcc407",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/client/world/provider/ChunkProviderGenerate.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/world/provider/ChunkProviderGenerate.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "67ac4498d6295e44b1edfcfdd87154f37a9373d3be401c5d2ae63849d5af8bd9",
+      "sha256": "67ac4498d6295e44b1edfcfdd87154f37a9373d3be401c5d2ae63849d5af8bd9",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/BlockRenderType.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/BlockRenderType.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "357cc122de36f2fa7a511e1855f3f76c9c45b9eca2f54aafc1a9e7bc78ce395c",
+      "sha256": "357cc122de36f2fa7a511e1855f3f76c9c45b9eca2f54aafc1a9e7bc78ce395c",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/BoundingBox.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/BoundingBox.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "a370fc351cdcd3e92fa209189380704297944dfc60df7631871e9e81142cfed8",
+      "sha256": "a370fc351cdcd3e92fa209189380704297944dfc60df7631871e9e81142cfed8",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/ChatLine.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/ChatLine.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "dedf0e8a36bba39118f82df5cf723cde85189d367dcd68278d9e516d59c8da46",
+      "sha256": "dedf0e8a36bba39118f82df5cf723cde85189d367dcd68278d9e516d59c8da46",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/EnumBlockFace.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/EnumBlockFace.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "32d879c9794a7a4628ddc4ce616bdbef5de8b0ec17253463f78035b8860d0e96",
+      "sha256": "32d879c9794a7a4628ddc4ce616bdbef5de8b0ec17253463f78035b8860d0e96",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/EnumSkyBlock.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/EnumSkyBlock.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "02dfb3a9a61f93683e527b44b2eb8af151c84b87d7f6fd7930b6c919a83bac32",
+      "sha256": "02dfb3a9a61f93683e527b44b2eb8af151c84b87d7f6fd7930b6c919a83bac32",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/FocusStateType.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/FocusStateType.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "8a81b2124e7820bd5490f477852c2e11c36167d7e901667cd794cb0376a6a142",
+      "sha256": "8a81b2124e7820bd5490f477852c2e11c36167d7e901667cd794cb0376a6a142",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/GameProfile.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/GameProfile.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "7b648f97d7c3522a410964353a844517e6f62537fea026a93678fd82c936f5e6",
+      "sha256": "7b648f97d7c3522a410964353a844517e6f62537fea026a93678fd82c936f5e6",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/Keyboard.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/Keyboard.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "5c6fb0488fe459551159193da52e80eeb78b3153d12e36c38c950c31eb0044d7",
+      "sha256": "5c6fb0488fe459551159193da52e80eeb78b3153d12e36c38c950c31eb0044d7",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/MathHelper.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/MathHelper.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "bcaa0ee477bd297be2522b9b46062a406c309c8ea84e361be7200db4ff278a9c",
+      "sha256": "bcaa0ee477bd297be2522b9b46062a406c309c8ea84e361be7200db4ff278a9c",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/MetadataChunkBlock.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/MetadataChunkBlock.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "8b68a09faf23a2b69500d57f96b88c06f0cee3ec040f43525acbb11e191337e9",
+      "sha256": "8b68a09faf23a2b69500d57f96b88c06f0cee3ec040f43525acbb11e191337e9",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/MovingObjectPosition.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/MovingObjectPosition.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "b7651bd2977f5285775b11b6f40cf97f09dbbaf7e5bf9439f3668e97f36d25c3",
+      "sha256": "b7651bd2977f5285775b11b6f40cf97f09dbbaf7e5bf9439f3668e97f36d25c3",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/Random.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/Random.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "94c059861538ce892bf27a45b013433be9b4dfae69eb6e2149b81100c35a4414",
+      "sha256": "94c059861538ce892bf27a45b013433be9b4dfae69eb6e2149b81100c35a4414",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/Session.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/Session.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "902d265c6720384e2a5d9dbabfe5dc6e4607da949685d9d54f542ddec1f51e5e",
+      "sha256": "902d265c6720384e2a5d9dbabfe5dc6e4607da949685d9d54f542ddec1f51e5e",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/Timer.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/Timer.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "533e7532f45ec6e8f75dbbe4857edd28784fbffb685ae971cfb5e19165fa264f",
+      "sha256": "533e7532f45ec6e8f75dbbe4857edd28784fbffb685ae971cfb5e19165fa264f",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/UUID.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/UUID.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "c8dd6bfc14584f6455c89efc135ede11908dcb7e10470a939d814e460c864492",
+      "sha256": "c8dd6bfc14584f6455c89efc135ede11908dcb7e10470a939d814e460c864492",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/Vector3.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/Vector3.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "91f89342670a2739e0a3478de747100f3be30b39b4ec666be57279afcc5ea3cb",
+      "sha256": "91f89342670a2739e0a3478de747100f3be30b39b4ec666be57279afcc5ea3cb",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    },
+    {
+      "path": "src/js/net/minecraft/util/Vector4.js",
+      "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/util/Vector4.js",
+      "commit": "468f942c4984578a03e472c49646198680489723",
+      "sourceSha256": "979375d602405a4e482530d6dbe90e1b7ddf91a5ea351fc666216268ed6fad9a",
+      "sha256": "979375d602405a4e482530d6dbe90e1b7ddf91a5ea351fc666216268ed6fad9a",
+      "modified": false,
+      "author": "LabyStudio and contributors",
+      "license": "CC-BY-NC-4.0"
+    }
+  ],
+  "assets": [
+    {
+      "path": "adapter/resources.mjs",
+      "creator": "Lapis Obsidian contributors",
+      "license": "CC0-1.0",
+      "source": "original procedural Canvas artwork",
+      "modified": false
+    },
+    {
+      "path": "src/js/net/minecraft/client/sound/SoundManager.js",
+      "creator": "Lapis Obsidian contributors",
+      "license": "CC0-1.0",
+      "source": "original synthesized audio output only; code retains CC-BY-NC-4.0",
+      "modified": true
+    }
+  ]
+}

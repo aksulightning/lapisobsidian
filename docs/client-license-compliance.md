@@ -41,3 +41,5 @@ references and unexpected HTML branding. Build checks the served route list.
 The script supplements the recorded primary-source and visual review; text
 matching and hashes cannot prove copyright ownership. Regenerating a manifest
 is not a replacement for that review. Tests include negative provenance cases.
+
+The separately licensed mode 2 client is documented in [client2-license-compliance.md](client2-license-compliance.md). Mode 1 behavior remains unchanged.

@@ -1,6 +1,16 @@
 #!/bin/sh
 # Checked-in route whitelist: no Node, downloads or runtime filesystem serving.
 set -eu
+if [ "${LAPIS_OBSIDIAN_WEB_CLIENT:-0}" = 2 ]; then
+  # Route metadata only: never embed CC BY-NC application code in GPL binary.
+  printf '#define WEB_ASSET_ENTRIES \\\n'
+  while IFS='|' read -r route file mime; do
+    [ -n "$route" ] || continue
+    printf '{"GET %s HTTP/1.1","%s","%s"}, \\\n' "$route" "$mime" "$file"
+  done < client2/routes.list
+  printf '\n'
+  exit 0
+fi
 index=0
 while IFS='|' read -r route file mime; do
   [ -n "$route" ] || continue

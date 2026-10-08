@@ -100,7 +100,7 @@ ssize_t recv_all (int client_fd, void *buf, size_t n, uint8_t require_first) {
 ssize_t send_all (int client_fd, const void *buf, ssize_t len) {
   /* Defence in depth for world-scoped broadcasts from inherited packet code. */
   if (!plates_fd_active(client_fd)) return len;
-#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && (LAPIS_OBSIDIAN_WEB_CLIENT == 1 || LAPIS_OBSIDIAN_WEB_CLIENT == 2)
   if (web_client_active(client_fd)) {
     return len < 0 ? -1 : web_client_send(client_fd,buf,(size_t)len);
   }

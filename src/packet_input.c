@@ -23,7 +23,7 @@ static bool would_block (void) {
 #endif
 }
 static int receive (int fd, size_t size, int flags) {
-#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && (LAPIS_OBSIDIAN_WEB_CLIENT == 1 || LAPIS_OBSIDIAN_WEB_CLIENT == 2)
   if (web_client_active(fd)) return (int)web_client_receive(fd,frame,size,flags);
 #endif
 #ifdef _WIN32

@@ -234,7 +234,7 @@ void disconnectClient (int *client_fd, int cause) {
   client_count --;
   setClientState(*client_fd, STATE_NONE);
   handlePlayerDisconnect(*client_fd);
-#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && (LAPIS_OBSIDIAN_WEB_CLIENT == 1 || LAPIS_OBSIDIAN_WEB_CLIENT == 2)
   web_client_forget(*client_fd);
 #endif
   #ifdef _WIN32

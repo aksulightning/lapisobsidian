@@ -65,3 +65,5 @@ Unknown events, failed definitions and unavailable Web Audio remain silent.
 `/ws` to one explicitly configured HTTP/WebSocket server (default loopback 8080).
 It never routes arbitrary addresses or native TCP. Production normally uses the
 embedded C listener or a TLS reverse proxy, preserving Host and Origin.
+
+The separately licensed mode 2 client is documented in [client2-architecture.md](client2-architecture.md). Mode 1 behavior remains unchanged.

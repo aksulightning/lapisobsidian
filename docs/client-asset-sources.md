@@ -75,3 +75,5 @@ its blanket CC0 statement was not used as evidence for arbitrary files. No files
 were selected: the small original-creator-verified terrain subset above and
 original missing art provide the current consistent palette without another pack.
 Do not infer that unreviewed collection files have been approved.
+
+The separately licensed mode 2 client is documented in [client2-asset-sources.md](client2-asset-sources.md). Mode 1 behavior remains unchanged.

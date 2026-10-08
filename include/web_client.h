@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 /* Entire transport and embedded assets are absent unless compiled in. */
-#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && LAPIS_OBSIDIAN_WEB_CLIENT == 1
+#if defined(LAPIS_OBSIDIAN_WEB_CLIENT) && (LAPIS_OBSIDIAN_WEB_CLIENT == 1 || LAPIS_OBSIDIAN_WEB_CLIENT == 2)
 /* Open a nonblocking IPv4 HTTP/WebSocket listener; -1 on bind/setup failure. */
 int web_client_listen(const char *address, uint16_t port);
 /* Register only sockets accepted by the web listener. */

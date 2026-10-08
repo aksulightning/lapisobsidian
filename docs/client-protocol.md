@@ -73,3 +73,5 @@ identities, commands, movement, creative inventory, mining, placement, shared
 updates and reconnection. `tests/web_browser.cjs` verifies terrain pixels and
 interactive desktop/mobile behavior with Chromium; CI repeats live protocol tests
 on the shipped AMD64 and RISC-V static binaries.
+
+The separately licensed mode 2 client is documented in [client2-protocol.md](client2-protocol.md). Mode 1 behavior remains unchanged.

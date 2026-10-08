@@ -246,3 +246,39 @@ Farm state persists in `farming.bin`. Animals and mobs have nearby ambient,
 hurt and death sounds using the client's own resources.
 
 See [farming, controls, recipes and limits](docs/farming-and-controls.md).
+
+### Alternative js-minecraft client (compile-time mode 2)
+
+`LAPIS_OBSIDIAN_WEB_CLIENT=2` selects **Lapis Obsidian Client**, a separately
+licensed adaptation of LabyStudio/js-minecraft's Three.js renderer, player
+physics and Canvas menus, with a protocol-772 adapter for this server.
+Mode `1` is preserved; default builds have neither client enabled.
+
+```sh
+npm --prefix client2 run build
+LAPIS_OBSIDIAN_WEB_CLIENT=2 ./build.sh
+LAPIS_OBSIDIAN_CLIENT2_DIR="$PWD/client2/dist" ./lapis-obsidian
+```
+
+Open the configured web address (default port 8080), choose Multiplayer and
+connect to that **web** port. The separate client directory must be shipped
+alongside the executable; it is intentionally not embedded in the GPL binary.
+The C build remains independent of Node.js. Modern WebGL desktop browsers are
+supported; use mode 1 for full touch controls. AMD64 and RISC-V server builds
+support both modes.
+
+The adapted upstream code remains **CC BY-NC 4.0 (noncommercial)**, separately
+from the GPL server; see [license boundary](docs/client2-license-compliance.md).
+All unverified upstream textures and sounds are excluded. This mode uses fresh
+original procedural artwork and synthesized audio, and adds no asset repository.
+
+**Unofficial Project Disclaimer:** Lapis Obsidian Client is an independent
+community project, not affiliated with, endorsed by, or associated with Mojang
+Studios, Microsoft, or Minecraft. Minecraft is a trademark of Mojang Studios.
+No proprietary Mojang/Microsoft assets are included.
+
+Documentation: [setup/testing](docs/client2-development.md),
+[architecture](docs/client2-architecture.md), [protocol/limitations](docs/client2-protocol.md),
+[asset provenance](docs/client2-asset-sources.md),
+[third-party code](docs/client2-third-party-code.md),
+[license compliance](docs/client2-license-compliance.md).

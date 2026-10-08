@@ -1,0 +1,8 @@
+// Original build tool. SPDX-License-Identifier: MIT
+import {readFile,mkdir,writeFile,rm,copyFile} from 'node:fs/promises';
+import {resolve,dirname,relative} from 'node:path';
+const root=resolve(import.meta.dirname,'..'),visited=new Set();
+async function visit(path){if(visited.has(path))return;if(!path.startsWith(root+'/'))throw Error('Import escapes client2');visited.add(path);const source=await readFile(path,'utf8');for(const match of source.matchAll(/\b(?:import|export)\s+(?:[^;]*?\s+from\s+)?["']([^"']+)["']/g)){const spec=match[1];if(!spec.startsWith('.'))throw Error(`External import: ${spec}`);await visit(resolve(dirname(path),spec));}}
+await visit(resolve(root,'src/js/Start.js'));for(const file of['index.html','style.css','LICENSE','licenses/THREE-MIT.txt','licenses/Apache-2.0.txt','licenses/ADAPTER-MIT.txt','licenses/ORIGINAL-ASSETS-CC0.txt','NOTICE.md','provenance.json'])visited.add(resolve(root,file));
+await rm(resolve(root,'dist'),{recursive:true,force:true});const routes=[];for(const path of [...visited].sort()){const local=relative(root,path),target=resolve(root,'dist',local);await mkdir(dirname(target),{recursive:true});await copyFile(path,target);const mime=/\.m?js$/.test(local)?'text/javascript':local.endsWith('.html')?'text/html':local.endsWith('.css')?'text/css':local.endsWith('.json')?'application/json':'text/plain';routes.push(`/${local}|${local}|${mime}`);if(local==='index.html')routes.push(`/|${local}|${mime}`);}
+await writeFile(resolve(root,'routes.list'),routes.sort().join('\n')+'\n');console.log(`Built separate CC BY-NC application: ${visited.size} files`);
