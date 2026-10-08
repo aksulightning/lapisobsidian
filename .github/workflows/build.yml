@@ -67,8 +67,9 @@ jobs:
               # Execute on the target CPU/emulator, without creating a world.
               result=0
               timeout 30 "$package/lapis-obsidian" --ci-abi-check > .tests/alpine-smoke.log 2>&1 || result=$?
+              cat .tests/alpine-smoke.log
               test "$result" -eq 1
-              grep -F "Usage: lapis-obsidian" .tests/alpine-smoke.log
+              grep -F "usage: lapis-obsidian" .tests/alpine-smoke.log
               cc -std=c11 -O2 -Wall -Wextra -Wconversion -Wshadow -Werror -Iinclude \
                 tests/server_config.c tests/sanitizer.c src/server_config.c src/beta173_rng.c \
                 -o .tests/alpine-config
