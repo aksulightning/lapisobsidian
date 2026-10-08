@@ -56,7 +56,7 @@
       "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/Minecraft.js",
       "commit": "468f942c4984578a03e472c49646198680489723",
       "sourceSha256": "db263a7472113eda162ecaee4804cb9e59338d411156d0659a79a02228a6f9ce",
-      "sha256": "259e6b43d7d1bdd72796a516772e91ea5db091fc60d86e2bbc172383369ef259",
+      "sha256": "eb25ed49d76c30d832a72ab950d1eac4b471625d5996fa084c1f48a33c327a1d",
       "modified": true,
       "author": "LabyStudio and contributors",
       "license": "CC-BY-NC-4.0"

@@ -177,9 +177,13 @@ export default class Minecraft {
     }
 
     requestNextFrame() {
-        requestAnimationFrame(() => {
+        requestAnimationFrame((timestamp) => {
             if (this.running) {
                 this.requestNextFrame();
+                // Limit menu GPU work; the original renderer is still used.
+                const interval = this.isInGame() ? 1000 / 60 : 1000 / 20;
+                if (this.lastFrameTime !== undefined && timestamp - this.lastFrameTime < interval) return;
+                this.lastFrameTime = timestamp;
                 this.onLoop();
             }
         });

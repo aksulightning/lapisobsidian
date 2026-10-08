@@ -37,6 +37,8 @@ async function port() {
   server.stderr.on("data", (b) => (logs += b));
   const errors = [],
     requests = [];
+  let completed = false;
+  const sent = {}, received = {};
   try {
     for (let i = 0; !logs.includes("Server listening"); i++) {
       assert.ok(i < 500, logs);
@@ -56,6 +58,12 @@ async function port() {
     });
     const page = await browser.newPage({
       viewport: { width: 800, height: 600 },
+    });
+    const {Stream}=await import('../client2/adapter/wire.mjs');
+    page.on('websocket', ws => {
+      const output=new Stream(id=>sent[id]=(sent[id]||0)+1),input=new Stream(id=>received[id]=(received[id]||0)+1);
+      ws.on('framesent', e=>{try{output.push(new Uint8Array(e.payload));}catch{}});
+      ws.on('framereceived', e=>{try{input.push(new Uint8Array(e.payload));}catch{}});
     });
     page.on("pageerror", (e) => {
       errors.push(e.message);
@@ -240,6 +248,7 @@ async function port() {
       requests.every((url) => !url.includes("/src/resources/")),
       "no inherited assets",
     );
+    completed = true;
     console.log(
       "Mode 2 Chromium: login, configuration, chunks, inventory, chat, movement, disconnect passed",
     );
@@ -248,7 +257,7 @@ async function port() {
     server.kill("SIGTERM");
     if (server.exitCode === null) await once(server, "exit").catch(() => {});
     await rm(cwd, { recursive: true, force: true });
-    if (errors.length || !browser) console.error(logs.slice(-4000));
+    if (!completed) { console.error(logs.slice(-4000)); console.log("Wire counters", {sent,received}); }
   }
 })().catch((error) => {
   console.error(error);
