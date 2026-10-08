@@ -70,7 +70,7 @@ SANITIZE=1 ./tests/run.sh
 The tests include a source-only build with a restricted PATH that excludes Java
 and JavaScript runtimes. Maintainers can additionally run
 `node build_registries.js` and check that the generated C files have no diff.
-Node is only used for optional snapshot maintenance.
+Node is only used for optional snapshot maintenance and web-client tests.
 
 `node build_registries.js --check` verifies deterministic generation without
 rewriting files. New C modules and unit tests compile with `-Wall -Wextra

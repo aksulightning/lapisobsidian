@@ -26,6 +26,9 @@ jobs:
       - run: SANITIZE=1 ./tests/web-client.sh
       - run: node tests/web_protocol.mjs
       - run: node tests/web_integration.mjs ./lapis-obsidian
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - run: LAPIS_OBSIDIAN_WEB_CLIENT=1 CC=musl-gcc ./build-alpine.sh --static --output .tests/lapis-alpine
+      - run: node tests/web_integration.mjs .tests/lapis-alpine
       - run: npm install --prefix .tests/browser --no-save --no-package-lock playwright@1.51.1
       - run: node .tests/browser/node_modules/playwright/cli.js install --with-deps chromium
       - run: node tests/web_browser.cjs
@@ -35,3 +38,4 @@ jobs:
           name: web-client-screenshot
           path: .tests/web-client.png
           if-no-files-found: ignore
+          include-hidden-files: true

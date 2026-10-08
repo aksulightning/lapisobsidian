@@ -2,13 +2,14 @@
 const assert=require('node:assert/strict');
 const net=require('node:net');
 const {spawn}=require('node:child_process');
-const {mkdtemp,writeFile,rm}=require('node:fs/promises');
+const {mkdir,mkdtemp,writeFile,rm}=require('node:fs/promises');
 const {resolve}=require('node:path');
 const {once}=require('node:events');
 const {chromium}=require('../.tests/browser/node_modules/playwright');
 (async()=>{
   const listener=net.createServer();listener.listen(0,'127.0.0.1');await once(listener,'listening');
   const port=listener.address().port;await new Promise(resolve=>listener.close(resolve));
+  await mkdir(resolve('.tests'),{recursive:true});
   const directory=await mkdtemp(resolve('.tests/browser-world-'));
   await writeFile(`${directory}/server.txt`,`port=${port}\ngamemode=creative\n`);
   const server=spawn(resolve('lapis-obsidian'),[],{cwd:directory,stdio:['pipe','pipe','pipe']});

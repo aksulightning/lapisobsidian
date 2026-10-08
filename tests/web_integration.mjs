@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import net from 'node:net';
 import {spawn} from 'node:child_process';
-import {mkdtemp,writeFile,rm} from 'node:fs/promises';
+import {mkdir,mkdtemp,writeFile,rm} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {EventEmitter,once} from 'node:events';
 import {packet,PacketStream,readChunk} from '../web/protocol.mjs';
@@ -14,6 +14,7 @@ async function until(predicate,label) {
 }
 const listener=net.createServer(); listener.listen(0,'127.0.0.1'); await once(listener,'listening');
 const port=listener.address().port; await new Promise(resolve=>listener.close(resolve));
+await mkdir(resolve('.tests'),{recursive:true});
 const directory=await mkdtemp(resolve('.tests/web-world-'));
 await writeFile(`${directory}/server.txt`,`port=${port}\ngamemode=creative\n`);
 const server=spawn(binary,[],{cwd:directory,env:{...process.env,LAPIS_OBSIDIAN_WEB_CLIENT:disabled?'1':'0'},stdio:['pipe','pipe','pipe']});
