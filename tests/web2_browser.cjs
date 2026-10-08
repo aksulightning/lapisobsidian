@@ -396,6 +396,8 @@ async function port() {
       [...app.lapisConnection.entities.values()].some((e) => e.kind === "cow"),
     );
     await page.evaluate(() => {
+      app.window.pullMouseMotionX();
+      app.window.pullMouseMotionY();
       const cow = [...app.lapisConnection.entities.values()].find(
         (e) => e.kind === "cow",
       );
@@ -413,6 +415,11 @@ async function port() {
         [...app.lapisConnection.entities.values()].find((e) => e.kind === "cow")
           ?.renderer.group.children.length >= 8,
     );
+    assert.ok(await page.evaluate(async () => {
+      const { pickEntity } = await import("/adapter/entities.mjs");
+      return pickEntity(app.player, app.lapisConnection.entities,
+        app.player.rayTrace(4.5, app.timer.partialTicks), app.timer.partialTicks)?.kind === "cow";
+    }), "cow body must be visible and targetable above surface cover");
     await capture(".tests/web-client2-entities.png");
     console.log("Survival inventory and cow model passed");
     // Measure Web Audio signal after the positional listener, even in muted CI.

@@ -13,7 +13,7 @@ import {
 import { Payload, Cursor } from "../adapter/wire.mjs";
 import { canonicalSlot } from "../adapter/inventory.mjs";
 import { synthesize } from "../adapter/audio.mjs";
-import { items, stateToBlock, registerBlocks } from "../adapter/registry.mjs";
+import { items, nameToBlock, stateToBlock, registerBlocks } from "../adapter/registry.mjs";
 import { BlockRegistry } from "../src/js/net/minecraft/client/world/block/BlockRegistry.js";
 import Block from "../src/js/net/minecraft/client/world/block/Block.js";
 import SoundManager from "../src/js/net/minecraft/client/sound/SoundManager.js";
@@ -210,6 +210,20 @@ test("container slots map back to canonical hotbar and all flowing water remains
     assert.equal(stateToBlock.get(state), 9);
     assert.equal(Block.getById(stateToBlock.get(state)).isSolid(), false);
   }
+});
+test("surface cover cannot obstruct a mob's body and remains selectable near ground", () => {
+  BlockRegistry.create();
+  registerBlocks();
+  for (const name of ["snow", "moss_carpet"]) {
+    const block = Block.getById(nameToBlock.get(name));
+    assert.equal(block.isSolid(), false);
+    assert.equal(block.isTranslucent(), true);
+    assert.equal(block.collisionRayTrace(null, 0, 0, 0,
+      new Vector3(0.5, 0.7, -1), new Vector3(0.5, 0.7, 2)), null);
+    assert.ok(block.collisionRayTrace(null, 0, 0, 0,
+      new Vector3(0.5, 0.03, -1), new Vector3(0.5, 0.03, 2)));
+  }
+  assert.equal(Block.getById(nameToBlock.get("snow_block")).isSolid(), true);
 });
 test("server inline sound and eating completion packets reach the client", () => {
   const calls = [],

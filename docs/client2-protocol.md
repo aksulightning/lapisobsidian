@@ -41,7 +41,9 @@ renderer remains for remote players.
 
 Additional blocks use generic cubes/translucent cubes, so doors/slabs and other
 complex collision shapes are approximate. Flowing water maps to the same
-non-solid liquid as source water; lava variants are non-solid. Server lighting
+non-solid liquid as source water; lava variants are non-solid. Snow cover and
+moss carpet use thin, selectable, passable surfaces so they cannot hide or trap
+mobs; full snow blocks remain solid. Server lighting
 arrays are not applied; the upstream ambient/skylight model remains. Survival
 mining uses a client material/tool timing table, cancels on release/retarget/tool
 change, and applies edits only upon server updates. This is not a claim of exact

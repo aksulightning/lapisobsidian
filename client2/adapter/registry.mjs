@@ -58,6 +58,14 @@ export function registerBlocks() {
     const block = /^lava/.test(name)
       ? new BlockWater(id, tile)
       : new Block(id, tile);
+    if (name === "snow" || name === "moss_carpet") {
+      // These are passable surface cover in src/procedures.c, not full cubes.
+      // Keep their visible/pickable surface without hiding or trapping mobs.
+      block.boundingBox.maxY = name === "snow" ? 1 / 8 : 1 / 16;
+      block.isSolid = () => false;
+      block.isTranslucent = () => true;
+      block.getOpacity = () => 0;
+    }
     if (/sapling|flower|fern|grass$|rail|air/.test(name)) {
       block.isSolid = () => false;
       block.getTransparency = () => 0.4;
