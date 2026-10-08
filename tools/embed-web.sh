@@ -1,5 +1,5 @@
 #!/bin/sh
-# Checked-in route whitelist: no Node, downloads or runtime filesystem serving.
+# Compile route metadata for mode 2; embed mode 1 assets without Node or downloads.
 set -eu
 if [ "${LAPIS_OBSIDIAN_WEB_CLIENT:-0}" = 2 ]; then
   # Route metadata only: never embed CC BY-NC application code in GPL binary.

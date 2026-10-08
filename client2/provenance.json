@@ -186,7 +186,7 @@
       "source": "https://github.com/LabyStudio/js-minecraft/blob/468f942c4984578a03e472c49646198680489723/src/js/net/minecraft/client/gui/overlay/IngameOverlay.js",
       "commit": "468f942c4984578a03e472c49646198680489723",
       "sourceSha256": "a0de1bedd76fd08843253d24a92e412b4f92dbfb27cfab2921540fa73b2849d7",
-      "sha256": "e5163eec3c3f2f2a9caeb3343591911ab1b514ae5f1a3befb7c0cb0ad55e067f",
+      "sha256": "c3e02c6e621554be317d3d9b069f8403d2c7dfd870128de94f4285514bcd849b",
       "modified": true,
       "author": "LabyStudio and contributors",
       "license": "CC-BY-NC-4.0"

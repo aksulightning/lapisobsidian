@@ -35,7 +35,7 @@ export default class IngameOverlay extends Gui {
         this.renderHotbar(stack, this.window.width / 2 - 91, this.window.height - 22);
 
         if (this.minecraft.lapisConnection) {
-            this.drawCenteredString(stack, `Health ${Math.ceil(this.minecraft.player.health)} / 20   Food ${this.minecraft.player.food} / 20`, this.window.width / 2, this.window.height - 36);
+            this.drawCenteredString(stack, `Health ${Math.ceil(this.minecraft.player.health)} / 20   Food ${this.minecraft.player.food} / 20`, this.window.width / 2, 8);
         }
         // Render chat canvas
         stack.drawImage(this.window.canvasChat, 0, 0);
