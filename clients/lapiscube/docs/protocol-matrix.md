@@ -57,8 +57,8 @@ Source is `src/packets.c` unless another source is listed.
 | 2B | `sc_loginPlay` | i32 entity ID, dimension-key list, distances, dimension type/name, seed, modes, death/portal/sea/chat flags | Implemented, validated and stored |
 | 41 | `sc_synchronizePlayerPosition` | Teleport VarInt **-1**, XYZ doubles, velocity doubles, yaw/pitch floats, i32 flags=0 | Absolute synchronization + ack and native position/origin update |
 | 26 | `sc_keepAlive` | Opaque i64 (currently zero), once per second | Implemented, exact echo |
-| 27 | `sc_chunkDataAndUpdateLight` | i32 X/Z, empty heightmaps, sized section payload, block entities, light masks/arrays | All 24 sections validated; Y=0..255 cached/rendered; real 25-chunk world tested |
-| 57 | `sc_setCenterChunk` | Signed chunk X/Z VarInts | Bounded cache center, eviction and native origin shift; boundaries unit-tested |
+| 27 | `sc_chunkDataAndUpdateLight` | i32 X/Z, empty heightmaps, sized section payload, block entities, light masks/arrays | All 24 sections validated; Y=0..255 cached/rendered; bounded incremental native column copies; real 175-chunk travel test |
+| 57 | `sc_setCenterChunk` | Signed chunk X/Z VarInts | Bounded cache, eviction and native origin shift; signed boundaries/Far Lands teleports tested; full-view ordering gates movement |
 | 5A | `sc_setDefaultSpawnPosition` | Packed position + angle | Deferred M2 |
 | 08 | `sc_blockUpdate`; signs/doors/circuits/farming/fluid overlays | Packed position + modern state VarInt | Authoritative cache/native updates; real mining and placement tested |
 | 04 | `sc_acknowledgeBlockChange` | Action sequence VarInt | Sequence acknowledgment retained; server decides mutations |
@@ -72,16 +72,16 @@ Source is `src/packets.c` unless another source is listed.
 | 61 | `sc_setHealth` | Health float, food VarInt, saturation float | Health/food/saturation state and HUD; saturation can be -0.4 in Lapis; eating and lethal damage verified |
 | 4B | `sc_respawn` | Dimension/mode/death/portal/sea/data-kept fields | Validated reset and native reload path + Enter request; two-client lethal damage/respawn passed |
 | 3F | `sc_playerInfoUpdateAddPlayer`, `command_packets.c` | Add-player + mode or mode-only action mask | Deferred M4 |
-| 01 | `sc_spawnEntity` | Entity ID, UUID, type, XYZ, angles, object data, velocity | Bounded snapshots and original shared native models; species detail incomplete |
-| 5C | `sc_setEntityMetadata`, `mob_packets.c` | Typed indexed metadata terminated by FF; items, pose, creeper fuse, arrows | Lapis metadata types 0/1/7/8/21 parsed; partial visual application |
-| 02 | `sc_entityAnimation` | Entity ID + animation | Deferred M4 |
+| 01 | `sc_spawnEntity` | Entity ID, UUID, type, XYZ, angles, object data, velocity | Bounded snapshots; eight distinct original species shapes plus player/item models; real eight-species spawn test |
+| 5C | `sc_setEntityMetadata`, `mob_packets.c` | Typed indexed metadata terminated by FF; items, pose, creeper fuse, arrows | Types 0/1/7/8/21 parsed; sheep coat/fuse visuals applied; other metadata presentation partial |
+| 02 | `sc_entityAnimation` | Entity ID + animation 0/2 | Validated; main-hand arm swing rendered; real two-client attack event |
 | 1F | `sc_teleportEntity` | Entity position/velocity/angles/grounded synchronization | Native interpolated entity position/rotation |
 | 2F | `sc_mob_move`, `mob_packets.c` | i16 deltas at 1/4096 block, yaw/pitch, grounded | Signed fixed-point deltas decoded and interpolated; unit tests |
 | 31 | `sc_updateEntityRotation` | Entity ID, yaw/pitch bytes, grounded | Rotation synchronization |
 | 4C | `sc_setHeadRotation` | Entity ID + head yaw | Head rotation retained; model animation limited |
-| 5F | `sc_mob_equipment`, `mob_packets.c` | Skeleton main-hand bow stack | Deferred M4 |
-| 19 | `sc_damageEvent` | Entity ID, damage registry ID, sources, optional position | Deferred M4 |
-| 1E | `sc_entityEvent` | i32 entity ID + status | Deferred M4 |
+| 5F | `sc_mob_equipment`, `mob_packets.c` | Skeleton main-hand bow stack | Bounded component-free main-hand stack parser and native bow; actual server equipment verified |
+| 19 | `sc_damageEvent` | Entity ID, damage registry ID, sources=0, position absent | Exact profile validation and short native hit tint; real mob/player damage verified |
+| 1E | `sc_entityEvent` | i32 entity ID + status | Death status 3 retained/tinted; 9/47 consumed; real death event verified |
 | 46 | `sc_removeEntity` | VarInt count/IDs | Native entity removal and fixed slot reuse |
 | 75 | `sc_pickupItem` | Collected ID, collector ID, count | Deferred M3/M4 |
 | 72 | `sc_systemChat` | Anonymous NBT TAG_String using modified UTF-8 + overlay boolean | Validated modified UTF-8 → UTF-8 → engine CP437; UTF-8 wire text retained, font repertoire limited |
@@ -131,7 +131,7 @@ Authoritative dispatch: `src/main.c:handlePacket`.
 | 1B | Dispatch discards 8-byte payload | Keep-alive response, currently ignored by server | Implemented |
 | 2B | `cs_playerLoaded` | Empty; completes join and entity/inventory synchronization | Native and probe send after decoded terrain and both spawn teleports |
 | 1D | `cs_setPlayerPosition` | XYZ doubles + flags, exactly 25 bytes | Deferred M2 |
-| 1E | `cs_setPlayerPositionAndRotation` | XYZ doubles + yaw/pitch floats + flags, exactly 33 bytes | Native position/rotation/ground state at tick rate; actual movement smoke |
+| 1E | `cs_setPlayerPositionAndRotation` | XYZ doubles + yaw/pitch floats + flags, exactly 33 bytes | Changed native position/rotation/ground at tick rate, idle once/second; paused during full-view teleport synchronization |
 | 1F | `cs_setPlayerRotation` | Two floats + flags, exactly 9 bytes | Deferred M2 |
 | 20 | `cs_setPlayerMovementFlags` | One flags byte | Deferred M2 |
 | 29 | `cs_playerCommand` | Entity VarInt, action byte, boost VarInt; server actions **1/2 set/clear sprint** | Native sprint action 1/2 using Lapis-specific semantics |
@@ -144,7 +144,7 @@ Authoritative dispatch: `src/main.c:handlePacket`.
 | 12 | `cs_closeContainer` | One window byte | Sent on UI close; real inventory test |
 | 37 | `cs_creativeSlot`, `command_packets.c` | Slot + stack; gated by living/loaded/creative mode | Deferred M4; never sent for survival item creation |
 | 19 | `cs_interact`, `mob_packets.c` | Entity VarInt, action, optional hit position/hand, sneaking | Attack action + native ray targeting; two actual clients verified lethal sword damage and respawn |
-| 3C | `cs_swingArm` | Hand VarInt | Deferred M4 |
+| 3C | `cs_swingArm` | Hand VarInt | Main hand request before attacking; server forwards the animation to other players |
 | 0B | `cs_clientStatus` | Action 0 requests respawn | Enter on death requests respawn; real-server death/respawn scenario passed |
 | 06 / 07 | `cs_chatCommand`, `command_packets.c` | Unsigned/signed command forms with strict payload checks | Unsigned 06 command text implemented; signed 07 not sent |
 | 08 | `cs_chat`, `command_packets.c` | Text with timestamp/salt/signature/ack fields, bounded validated UTF-8 | Validated UTF-8 chat; native CP437 input encoded to UTF-8; real ASCII chat round trip |

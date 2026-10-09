@@ -164,20 +164,86 @@ fields, per-window outgoing slot bounds and rejected closes. The earlier protoco
 seeded survival, status/reconnect/interaction and native Classic checks remain
 separate regression gates. Linux CI now also runs `make progression`.
 
+## Milestones 8–10: streaming, entity presentation and package usability
+
+The extension slices were tested against the same unchanged reference server.
+No command, movement, combat, inventory or authentication check was removed.
+
+- `make test`: 2,396 protocol + 8,337 world/gameplay assertions (10,733 total),
+  plus two Python package-gate tests. New cases cover dirty-column coalescing,
+  eviction and coordinate extremes, atomic/truncated damage/equipment packets,
+  unknown entity IDs and the independent swing/attack request sequence.
+- `make sanitize` with the documented sandbox flag passes the same C assertions.
+  Address/undefined-behavior checks remain enabled; this runner cannot perform
+  the leak scan. Linux CI uses ordinary ASan/UBSan including its normal leak scan.
+- `make travel` passes six administrator-authorized teleports: (17,17), (-17,-17),
+  (33,-33), (3950,8), (-3950,-8), then the saved platform at (8,8). It decodes 175
+  chunks, checks all cache coordinates after each move, and sees 119 evictions.
+  The server's Far Lands begin at +/-3940, within its +/-4068 border.
+- That scenario then spawns chicken, cow, pig, sheep, zombie, skeleton, spider
+  and creeper through ordinary authenticated commands. All eight snapshots,
+  skeleton main-hand bow item 858 and actual cow damage are required for success.
+  This is an isolated saved-platform/presentation test, not survival progression.
+- The existing status/login/reconnect/interaction, seeded crafting/container/
+  food/sign/combat/death/respawn and empty-inventory first-tools tests pass. The
+  second combat client now requires server animation, damage and death events
+  before requesting respawn. It exposed a missing outgoing swing request, which
+  was added without changing server attack rules.
+
+`tests/windowed.py` now extracts the Linux ZIP into a new path containing spaces
+and invokes `connect.sh` from a different working directory. A real X11/Mesa client
+joins the server, opens inventory at 320x240, 640x360 and 1024x640, spawns and views
+mobs, attacks a cow, visits signed boundaries and both Far Lands, and exits through
+the window-close event. The screenshots were inspected: inventory stays on-screen,
+models have distinct geometry, the cow turns red on server damage, and received
+terrain appears at the travel destinations. Only the inventory sizes have this
+visual acceptance; broader sign/menu accessibility remains an open gate.
+
+Native travel testing exposed a packet-ordering problem: full-view chunk delivery
+precedes the server's teleport, allowing old movement reports to trigger extra
+recenters. The backend now gates movement during full-view synchronization and
+locally requested travel, with a deadline and rejection recovery. On the same
+five-teleport native script, full map copies fell from 16 to 6 (initial load plus
+five destination changes); column copies fell from 494 to 189. These are measured
+copy counts, not a claimed frame-rate improvement. The test requires exactly six
+full copies, so an ordering regression fails CI.
+
+The final recorded native run took 47.82 seconds, used 21.54 user + 1.28 system CPU
+seconds, and peaked at 102,748 KiB RSS (about 100.3 MiB). It used software Mesa under
+Xvfb with a 30 FPS limit and scripted input/screenshots. It is not a hardware or
+idle-power benchmark, and no frame-time distribution was measured. Origin changes
+still rebuild the dense map; Fancy lighting still uses conservative global mesh
+refreshes. Long walking sessions and hitch elimination remain acceptance work.
+
+The build has separate object directories for native, terminal and Windows modes.
+Packaging refuses a terminal-mode stamp, mismatched ELF/MZ format, missing Linux
+execute permission or a modified asset. `release.json` includes source/engine
+revisions, dirty-source status and every packaged file's SHA-256. The ZIP checker
+requires exact file membership, matching hashes, launchers, resources and notices;
+it detects integrity errors, not release authenticity (there is no signature).
+CI now runs travel, extracted-package windowed acceptance and ZIP validation,
+and uploads native review images/metrics as a separate evidence artifact.
+
+All native audio was muted. Windows remains cross-build/package evidence until
+an actual Windows session is performed. Particles, full equipment, detailed mob
+animations, final asset review and a complete human survival playthrough are not
+claimed by this milestone start.
+
 ## Remaining acceptance gates
 
-- Long-distance/chunk-boundary walking, Far Lands, cache hitches and long sessions.
+- Long-distance/chunk-boundary walking, cache hitches and long sessions beyond
+  the tested signed-boundary/Far Lands teleport routes.
 - Progression beyond the first tools, server-restart persistence, full-inventory
   crafting-close recovery, buckets,
   armour/equipment and complete mode-specific gameplay sessions.
 - Mining pace balancing and animation; server owns drops/durability but does not
   provide a timed hardness table. Current non-instant timings are client choices.
-- Species art/metadata, drops/projectiles, particles, text on sign planes,
+- Further species art/metadata, armour, drops/projectiles, particles, text on sign planes,
   redstone/fluid interactions and musicbox/audio listening QA.
 - Full Classic world/CPE regression, beyond the original login and untouched
   packet implementation. Atlas slots have independent compatibility substitutes.
 - Windows runtime, other engine ports, clean-machine dependencies and performance.
-- Full Unicode font/input, accessibility/resizing and final asset/provenance review.
+- Full Unicode font/input, broader menu/accessibility testing and final asset/provenance review.
 
 No generic vanilla-772 or completed M2–M6 compatibility claim is made. Finish
 these gates before calling the project a complete survival release.

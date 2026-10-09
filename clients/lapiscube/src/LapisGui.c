@@ -18,18 +18,24 @@ static struct Screen inventoryScreen, signScreen;
 static char signLines[4][97];
 static int signLine,signDirty[4];
 static struct FontDesc font;
-static int fontReady, hover=-1, cell=44, left, top;
+static int fontReady, fontSize, hover=-1, cell=44, left, top, header, footer, lineHeight, signWidth;
 static int slotX[64],slotY[64];
 static struct { struct Texture tex; char value[192]; } labels[99];
 static void Empty(void* s) { (void)s; }
 static void Update(void* s,float dt) { (void)s;(void)dt; }
 static void Text(int index,const char* value,int x,int y) {
     struct DrawTextArgs args;cc_string text;
-    if(!fontReady) { Font_Make(&font,13,0);fontReady=1; }
+    static int lastWidth,lastHeight;
+    int desired=Window_Main.Height<420 || Window_Main.Width<480?10:13;
+    if(fontReady && (fontSize!=desired || lastWidth!=Window_Main.Width || lastHeight!=Window_Main.Height))LapisGui_ContextLost();
+    lastWidth=Window_Main.Width;lastHeight=Window_Main.Height;
+    if(!fontReady) { Font_Make(&font,desired,0);fontReady=1;fontSize=desired; }
     if(strcmp(labels[index].value,value) || !labels[index].tex.ID) {
         Gfx_DeleteTexture(&labels[index].tex.ID);
         strncpy(labels[index].value,value,191);labels[index].value[191]=0;
         text=String_FromReadonly(labels[index].value);DrawTextArgs_Make(&args,&text,&font,true);
+        /* Keep long item names/sign text inside the viewport; wire text stays intact. */
+        while(args.text.length && Drawer2D_TextWidth(&args)>Window_Main.Width-x-4)args.text.length--;
         Drawer2D_MakeTextTexture(&labels[index].tex,&args);
     }
     labels[index].tex.x=x;labels[index].tex.y=y;Texture_Render(&labels[index].tex);
@@ -49,7 +55,7 @@ static void Slot(int slot,struct LapisStack stack,int x,int y,int size,int activ
     char count[24];
     Gfx_Draw2DFlat(x,y,size-2,size-2,active?PackedCol_Make(118,101,64,235):PackedCol_Make(31,49,62,235));
     Icon(stack.item,x+3,y+3,size-10);
-    if(stack.count) { sprintf(count,"%d",stack.count);Text(slot,count,x+size-20,y+size-20); }
+    if(stack.count) { sprintf(count,"%d",stack.count);Text(slot,count,x+(size>24?size-20:1),y+(size>24?size-20:0)); }
 }
 static int Slots(void) {
     int window=LapisBackend_Gameplay()->window;
@@ -57,9 +63,14 @@ static int Slots(void) {
 }
 static void Layout(void* s) {
     int i,w=LapisBackend_Gameplay()->window,row,col;(void)s;
-    cell=Window_Main.Width>=700 && Window_Main.Height>=500?48:36;
-    left=(Window_Main.Width-cell*9)/2;top=(Window_Main.Height-cell*7)/2;
-    if(top<36)top=36;
+    lineHeight=Window_Main.Height<420 || Window_Main.Width<480?15:21;
+    header=lineHeight+10;footer=lineHeight*4+8;
+    cell=(Window_Main.Width-24)/9;
+    if(cell>(Window_Main.Height-header-footer-12)/7)cell=(Window_Main.Height-header-footer-12)/7;
+    if(cell>48)cell=48;if(cell<16)cell=16;
+    left=(Window_Main.Width-cell*9)/2;
+    top=(Window_Main.Height-cell*7-header-footer)/2+header;
+    hover=-1;
     for(i=0;i<Slots();i++) {
         if(w==2) { row=i/9;col=i%9; }
         else if(w==12) {
@@ -82,8 +93,8 @@ static void Layout(void* s) {
 static void Render(void* s,float dt) {
     struct LapisGameplay* g=LapisBackend_Gameplay();char buffer[192];int i,n=Slots();
     (void)s;(void)dt;
-    Gfx_Draw2DFlat(left-12,top-32,cell*9+22,cell*7+132,PackedCol_Make(15,26,37,255));
-    Text(64,g->window?g->title:"Inventory / crafting / armour",left,top-26);
+    Gfx_Draw2DFlat(left-12,top-header,cell*9+24,cell*7+header+footer,PackedCol_Make(15,26,37,255));
+    Text(64,g->window?g->title:"Inventory / crafting / armour",left,top-header+3);
     for(i=0;i<n;i++) {
         if(g->window==0 && i<=4 && (g->refreshMask&(1u<<i)))
             Gfx_Draw2DFlat(slotX[i],slotY[i],cell-2,cell-2,PackedCol_Make(31,49,62,235));
@@ -93,9 +104,9 @@ static void Render(void* s,float dt) {
         sprintf(buffer,"Slot %d: %.28s",hover,LapisBlocks_ItemName(g->slots[g->window][hover].item));
         Text(65,buffer,left,top+cell*7+2);
     }
-    Text(66,"Click: stack   Right: one",left,top+cell*7+24);
-    Text(96,"Shift-click: transfer   1-9: hotbar",left,top+cell*7+46);
-    Text(97,"Drop: one   Shift+Drop: stack",left,top+cell*7+68);
+    Text(66,"Click: stack   Right: one",left,top+cell*7+2+lineHeight);
+    Text(96,"Shift-click: transfer   1-9: hotbar",left,top+cell*7+2+lineHeight*2);
+    Text(97,"Drop: one   Shift+Drop: stack",left,top+cell*7+2+lineHeight*3);
     if(g->refreshMask && !g->window)Text(98,"Updating crafting slots...",left,top+cell*7+2);
     if(g->cursor.count)Slot(67,g->cursor,Pointers[0].x+12,Pointers[0].y+12,cell,1);
 }
@@ -148,6 +159,7 @@ void LapisGui_RenderHUD(void) {
     struct LapisGameplay* g=LapisBackend_Gameplay();char buffer[160];int i,x,y,size=40;
     if(!g || !LapisBackend_Protocol()->loaded || Game_HideGui)return;
     if(Gui_GetScreen(GUI_PRIORITY_INVENTORY)==&inventoryScreen)return;
+    if(size>(Window_Main.Width-16)/9)size=(Window_Main.Width-16)/9;
     x=(Window_Main.Width-9*size)/2;y=Window_Main.Height-size-6;
     Gfx_Draw2DFlat(Window_Main.Width/2-5,Window_Main.Height/2,11,1,PackedCol_Make(245,245,230,255));
     Gfx_Draw2DFlat(Window_Main.Width/2,Window_Main.Height/2-5,1,11,PackedCol_Make(245,245,230,255));
@@ -177,18 +189,19 @@ void LapisGui_RenderHUD(void) {
 }
 
 static void SignLayout(void* screen) {
-    (void)screen;left=(Window_Main.Width-420)/2;top=(Window_Main.Height-230)/2;
+    (void)screen;signWidth=Window_Main.Width-32;if(signWidth>420)signWidth=420;
+    left=(Window_Main.Width-signWidth)/2;top=(Window_Main.Height-210)/2;
 }
 static void SignRender(void* screen,float dt) {
     int i;(void)screen;(void)dt;
-    Gfx_Draw2DFlat(left-12,top-12,444,246,PackedCol_Make(15,26,37,245));
+    Gfx_Draw2DFlat(left-12,top-10,signWidth+24,220,PackedCol_Make(15,26,37,245));
     Text(80,LapisBackend_Signs()->front?"Edit sign: front":"Edit sign: back",left,top);
     for(i=0;i<4;i++) {
-        Gfx_Draw2DFlat(left,top+32+i*34,420,30,i==signLine?PackedCol_Make(93,83,53,255):PackedCol_Make(31,49,62,255));
-        Text(81+i,signLines[i][0]?signLines[i]:" ",left+5,top+35+i*34);
+        Gfx_Draw2DFlat(left,top+28+i*30,signWidth,28,i==signLine?PackedCol_Make(93,83,53,255):PackedCol_Make(31,49,62,255));
+        Text(81+i,signLines[i][0]?signLines[i]:" ",left+5,top+30+i*30);
     }
-    Text(85,"Tab: next line   Enter: save   Escape: cancel",left,top+184);
-    Text(86,"Up/Down: choose line   Backspace: erase",left,top+208);
+    Text(85,"Tab: next line   Enter: save   Escape: cancel",left,top+164);
+    Text(86,"Up/Down: choose line   Backspace: erase",left,top+188);
 }
 static int SignDown(void* screen,int key,struct InputDevice* device) {
     struct LapisSigns* signs=LapisBackend_Signs();char lines[4][97];int i,n,side=signs->front?0:1;
@@ -224,7 +237,7 @@ static int SignText(void* screen,const cc_string* value) {
 }
 static int SignPointer(void* screen,int id,int x,int y) {
     (void)screen;(void)id;
-    if(x>=left && x<left+420 && y>=top+32 && y<top+168)signLine=(y-top-32)/34;
+    if(x>=left && x<left+signWidth && y>=top+28 && y<top+148)signLine=(y-top-28)/30;
     return true;
 }
 static void SignFree(void* screen) { (void)screen;LapisBackend_Signs()->editing=0; }

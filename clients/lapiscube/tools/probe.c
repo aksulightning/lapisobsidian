@@ -30,6 +30,7 @@ static cc_uint64 Now(void) {
 }
 #include "survival_scenario.h"
 #include "progression_scenario.h"
+#include "travel_scenario.h"
 
 static int Read(void* context, cc_uint8* data, int capacity) {
     int fd = *(int*)context;
@@ -139,14 +140,15 @@ int main(int argc, char** argv) {
     struct LapisIO io; struct pollfd poller; struct LapisProtocol* p = &session.protocol;
     char* end; long parsed;
     setvbuf(stdout,NULL,_IOLBF,0);
-    if (argc != 5 || (strcmp(argv[1], "status") && strcmp(argv[1], "login") && strcmp(argv[1],"exercise") && strcmp(argv[1],"survival") && strcmp(argv[1],"combat") && strcmp(argv[1],"progression") && strcmp(argv[1],"resume"))) {
-        fprintf(stderr, "usage: %s status|login|exercise|survival|combat|progression|resume host port username\n", argv[0]); return 2;
+    if (argc != 5 || (strcmp(argv[1], "status") && strcmp(argv[1], "login") && strcmp(argv[1],"exercise") && strcmp(argv[1],"survival") && strcmp(argv[1],"combat") && strcmp(argv[1],"progression") && strcmp(argv[1],"resume") && strcmp(argv[1],"travel"))) {
+        fprintf(stderr, "usage: %s status|login|exercise|survival|combat|progression|resume|travel host port username\n", argv[0]); return 2;
     }
     parsed = strtol(argv[3], &end, 10);
     if (*end || parsed < 1 || parsed > 65535) return 2;
     port = (int)parsed; status = !strcmp(argv[1], "status");
     exercise=!strcmp(argv[1],"exercise");scenario=!strcmp(argv[1],"survival");combat=!strcmp(argv[1],"combat");
     progression=!strcmp(argv[1],"progression");resumeProgression=!strcmp(argv[1],"resume");
+    travel=!strcmp(argv[1],"travel");
     start = Now(); LapisSession_Init(&session, start, Packet, NULL);
     LapisWorld_Init(&world);LapisGameplay_Init(&gameplay);LapisEntities_Init(&entities);
     LapisIdentity_OfflineUUID(argv[4], uuid);
@@ -157,14 +159,15 @@ int main(int argc, char** argv) {
     if (fd < 0) { fputs("TCP connection failed\n", stderr); return 1; }
     io.read = Read; io.write = Write; io.context = &fd;
     poller.fd = fd;
-    while (Now() - start < ((progression||resumeProgression)?180000u:(scenario||combat)?120000u:45000u)) {
+    while (Now() - start < ((progression||resumeProgression||travel)?180000u:(scenario||combat)?120000u:45000u)) {
         if (!LapisSession_Pump(&session, &io, Now())) break;
         if(exercise)Exercise(p);
         if(scenario)Survival(p);
         if(combat)Combat(p);
         if(progression||resumeProgression)Fresh(p);
+        if(travel)Travel(p);
         if ((status && p->statusPong) || (!status && p->loaded && p->teleports >= 2 &&
-             p->keepalives && world.clockValid && !p->outputSize && (!exercise || stage==9) && (!scenario || stage==36) && (!combat || combatStage==2) && (!(progression||resumeProgression) || freshStage==30))) { ok = 1; break; }
+             p->keepalives && world.clockValid && !p->outputSize && (!exercise || stage==9) && (!scenario || stage==36) && (!combat || combatStage==2) && (!(progression||resumeProgression) || freshStage==30) && (!travel || travelStage==8))) { ok = 1; break; }
         poller.events = (short)(POLLIN | (p->outputSize ? POLLOUT : 0));
         poller.revents = 0;
         if (poll(&poller, 1, 50) < 0 && errno != EINTR) break;
@@ -176,6 +179,7 @@ int main(int argc, char** argv) {
     if (status) printf("status=%s\n", p->status);
     else printf("decoded=%u block_updates=%u gameplay_updates=%u health=%.0f food=%d exercise_stage=%d\n",world.decoded,world.changes,gameplay.revision,gameplay.health,gameplay.food,stage);
     if(progression||resumeProgression)printf("progression_stage=%d\n",freshStage);
+    if(travel)printf("travel_stage=%d\n",travelStage);
     if (!ok) fprintf(stderr, "reason=%s\n", p->error[0] ? p->error : "integration deadline");
     close(fd); return ok ? 0 : 1;
 }

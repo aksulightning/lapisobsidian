@@ -3,14 +3,16 @@
 An experimental native C survival client for Lapis Obsidian, using ClassiCube's
 renderer, input, windowing, audio, collision and UI infrastructure.
 
-**Milestones 2–6 remain in progress. Milestone 7 now starts fresh-world survival progression.** The native client now
+**Milestones 2–10 remain in progress. M8–M10 now have working streaming, entity-presentation and usability slices.** The native client now
 renders a server world, moves and jumps, displays health/hunger and authoritative
 item stacks, and has mining/placement and inventory controls. Real-server tests
 pass mining, pickup/drop, placement, crafting, chest/furnace use, food, signs,
 combat, death and respawn; advanced survival tests use an isolated seeded save. This is
 an early playable development slice, not a finished survival release. A separate
 fresh-world test starts empty and reaches a crafted pickaxe and mined cobblestone,
-then verifies the earned inventory on reconnect.
+then verifies the earned inventory on reconnect. The next slice adds bounded
+column updates, eight distinct original mob shapes, server-driven hit/swing/bow
+effects, smaller-window layouts and an extracted-package native acceptance run.
 
 The client uses an independent CC0 atlas, geometric models/UI and synthesized
 sounds. It requires no Java, game JAR, Microsoft account or proprietary assets.
@@ -46,7 +48,9 @@ cd build/LapisCube-linux
 
 Start the separate Lapis server before connecting. Use 1–15 ASCII letters, digits
 or underscores for the offline username. Extract the entire package; launch from
-its directory so textures, sounds and settings are found. The ZIP is in `build/`.
+its launcher, which locates textures, sounds and settings even when invoked from
+another directory. Paths containing spaces are included in Linux acceptance.
+The ZIP is in `build/`; `release.json` records revisions and every bundled file hash.
 No-argument startup prints usage rather than opening an asset downloader.
 
 For a staged developer build, run from `build/engine`:
@@ -103,7 +107,10 @@ make sanitize
 make integration
 make survival
 make progression
+make travel
 make native-smoke
+make native package
+python3 tests/windowed.py  # requires Xvfb, ImageMagick and unzip
 ```
 
 `integration` starts the unchanged server in a temporary save with seed 42; its
@@ -116,6 +123,21 @@ check the earned inventory. Its movement is a test input driver over received
 terrain; it does not prove native collision or long-distance travel. `native-smoke` builds the existing
 terminal/software renderer and checks actual engine world loading plus the
 original Classic login. Rebuild `make native` before packaging a windowed client.
+`travel` uses an isolated saved platform and an ephemeral administrator credential
+through the normal `/admin` command. It checks signed chunk boundaries, both Far
+Lands, eight mob types, equipment and damage. This is teleport/packet evidence,
+not an unassisted survival journey. `windowed.py` extracts the Linux ZIP, launches
+it outside its installation directory, resizes inventory, captures native combat
+and terrain views, and records CPU/RSS/copy counts under `build/windowed-evidence`.
+Packaging rejects the terminal build and wrong executable format; build objects
+are separated by native/terminal/Windows mode. CI runs these gates and uploads
+review screenshots alongside the development packages.
+
+Set `lapis-entity-effects=false` in the installed `options.txt` before connecting
+to disable hit/death tint, creeper flashing and attack-arm effects. Walking
+animation and server-owned gameplay continue. Audio remains separately adjustable
+through the existing engine settings.
+
 On restricted runners without `/proc`, use
 `make sanitize SANITIZER_FLAGS=-DLAPIS_SANDBOX_SANITIZERS`; this disables only leak
 detection, retaining address/undefined-behavior checks.
@@ -124,12 +146,14 @@ detection, retaining address/undefined-behavior checks.
 
 The 7×7 chunk cache presents a 112×256×112 moving window. Server terrain and
 block changes are authoritative. Cache recentering refreshes the dense map and
-may hitch; efficient incremental remeshing remains work. Lighting is an engine
+may hitch. Arriving columns now update at most two per tick and retain unaffected
+meshes with Classic lighting; Fancy lighting conservatively refreshes all meshes. Lighting is an engine
 approximation of the server's placeholder light arrays. Special shapes, water
-levels, mob distinctions/metadata and item/projectile rendering need refinement.
-Particles and several entity effects are omitted. Creative/adventure/spectator
+levels, mob detail/metadata and item/projectile rendering need refinement.
+Particles, remote armour and several entity effects are omitted. Creative/adventure/spectator
 handling is partial. Progression beyond the first tools, inventory-full crafting-close
-recovery, armour, Far Lands and long-distance sessions remain unverified. Sky and
+recovery, armour and long-distance survival walking remain unverified. Both Far
+Lands have teleport and native render checks; this is not a long-session gate. Sky and
 terrain shading follow server time; per-voxel modern lighting remains approximate.
 The pinned server can broadcast Play packets to another connection that is still
 configuring during simultaneous joins; sequential joins are the tested path.

@@ -201,6 +201,8 @@ int LapisGameplay_Chat(struct LapisProtocol* p, const char* text, int length) {
 }
 int LapisGameplay_Attack(struct LapisProtocol* p, int entity) {
     struct Writer w; w.n = 0;
+    Var(&w,0);if(!Send(p,0x3C,&w))return 0; /* Main-hand animation is a separate server request. */
+    w.n=0;
     Var(&w, (cc_uint32)entity); Var(&w, 1); Big(&w, 0, 1); return Send(p, 0x19, &w);
 }
 int LapisGameplay_Respawn(struct LapisProtocol* p) {

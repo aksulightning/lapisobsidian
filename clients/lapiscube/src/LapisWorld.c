@@ -21,7 +21,7 @@ int LapisWorld_Center(struct LapisWorld* w, int x, int z) {
     w->centerX = x; w->centerZ = z; w->hasCenter = 1;
     for (i = 0; i < LAPIS_CACHE_COUNT; i++) {
         struct LapisChunk* c = &w->chunks[i];
-        if (c->valid && !InRange(w, c->x, c->z)) { c->valid = 0; w->evicted++; }
+        if (c->valid && !InRange(w, c->x, c->z)) { c->valid = c->dirty = 0; w->evicted++; }
     }
     return changed;
 }
@@ -29,6 +29,13 @@ struct LapisChunk* LapisWorld_Find(struct LapisWorld* w, int x, int z) {
     int i;
     for (i = 0; i < LAPIS_CACHE_COUNT; i++)
         if (w->chunks[i].valid && w->chunks[i].x == x && w->chunks[i].z == z) return &w->chunks[i];
+    return NULL;
+}
+struct LapisChunk* LapisWorld_TakeDirty(struct LapisWorld* w) {
+    int i;
+    for(i=0;i<LAPIS_CACHE_COUNT;i++)if(w->chunks[i].valid && w->chunks[i].dirty) {
+        w->chunks[i].dirty=0;return &w->chunks[i];
+    }
     return NULL;
 }
 /* Protocol 772 infers word count. Entries never straddle a 64-bit word. */
@@ -110,7 +117,7 @@ int LapisWorld_Chunk(struct LapisWorld* w, const cc_uint8* data, int size) {
     if (!c) for (i = 0; i < LAPIS_CACHE_COUNT; i++) if (!w->chunks[i].valid) { c = &w->chunks[i]; break; }
     if (!c) return 0;
     memcpy(c->blocks, w->staging.blocks, sizeof(c->blocks));
-    c->x = x; c->z = z; c->valid = 1; w->decoded++;
+    c->x = x; c->z = z; c->valid = c->dirty = 1; w->decoded++;
     return 1;
 }
 int LapisWorld_Block(struct LapisWorld* w, int x, int y, int z, int state) {

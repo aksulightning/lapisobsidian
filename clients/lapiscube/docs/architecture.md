@@ -23,7 +23,7 @@ The original engine submodule stays untouched; the patch is applied to a build c
 | `LapisIdentity` | Offline UUIDv3 with existing BearSSL MD5 |
 | `LapisWorld` | Pure bounded palette/chunk/light validation, cache, block updates and authoritative world clock |
 | `LapisGameplay` | Server-owned stacks/containers/health; bounded outgoing action encoding |
-| `LapisEntities` | Bounded entity snapshots, movement and metadata parsing |
+| `LapisEntities` | Bounded entity snapshots, movement, metadata and combat/equipment event parsing |
 | `LapisSigns` / `LapisText` | Bounded sign cache/editor requests and validated modified-UTF-8 ↔ UTF-8 text |
 | `LapisMining` | Pure local material/tool pacing; no world or inventory mutations |
 | `LapisEffects` | Named sound packet decoding |
@@ -49,9 +49,14 @@ stay separate from local render coordinates; negative chunk division is floored.
 An unloaded region is an invisible solid barrier. Center changes evict old cache
 entries and shift player/entity coordinates; no terrain is generated locally.
 
-Cache updates currently refill/refresh the dense map. This bounds memory but can
-cause hitches; incremental column copies, lighting invalidation and mesh scheduling
-remain performance work. The existing engine adds its normal mesh/texture memory.
+Chunk replacements now mark one dirty flag per cache slot; repeated replacements
+coalesce, malformed packets cannot enqueue work and eviction removes pending work.
+The native adapter copies at most two dirty columns (131,072 block mappings) per
+network tick. Classic lighting invalidates its height cache and marks the affected
+column plus its eight neighbours for the engine's ordinary bounded mesh builder.
+Unaffected vertex buffers survive arrivals. Fancy lighting conservatively refreshes
+all meshes because light can propagate farther. An origin shift still refills the
+dense map and rebuilds its meshes; eliminating those hitches remains work. The existing engine adds its normal mesh/texture memory.
 Tiny-console compatibility or a total process-memory ceiling is not claimed.
 
 - One 512 KiB incoming frame, 32 KiB outbound queue; no per-packet heap allocation.
@@ -114,3 +119,23 @@ separate acceptance; this mechanism makes no claim to solve that server edge cas
 Number keys over a native inventory cell send mode-2 swaps. The configured Drop
 key sends mode 4, with Shift selecting the entire stack. Window-specific bounds
 are checked before encoding; only server slot/cursor packets update the display.
+
+## Travel ordering and entity presentation
+
+The pinned server sends a full view's centre column first and its position sync
+last. An incremental, adjacent movement update sends only an exposed edge strip.
+The backend pauses movement while classifying a centre update and during a full
+view until its teleport arrives. Locally issued `/tp`, `/spawn` and `/plate go`
+commands pause immediately; a response without a new view releases a rejected
+request. A 15-second synchronization deadline prevents a permanent input stall.
+This avoids feeding the old position back into a server which does not gate it
+on teleport acknowledgment. Idle position reports are reduced to once per second;
+position/rotation/ground changes still transmit at the network tick rate. This
+also matches the reference server's packet-count-based hunger assumptions.
+
+Combat packets update bounded snapshots atomically. Their counters trigger local
+350 ms hit tint and 300 ms attack-arm motion; they never apply health or AI changes.
+Skeleton bow parts depend on authoritative equipment item 858. Sheep metadata
+removes the wool coat; active creeper fuse metadata pulses its tint. These effects
+are optional in `options.txt`. Entity slots clear their visual state on reuse and
+world reset. Geometric designs are CC0; renderer/parser source remains BSD-3-Clause.

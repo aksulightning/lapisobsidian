@@ -72,6 +72,32 @@ static void WorldTests(void) {
     CHECK(LapisWorld_Center(&world,10,10)==1);CHECK(!LapisWorld_Find(&world,-1,-1));CHECK(world.evicted==1);
     CHECK(LapisWorld_Center(&world,2048,0)==-1);
 }
+static void StreamingTests(void) {
+    struct LapisChunk* chunk;int x,z,count,size;
+    LapisWorld_Init(&world);CHECK(LapisWorld_Center(&world,-1,1)==1);
+    for(z=-2;z<=4;z++)for(x=-4;x<=2;x++) {
+        size=Chunk(0,x,z);CHECK(LapisWorld_Chunk(&world,data,size));
+    }
+    /* A replacement coalesces, and subsequent authoritative updates survive. */
+    size=Chunk(0,-1,1);CHECK(LapisWorld_Chunk(&world,data,size));
+    CHECK(LapisWorld_Block(&world,-1,255,17,24002));
+    count=0;while((chunk=LapisWorld_TakeDirty(&world))!=NULL) {
+        count++;CHECK(chunk->valid && !chunk->dirty);
+    }
+    CHECK(count==49);CHECK(LapisWorld_Get(&world,-1,255,17)==24002);
+    CHECK(!LapisWorld_TakeDirty(&world));
+    CHECK(!LapisWorld_Chunk(&world,data,size-1));CHECK(!LapisWorld_TakeDirty(&world));
+    CHECK(LapisWorld_Chunk(&world,data,size));CHECK(LapisWorld_Chunk(&world,data,size));
+    CHECK(LapisWorld_TakeDirty(&world)==LapisWorld_Find(&world,-1,1));CHECK(!LapisWorld_TakeDirty(&world));
+    CHECK(LapisWorld_Center(&world,-4,1)==1);CHECK(world.evicted==21);
+    CHECK(!LapisWorld_TakeDirty(&world));
+    /* Edges of server coordinates, and ignored but validated out-of-window data. */
+    CHECK(LapisWorld_Center(&world,2047,-2048)==1);
+    size=Chunk(0,2047,-2048);CHECK(LapisWorld_Chunk(&world,data,size));
+    CHECK(LapisWorld_Get(&world,32767,255,-32768)==20);
+    CHECK(LapisWorld_TakeDirty(&world)!=NULL);CHECK(!LapisWorld_TakeDirty(&world));
+    size=Chunk(0,0,0);CHECK(LapisWorld_Chunk(&world,data,size));CHECK(!LapisWorld_TakeDirty(&world));
+}
 static void SlotPacket(int window,int slot,int item,int count) {
     n=0;Var((cc_uint32)window);Var(0);Big((cc_uint64)slot,2);Var((cc_uint32)count);
     if(count) { Var((cc_uint32)item);Var(0);Var(0); }
@@ -118,6 +144,23 @@ static void EntityTests(void) {
     revision=entities.revision;CHECK(!LapisEntities_Packet(&entities,0x2F,data,n-1));CHECK(entities.revision==revision);
     n=0;Var((cc_uint32)-2);Byte(0);Var(0);Byte(2);Byte(6);Var(21);Var(5);Byte(255);
     CHECK(LapisEntities_Packet(&entities,0x5C,data,n));CHECK(entities.list[index].flags==2 && entities.list[index].pose==5);
+    n=0;Var((cc_uint32)-2);Var(0);Var(0);Var(0);Byte(0);
+    revision=entities.revision;
+    for(i=0;i<n;i++) { CHECK(!LapisEntities_Packet(&entities,0x19,data,i));CHECK(entities.revision==revision && !entities.damageEvents); }
+    CHECK(LapisEntities_Packet(&entities,0x19,data,n));CHECK(entities.damageEvents==1 && entities.list[index].hurt==1);
+    data[n-1]=1;CHECK(!LapisEntities_Packet(&entities,0x19,data,n));CHECK(entities.damageEvents==1);data[n-1]=0;
+    n=0;Var((cc_uint32)-2);Byte(0);CHECK(LapisEntities_Packet(&entities,0x02,data,n));CHECK(entities.list[index].swing==1);
+    Byte(0);CHECK(!LapisEntities_Packet(&entities,0x02,data,n));CHECK(entities.animations==1);
+    n=0;Var((cc_uint32)-2);Byte(0);Var(1);Var(858);Var(0);Var(0);
+    revision=entities.revision;
+    for(i=0;i<n;i++) { CHECK(!LapisEntities_Packet(&entities,0x5F,data,i));CHECK(entities.revision==revision && !entities.equipmentUpdates); }
+    CHECK(LapisEntities_Packet(&entities,0x5F,data,n));CHECK(entities.list[index].mainHand==858 && entities.equipmentUpdates==1);
+    data[n-1]=1;CHECK(!LapisEntities_Packet(&entities,0x5F,data,n));CHECK(entities.list[index].mainHand==858);
+    n=0;Var((cc_uint32)-2);Byte(0);Var(0);CHECK(LapisEntities_Packet(&entities,0x5F,data,n));CHECK(!entities.list[index].mainHand);
+    n=0;Big((cc_uint32)-2,4);Byte(3);CHECK(!LapisEntities_Packet(&entities,0x1E,data,n-1));
+    CHECK(LapisEntities_Packet(&entities,0x1E,data,n));CHECK(entities.list[index].dead && entities.deaths==1);
+    n=0;Var(12345);Var(48);Var(0);Var(0);Byte(0);CHECK(LapisEntities_Packet(&entities,0x19,data,n));
+    CHECK(entities.damageEvents==2 && LapisEntities_Find(&entities,12345)<0);
     n=0;Var(1);Var((cc_uint32)-2);CHECK(LapisEntities_Packet(&entities,0x46,data,n));CHECK(LapisEntities_Find(&entities,-2)==-1);
 }
 
@@ -238,7 +281,15 @@ static void InventoryControlsTests(void) {
     game.window=15;CHECK(!LapisGameplay_Click(&game,&protocol,-999,0,0));
     game.window=2;protocol.state=LAPIS_FAILED;CHECK(!LapisGameplay_Close(&game,&protocol));CHECK(game.window==2);
 }
+static void AttackTests(void) {
+    static const cc_uint8 expected[]={2,0x3C,0,4,0x19,5,1,0};
+    LapisProtocol_Init(&protocol,NULL,NULL);protocol.state=LAPIS_PLAY;protocol.loaded=1;
+    CHECK(LapisGameplay_Attack(&protocol,5));CHECK(protocol.outputSize==(int)sizeof(expected));
+    CHECK(!memcmp(protocol.output,expected,sizeof(expected)));
+    protocol.state=LAPIS_FAILED;CHECK(!LapisGameplay_Attack(&protocol,5));
+    CHECK(protocol.outputSize==(int)sizeof(expected));
+}
 int main(void) {
-    WorldTests();GameplayTests();EntityTests();SignTests();ContainerTests();MiningTests();TimeTests();InventoryControlsTests();
+    WorldTests();StreamingTests();GameplayTests();EntityTests();SignTests();ContainerTests();MiningTests();TimeTests();InventoryControlsTests();AttackTests();
     printf("world/gameplay: %u assertions passed (palettes, height, boundaries, truncation, inventory authority, actions, entities, sounds)\n",checks);return 0;
 }

@@ -84,7 +84,8 @@ static void Survival(struct LapisProtocol* p) {
 
 static void Combat(struct LapisProtocol* p) {
     if(!combatReady && p->loaded) { puts("combat: ready");combatReady=1; }
-    if(!combatStage && p->loaded && gameplay.health==0) {
+    if(!combatStage && p->loaded && gameplay.health==0 && entities.damageEvents && entities.deaths && entities.animations) {
+        puts("combat: server damage, death and attack animation events decoded");
         puts("combat: authoritative lethal damage received");LapisGameplay_Respawn(p);combatAt=p->packets;combatStage=1;
     } else if(combatStage==1 && p->packets>combatAt && p->loaded && p->teleports==2 && gameplay.health==20) {
         puts("combat: death and respawn round trip passed");combatStage=2;

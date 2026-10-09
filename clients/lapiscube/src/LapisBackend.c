@@ -40,6 +40,10 @@ static struct LapisGameplay gameplay;
 static struct LapisEntities entities;
 static struct LapisSigns signs;
 static int originX, originZ, mapDirty, ready, selected, sneak, sprint;
+static int fullMaps, columnCopies;
+static int streamPending, haveSent, sentGround;
+static float sentX,sentY,sentZ,sentYaw,sentPitch;
+static cc_uint64 streamStarted,lastMove;
 static int digging, digX, digY, digZ, digFace, digState, digItem, digSlot, digDuration;
 static int usingItem;
 static cc_uint64 digStart, lastUse;
@@ -57,33 +61,56 @@ static void Position(struct LapisProtocol* p) {
     Vec3_Set(u.pos,(float)(p->x-originX),(float)p->y,(float)(p->z-originZ));
     u.yaw=p->yaw+180;u.pitch=p->pitch;
     e->VTABLE->SetLocation(e,&u);Vec3_Set(e->Velocity,0,0,0);
+    haveSent=0;
 }
 static void Recenter(void) {
     int x=(world.centerX-3)*16,z=(world.centerZ-3)*16;
     struct LocationUpdate u;struct Entity* e=&Entities.CurPlayer->Base;
+    if(x==originX && z==originZ)return;
     if(ready && (x!=originX || z!=originZ)) {
         memset(&u,0,sizeof(u));u.flags=LU_HAS_POS|LU_POS_RELATIVE_SHIFT;
         Vec3_Set(u.pos,(float)(originX-x),0,(float)(originZ-z));e->VTABLE->SetLocation(e,&u);
     }
     originX=x;originZ=z;mapDirty=1;
 }
+static void CopyColumn(struct LapisChunk* c) {
+    int x,y,z,dx=c->x*16-originX,dz=c->z*16-originZ,index;BlockID b;
+    c->dirty=0;
+    if(dx<0 || dz<0 || dx+16>World.Width || dz+16>World.Length)return;
+    for(y=0;y<256;y++)for(z=0;z<16;z++)for(x=0;x<16;x++) {
+        b=LapisBlocks_State(c->blocks[y*256+z*16+x]);index=World_Pack(dx+x,y,dz+z);
+        World.Blocks[index]=(BlockRaw)b;World.Blocks2[index]=(BlockRaw)(b>>8);
+    }
+    columnCopies++;
+}
 static void FillMap(void) {
-    int i,x,y,z,dx,dz,index;BlockID b;struct LapisChunk* c;
+    int i;struct LapisChunk* c;
     if(!World.Blocks)return;
     /* Unknown chunks are invisible solid barriers until their authoritative data arrives. */
     memset(World.Blocks,255,(size_t)World.Volume);
     memset(World.Blocks2,0,(size_t)World.Volume);
     for(i=0;i<LAPIS_CACHE_COUNT;i++) {
         c=&world.chunks[i];if(!c->valid)continue;
-        dx=c->x*16-originX;dz=c->z*16-originZ;
-        if(dx<0 || dz<0 || dx+16>World.Width || dz+16>World.Length)continue;
-        for(y=0;y<256;y++)for(z=0;z<16;z++)for(x=0;x<16;x++) {
-            b=LapisBlocks_State(c->blocks[y*256+z*16+x]);index=World_Pack(dx+x,y,dz+z);
-            World.Blocks[index]=(BlockRaw)b;World.Blocks2[index]=(BlockRaw)(b>>8);
-        }
+        CopyColumn(c);
     }
     if(ready) { Lighting.Refresh();MapRenderer_Refresh(); }
-    mapDirty=0;
+    mapDirty=0;fullMaps++;
+}
+static void StreamColumns(void) {
+    struct LapisChunk* c;int count,x,y,z,cx,cz;
+    /* At most 128K block mappings per network tick, even after a packet burst.
+       Origin shifts still rebuild the window. Existing meshes survive arrivals. */
+    for(count=0;count<2;count++) {
+        c=LapisWorld_TakeDirty(&world);if(!c)break;
+        CopyColumn(c);cx=c->x-originX/16;cz=c->z-originZ/16;
+        for(y=0;y<16;y++)for(z=cz-1;z<=cz+1;z++)for(x=cx-1;x<=cx+1;x++)
+            MapRenderer_RefreshChunk(x,y,z);
+    }
+    if(count) {
+        Lighting.Refresh();
+        /* Fancy light can propagate beyond neighbouring columns. */
+        if(Lighting_Mode!=LIGHTING_MODE_CLASSIC)MapRenderer_Refresh();
+    }
 }
 static void Daylight(void) {
     int light=LapisWorld_Daylight(&world);
@@ -122,11 +149,14 @@ static void Packet(struct LapisProtocol* p, int state, int id, const cc_uint8* d
     } else if(id==0x57) {
         x=(cc_int32)LapisReader_VarInt(&r);z=(cc_int32)LapisReader_VarInt(&r);
         if(!LapisReader_Done(&r) || LapisWorld_Center(&world,x,z)<0)goto malformed;
+        if(ready) { streamPending=1;streamStarted=Now(); }
         Recenter();
     } else if(id==0x27) {
         if(!LapisWorld_Chunk(&world,data,size))goto malformed;
         x=(cc_int32)LapisReader_Big(&r,4);z=(cc_int32)LapisReader_Big(&r,4);LapisSigns_Chunk(&signs,x,z);
-        mapDirty=1;
+        /* Pinned full views start with the centre column, then end in a teleport.
+           Ordinary adjacent movement sends only the newly exposed edge strip. */
+        if(streamPending==1)streamPending=x==world.centerX && z==world.centerZ?2:0;
     } else if(id==0x08) {
         LapisWorld_Position(LapisReader_Big(&r,8),&x,&y,&z);value=LapisReader_Count(&r,65535);
         if(!LapisReader_Done(&r) || !LapisWorld_Block(&world,x,y,z,value))goto malformed;
@@ -134,6 +164,7 @@ static void Packet(struct LapisProtocol* p, int state, int id, const cc_uint8* d
         if(ready && x>=originX && x<originX+World.Width && z>=originZ && z<originZ+World.Length)
             Game_UpdateBlock(x-originX,y,z-originZ,LapisBlocks_State(value));
     } else if(id==0x41) {
+        streamPending=0;
         if(!world.hasCenter) { LapisWorld_Center(&world,LapisWorld_ChunkCoord((int)p->x),LapisWorld_ChunkCoord((int)p->z));Recenter(); }
         if(ready)Position(p);
     }
@@ -143,7 +174,7 @@ static void Packet(struct LapisProtocol* p, int state, int id, const cc_uint8* d
     if(id==0x35)LapisGui_ShowSign();
     if(id==0x4B) {
         LapisGui_Close();LapisMobs_Clear();LapisEntities_Init(&entities);
-        World_NewMap();LapisSigns_Init(&signs);LapisWorld_Init(&world);ready=0;digging=0;mapDirty=0;
+        World_NewMap();LapisSigns_Init(&signs);LapisWorld_Init(&world);ready=0;digging=0;mapDirty=0;streamPending=0;
     }
     if(id==0x6E) {
         if(!LapisEffects_Sound(&sound,data,size))goto malformed;
@@ -153,6 +184,7 @@ static void Packet(struct LapisProtocol* p, int state, int id, const cc_uint8* d
     if(id==0x72) {
         char buffer[2048];cc_string message=String_FromArray(buffer);
         String_AppendUtf8(&message,gameplay.message,(int)strlen(gameplay.message));Chat_Add(&message);
+        if(streamPending==3)streamPending=0; /* Rejected command: no view or teleport followed. */
     }
     if(id==0x62) { Inventory.SelectedIndex=gameplay.selected;selected=gameplay.selected; }
     if (id == 0x2B) Platform_LogConst("LapisCube native: Play login accepted");
@@ -183,6 +215,7 @@ static int Write(void* context, const cc_uint8* data, int size) {
     return (int)n;
 }
 void LapisBackend_Close(void) {
+    if(ready)Platform_Log2("LapisCube streaming: full windows=%i, column copies=%i",&fullMaps,&columnCopies);
     if (connection != -1) Socket_Close(connection);
     connection = -1; connecting = false;
     LapisGui_Close();LapisMobs_Clear();LapisAudio_Free();ready=0;digging=0;usingItem=0;
@@ -212,6 +245,7 @@ static void Progress(void) {
 static void PlayerTick(void) {
     struct LapisProtocol* p=&session.protocol;struct LocalPlayer* player=Entities.CurPlayer;
     struct Entity* e=&player->Base;cc_uint8 data[16];int i,n,s;
+    float x=e->next.pos.x+originX,y=e->next.pos.y,z=e->next.pos.z+originZ,yaw=JavaYaw(e->Yaw),pitch=JavaPitch(e->Pitch);
     player->Hacks.CanAnyHacks=false;player->Hacks.CanSpeed=false;player->Hacks.CanRespawn=false;
     player->Hacks.CanFly=(gameplay.abilities&4)!=0;player->Hacks.CanNoclip=p->gamemode==3;
     if(!player->Hacks.CanFly)player->Hacks.Flying=false;
@@ -223,13 +257,18 @@ static void PlayerTick(void) {
     if(s!=sprint) { sprint=s;n=LapisProtocol_EncodeVarInt(data,(cc_uint32)p->entityId);data[n++]=(cc_uint8)(s?1:2);data[n++]=0;LapisProtocol_Queue(p,0x29,data,n); }
     player->Hacks.BaseHorSpeed=sneak?.3f:sprint?1.3f:1.0f;
     if(gameplay.health<=0) { Vec3_Set(e->Velocity,0,0,0); }
-    else LapisGameplay_Move(p,e->next.pos.x+originX,e->next.pos.y,e->next.pos.z+originZ,JavaYaw(e->Yaw),JavaPitch(e->Pitch),e->OnGround);
+    else if(!streamPending && (!haveSent || x!=sentX || y!=sentY || z!=sentZ || yaw!=sentYaw || pitch!=sentPitch ||
+            sentGround!=e->OnGround || Now()-lastMove>=1000)) {
+        if(LapisGameplay_Move(p,x,y,z,yaw,pitch,e->OnGround)) {
+            haveSent=1;sentX=x;sentY=y;sentZ=z;sentYaw=yaw;sentPitch=pitch;sentGround=e->OnGround;lastMove=Now();
+        }
+    }
     Inventory.Offset=0;
     for(i=0;i<9;i++)Inventory.Table[i]=LapisBlocks_Item(gameplay.slots[0][36+i].item);
     if(selected!=Inventory.SelectedIndex) {
         selected=Inventory.SelectedIndex;gameplay.selected=selected;LapisGameplay_Select(p,selected);
     }
-    if(digging && (Gui.InputGrab || gameplay.health<=0 || p->gamemode>=2 ||
+    if(digging && (streamPending || Gui.InputGrab || gameplay.health<=0 || p->gamemode>=2 ||
         selected!=digSlot || gameplay.slots[0][36+selected].item!=digItem ||
         LapisWorld_Get(&world,digX,digY,digZ)!=digState ||
         !KeyBind_IsPressed(BIND_DELETE_BLOCK) || !Game_SelectedPos.valid ||
@@ -261,9 +300,10 @@ static cc_bool Tick(struct ScheduledTask2* task) {
     if (!LapisSession_Pump(&session, &io, Now())) {
         Disconnect(session.protocol.error); return true;
     }
+    if(streamPending && Now()-streamStarted>15000) { Disconnect("Lapis world synchronization timed out");return true; }
     Progress();
     if(!ready && session.protocol.teleports>=2 && world.decoded)LoadWorld(&session.protocol);
-    if(ready && mapDirty)FillMap();
+    if(ready) { if(mapDirty)FillMap();else StreamColumns(); }
     if(ready) { PlayerTick();LapisMobs_Update(&entities,originX,originZ); }
     return true;
 }
@@ -275,7 +315,7 @@ static void Begin(void) {
     World_NewMap();LapisSigns_Init(&signs);LapisWorld_Init(&world);LapisGameplay_Init(&gameplay);LapisBlocks_Init();
     LapisEntities_Init(&entities);LapisMobs_Init();TexturePack_ExtractCurrent(true);
     Blocks.Draw[255]=DRAW_GAS;Blocks.Collide[255]=COLLIDE_SOLID;Blocks.BlocksLight[255]=false;Block_DefineCustom(255,false);
-    originX=originZ=0;mapDirty=0;selected=0;sneak=sprint=0;lastUse=0;
+    originX=originZ=0;mapDirty=0;fullMaps=columnCopies=0;streamPending=haveSent=0;selected=0;sneak=sprint=0;lastUse=0;
     if (Server.Address.length > 255 || Game_Username.length > 15 || !Game_Username.length) {
         Disconnect("Use a host of at most 255 bytes and a 1-15 character offline username"); return;
     }
@@ -308,7 +348,13 @@ static void SendBlock(int x, int y, int z, BlockID old, BlockID now) {
 static void SendChat(const cc_string* text) {
     cc_uint8 utf8[STRING_SIZE*3];int n;
     if(text->length>STRING_SIZE)return;
-    n=String_EncodeUtf8(utf8,text);LapisGameplay_Chat(&session.protocol,(const char*)utf8,n);
+    n=String_EncodeUtf8(utf8,text);
+    if(LapisGameplay_Chat(&session.protocol,(const char*)utf8,n) &&
+       ((n>=4 && !memcmp(utf8,"/tp ",4)) || (n==6 && !memcmp(utf8,"/spawn",6)) || (n>=10 && !memcmp(utf8,"/plate go ",10)))) {
+        /* Avoid old movement after a local travel request. The server sends its
+           new chunks before its teleport, and does not gate movement on the ack. */
+        streamPending=3;streamStarted=Now();
+    }
 }
 static int TargetFace(void) {
     static const int map[6]={4,5,2,3,0,1};return Game_SelectedPos.closest<6?map[Game_SelectedPos.closest]:1;
@@ -320,7 +366,7 @@ struct LapisSign* LapisBackend_TargetSign(void) {
 static float Cursor(float value) { return value<0?0:value>1?1:value; }
 void LapisBackend_Dig(void) {
     int target;char block[STRING_SIZE];cc_string name,text=String_Init(block,0,STRING_SIZE-1);
-    if(!ready || gameplay.health<=0)return;
+    if(!ready || streamPending || gameplay.health<=0)return;
     target=LapisMobs_Target(&entities);
     if(target>=0) { LapisGameplay_Attack(&session.protocol,entities.list[target].id);return; }
     if(!Game_SelectedPos.valid || digging)return;
@@ -343,7 +389,7 @@ void LapisBackend_Use(void) {
     struct Entity* e=&Entities.CurPlayer->Base;
     /* Repeating Use every input tick restarts Lapis's eating timer. Hold one
        request until release; a second click starts the next interaction. */
-    if(!ready || gameplay.health<=0 || usingItem || Now()-lastUse<250)return;
+    if(!ready || streamPending || gameplay.health<=0 || usingItem || Now()-lastUse<250)return;
     lastUse=Now();
     usingItem=1;
     if(Game_SelectedPos.valid)

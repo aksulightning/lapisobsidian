@@ -20,8 +20,8 @@ The first 256 atlas cells preserve the Classic/CPE texture layout with independe
 substitutes. `assets/atlas.json` records locations. The rest hold Lapis images.
 
 `tools/build_assets.py` authors the UI geometry and 16 deterministic PCM effects.
-`LapisMobs.c` authors six geometric shape families shared by the initial animals,
-hostiles, players, items and projectiles. `LapisAudio.c` creates eight runtime
+`LapisMobs.c` authors ten geometric shapes: eight distinct initial mob species,
+players, and a shared item/projectile shape. `LapisAudio.c` creates eight runtime
 synthesis banks for named protocol events. The audiovisual output and geometric
 model designs are dedicated under CC0; generator/renderer code remains BSD-3-Clause.
 See `assets/licenses/LapisCube-Originals.txt`.
@@ -40,10 +40,11 @@ facts from the pinned server. Ordinary builds use the committed generated files.
 ## Coverage and quality limits
 
 The collection is an initial cohesive resource set, not complete original art for
-every item. Several utility blocks/items use material fallbacks. Cow, pig and
-sheep share a grazer shape; players/zombie/skeleton share an upright shape with
-different tints. Drops/projectiles are simple cuboids. Metadata/equipment and
-species-specific models/voices need further work. Animal events currently use
+every item. Several utility blocks/items use material fallbacks. Cow horns, a squat pig/snouted head, a removable sheep coat, chicken bill/comb,
+eight spider legs, an upright creeper, an outstretched zombie and a ribbed skeleton
+now give the eight species distinct geometry. The skeleton has original bow bars
+and string. Drops/projectiles remain simple cuboids. Remote armour, detailed
+animations and species voices need further work. Animal events currently use
 synthesis fallbacks. Note timbres are simple tones/noise, not a General MIDI bank.
 Particle art, full sign text, armor visualization and complete menu art are pending.
 Sounds have parser coverage but no listening acceptance session yet.

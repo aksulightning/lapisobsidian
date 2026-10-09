@@ -6,7 +6,7 @@ CC_BEGIN_HEADER
 #define LAPIS_CACHE_COUNT 49
 #define LAPIS_WORLD_SIDE (LAPIS_CACHE_SIDE * 16)
 struct LapisChunk {
-    int x, z, valid;
+    int x, z, valid, dirty;
     cc_uint16 blocks[65536];
 };
 struct LapisWorld {
@@ -20,6 +20,8 @@ void LapisWorld_Init(struct LapisWorld* w);
 int LapisWorld_Center(struct LapisWorld* w, int x, int z);
 int LapisWorld_Chunk(struct LapisWorld* w, const cc_uint8* data, int size);
 struct LapisChunk* LapisWorld_Find(struct LapisWorld* w, int cx, int cz);
+/* Coalesces replacements in a fixed-size queue; caller copies before next decode. */
+struct LapisChunk* LapisWorld_TakeDirty(struct LapisWorld* w);
 int LapisWorld_Block(struct LapisWorld* w, int x, int y, int z, int state);
 int LapisWorld_Get(struct LapisWorld* w, int x, int y, int z);
 int LapisWorld_Time(struct LapisWorld* w, const cc_uint8* data, int size);
