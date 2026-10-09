@@ -8,7 +8,7 @@ WARN := -std=c89 -Wall -Wextra -Werror -Wshadow -Wconversion
 CORE := src/LapisProtocol.c src/LapisSession.c src/LapisWorld.c src/LapisGameplay.c src/LapisEntities.c src/LapisEffects.c src/LapisText.c src/LapisSigns.c src/LapisMining.c
 IDENTITY := src/LapisIdentity.c build/md5.o build/dec32le.o build/enc32le.o
 
-.PHONY: all test sanitize probe integration survival progression travel native-smoke engine-prepare native terminal windows package clean
+.PHONY: all test sanitize probe integration survival progression travel native-smoke engine-prepare native terminal windows web web-test package clean
 all: test probe
 build:
 	mkdir -p build
@@ -53,8 +53,17 @@ terminal:
 windows:
 	$(PYTHON) tools/prepare_engine.py --mode windows
 	$(MAKE) -C build/engine -f misc/makefiles/windows.mk TARGET=LapisCube BUILD_DIR=build/lapiscube-windows JOBS=$(ENGINE_JOBS) RELEASE=1 CC=x86_64-w64-mingw32-gcc WINDRES=x86_64-w64-mingw32-windres
+web:
+	$(PYTHON) tools/prepare_engine.py --mode web
+	$(MAKE) -C build/engine -f ../../web/build.mk RELEASE=1 -j$(ENGINE_JOBS)
+	$(PYTHON) tools/package_web.py
 package:
 	$(PYTHON) tools/package.py
 	$(PYTHON) tools/check_package.py build/LapisCube-linux.zip
 clean:
 	rm -rf build
+
+web-test: probe build/survival-fixture
+	$(CC) -std=c11 -Wall -Wextra -Werror -I../../include tests/web_host.c -o build/web-host-test
+	./build/web-host-test
+	$(PYTHON) tests/web_transport.py

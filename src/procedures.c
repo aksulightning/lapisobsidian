@@ -1,3 +1,4 @@
+#include "webclient.h"
 #include "plates.h"
 #include "fluids.h"
 #include "items.h"
@@ -233,11 +234,15 @@ void disconnectClient (int *client_fd, int cause) {
   client_count --;
   setClientState(*client_fd, STATE_NONE);
   handlePlayerDisconnect(*client_fd);
+  int transport_owned = 0;
+  #if defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1
+  transport_owned = webclient_disconnect(*client_fd);
+  #endif
   #ifdef _WIN32
-  closesocket(*client_fd);
+  if (!transport_owned) closesocket(*client_fd);
   printf("Disconnected client %d, cause: %d, errno: %d\n", *client_fd, cause, WSAGetLastError());
   #else
-  close(*client_fd);
+  if (!transport_owned) close(*client_fd);
   printf("Disconnected client %d, cause: %d, errno: %d\n\n", *client_fd, cause, errno);
   #endif
   *client_fd = -1;

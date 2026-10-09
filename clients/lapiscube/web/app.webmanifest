@@ -1,0 +1,6 @@
+{
+  "name": "LapisCube", "short_name": "LapisCube", "start_url": "./",
+  "scope": "./", "display": "fullscreen", "orientation": "landscape",
+  "background_color": "#122c38", "theme_color": "#122c38",
+  "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml"}]
+}

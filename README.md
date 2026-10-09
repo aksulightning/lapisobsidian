@@ -201,3 +201,10 @@ Farm state persists in `farming.bin`. Animals and mobs have nearby ambient,
 hurt and death sounds using the client's own resources.
 
 See [farming, controls, recipes and limits](docs/farming-and-controls.md).
+
+### Optional LapisCube web client
+
+On `testing-cube`, `LAPIS_ENABLE_WEBCLIENT=1 ./build.sh` also builds and bundles
+the C/WebAssembly LapisCube client and enables HTTP/WebSocket hosting on port 8080.
+Desktop keyboard/mouse and landscape fullscreen touch controls are included.
+The default build contains no web host. See [build and hosting instructions](clients/lapiscube/docs/web.md).

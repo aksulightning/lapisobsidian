@@ -1,0 +1,2 @@
+# Patches preserve the pinned upstream CRLF and context indentation exactly.
+clients/lapiscube/patches/*.patch -text -whitespace

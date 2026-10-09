@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#122c38">
+  <title>LapisCube</title>
+  <link rel="manifest" href="app.webmanifest">
+  <link rel="stylesheet" href="web.css">
+</head>
+<body>
+  <main id="canvas_wrapper">
+    <canvas id="canvas" tabindex="-1" aria-label="LapisCube game"></canvas>
+    <div id="touch" hidden>
+      <nav id="toolbar" aria-label="Game controls">
+        <button data-action="9">Bag</button><button data-action="11">Chat</button>
+        <button data-action="10">Drop</button><button data-action="12">Menu</button>
+        <button data-action="13" id="respawn" hidden>Respawn</button>
+      </nav>
+      <div id="walk" class="world-controls" aria-label="Movement">
+        <button data-action="0" aria-label="Forward">▲</button>
+        <button data-action="1" aria-label="Left">◀</button>
+        <button data-action="2" aria-label="Back">▼</button>
+        <button data-action="3" aria-label="Right">▶</button>
+      </div>
+      <div id="actions" class="world-controls">
+        <button data-action="7">Mine / hit</button><button data-action="8">Use</button>
+        <button data-action="4">Jump</button><button data-action="5">Sneak</button>
+        <button data-action="6">Sprint</button><button data-action="14">Fly</button>
+        <button data-action="15">Up</button><button data-action="16">Down</button>
+      </div>
+      <div id="inventory-tools" hidden>
+        <button data-mode="0" aria-pressed="true">Stack</button>
+        <button data-mode="1" aria-pressed="false">One / split</button>
+        <button data-mode="2" aria-pressed="false">Transfer</button>
+        <button data-action="13">Enter</button><button data-action="12">Close</button>
+      </div>
+    </div>
+    <section id="gate" aria-live="polite">
+      <div class="card">
+        <span class="brand">LAPIS OBSIDIAN</span><h1>LapisCube</h1>
+        <p id="instruction">Explore, build and survive together.</p>
+        <form id="join">
+          <label for="username">Player name</label>
+          <input id="username" name="username" autocomplete="nickname" minlength="1" maxlength="15" pattern="[A-Za-z0-9_]+" value="CubePlayer" required>
+          <button id="play" type="submit">Play</button>
+        </form>
+        <button id="resume" hidden>Enter fullscreen &amp; resume</button>
+        <p id="logmsg" role="status"></p>
+        <details><summary>Controls &amp; requirements</summary>
+          <p>Desktop: WASD, mouse look, left click to mine or hit, right click to use, Space to jump, B for inventory, G to drop, T to chat. Ctrl sneaks; Shift sprints. Z toggles permitted flight, Q/E move up/down.</p>
+          <p>Touch: hold the movement and action buttons; drag the world to look. Tap the hotbar to select. Bag opens inventory; choose Stack, One / split or Transfer before tapping a slot.</p>
+          <p>Touch play requires landscape and fullscreen. If fullscreen is unavailable, add this page to your home screen and open it as an app. Rotate the device manually if orientation lock is unavailable.</p>
+        </details>
+        <a href="NOTICE.md" target="_blank" rel="noopener">Open source &amp; asset credits</a>
+      </div>
+    </section>
+  </main>
+  <script src="web.js"></script>
+</body>
+</html>

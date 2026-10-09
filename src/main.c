@@ -1,4 +1,5 @@
 #include "plates.h"
+#include "webclient.h"
 #include "fluids.h"
 #include "items.h"
 #include "server_config.h"
@@ -570,6 +571,10 @@ int main (int argc, char **argv) {
   }
   printf("Server listening on port %u...\n", (unsigned)server_config.port);
 
+  #if defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1
+  if (!webclient_start()) { fputs("Cannot start optional web host\n",stderr); return EXIT_FAILURE; }
+  #endif
+
   // Make the socket non-blocking
   // This is necessary to not starve the idle task during slow connections
   #ifdef _WIN32
@@ -607,10 +612,16 @@ int main (int argc, char **argv) {
     server_console_poll(&console,stdout);
     if (console.stop) break;
 
+    #if defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1
+    webclient_poll(get_program_time());
+    #endif
     // Attempt to accept a new connection
     for (int i = 0; i < MAX_PLAYERS; i ++) {
       if (clients[i] != -1) continue;
       clients[i] = accept(server_fd, (struct sockaddr *)&client_addr, &addr_len);
+      #if defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1
+      if (clients[i] == -1) clients[i] = webclient_accept();
+      #endif
       // If the accept was successful, make the client non-blocking too
       if (clients[i] != -1) {
         printf("New client, fd: %d\n", clients[i]);
@@ -680,6 +691,9 @@ int main (int argc, char **argv) {
     plates_select_for_fd(clients[i]);
     disconnectClient(&clients[i],0);
   }
+  #if defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1
+  webclient_stop();
+  #endif
   bool saved = true;
   for (unsigned plate = 0; plate < (plates_enabled ? PLATE_LIMIT : 1u); plate++) {
     if (plates_enabled && !plates_is_loaded(plate)) continue;

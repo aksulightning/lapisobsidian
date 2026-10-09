@@ -47,5 +47,16 @@ flags=(-O2 -Wall -Wextra)
 if [[ "${DEBUG:-0}" == 1 ]]; then
   flags=(-O1 -g -Wall -Wextra -Wconversion -Wshadow -fsanitize=address,undefined -fno-omit-frame-pointer)
 fi
+# Hosting is absent from the default binary. Setting this at runtime cannot
+# enable it. A web-enabled build also produces a redistributable local bundle.
+if [[ "${LAPIS_ENABLE_WEBCLIENT:-0}" == 1 ]]; then
+  if [[ -n "${LAPIS_WEBCLIENT_PREBUILT:-}" ]]; then
+    python3 clients/lapiscube/tools/install_web.py "$LAPIS_WEBCLIENT_PREBUILT" webclient
+  else
+    make -C clients/lapiscube web
+    python3 clients/lapiscube/tools/install_web.py clients/lapiscube/build/webclient webclient
+  fi
+  flags+=(-DLAPIS_ENABLE_WEBCLIENT=1)
+fi
 # Disable contraction so density vectors do not depend on FMA availability.
 "$compiler" src/*.c "${flags[@]}" -ffp-contract=off -Iinclude -o "lapis-obsidian$exe" $windows_linker -lm

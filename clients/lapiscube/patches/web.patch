@@ -1,0 +1,217 @@
+--- a/src/webclient/interop_web.js
++++ b/src/webclient/interop_web.js
+@@ -196,7 +196,7 @@
+   interop_AsyncDownloadTexturePack__deps: ['fetchTexturePackAsync'],
+   interop_AsyncDownloadTexturePack: function (rawPath) {
+     var path = UTF8ToString(rawPath);
+-    var url  = '/static/default.zip';
++    var url  = 'default.zip';
+     Module.setStatus('Downloading textures.. (1/2)');
+     
+     _fetchTexturePackAsync(url, 
+@@ -204,9 +204,7 @@
+         CCFS.writeFile(path, new Uint8Array(buffer));
+         _interop_callVoidFunc('main_phase1');
+       },
+-      function() {
+-        _interop_callVoidFunc('main_phase1');
+-      }
++      function() { Module.setStatus('Texture download failed. Reload to retry.'); }
+     );
+   },
+   interop_AsyncLoadIndexedDB__deps: ['IDBFS_loadFS'],
+@@ -216,6 +214,9 @@
+     _IDBFS_loadFS(function(err) { 
+       if (err) window.cc_idbErr = err;
+       Module.setStatus('');
++      if (!CCFS.entries[CCFS.resolvePath('options.txt')]) {
++        CCFS.writeFile('options.txt', new TextEncoder().encode('fpslimit=Limit60FPS\nviewdist=64\nsoundsvolume=70\nmusicvolume=0\nuse-chat-font=true\n'));
++      }
+       _interop_callVoidFunc('main_phase2');
+     });
+   },
+@@ -417,7 +418,7 @@
+ 
+     var req;
+     try {
+-      req = idb.open('/classicube', IDBFS_DB_VERSION);
++      req = idb.open('/lapiscube', IDBFS_DB_VERSION);
+     } catch (e) {
+       return callback(e);
+     }
+@@ -571,6 +572,7 @@
+     var sock = {
+       error: null, // Used by interop_SocketWritable
+       recv_queue: [],
++      queuedBytes: 0,
+       socket: null,
+     };
+ 
+@@ -595,7 +597,8 @@
+       var proto = _interop_IsHttpsOnly() ? 'wss://' : 'ws://';
+       var url   = proto + parts[0] + ":" + port + "/" + parts.slice(1).join('/');
+       
+-      ws = new WebSocket(url, 'ClassiCube');
++      url = Module['lapisSocketURL'] || url;
++      ws = new WebSocket(url, Module['lapisSocketURL'] ? 'LapisCube' : 'ClassiCube');
+       ws.binaryType = 'arraybuffer';
+     } catch (e) {
+       return SOCKETS.EHOSTUNREACH;
+@@ -620,6 +623,10 @@
+           data = new Uint8Array(data); // make a typed array view on the array buffer
+         }
+       }
++      if (sock.queuedBytes + data.byteLength > 4*1024*1024 || sock.recv_queue.length >= 4096) {
++        sock.error=SOCKETS.ECONNRESET; sock.recv_queue=[]; sock.queuedBytes=0; ws.close(1009,'Receive limit'); return;
++      }
++      sock.queuedBytes += data.byteLength;
+       sock.recv_queue.push(data);
+     };
+     ws.onerror = function(error) {
+@@ -638,6 +645,7 @@
+       sock.socket.close();
+     } catch (e) {
+     }
++    sock.recv_queue=[]; sock.queuedBytes=0;
+     delete sock.socket;
+     return 0;
+   },
+@@ -652,6 +660,7 @@
+       return SOCKETS.EAGAIN;
+     }
+ 
++    if (ws.bufferedAmount > 256*1024) return SOCKETS.EAGAIN;
+     // var data = HEAP8.slice(src, src + length); unsupported in IE11
+     var data = new Uint8Array(length);
+     for (var i = 0; i < length; i++) {  
+@@ -696,6 +705,7 @@
+       sock.recv_queue.unshift(packet);
+     }
+ 
++    sock.queuedBytes -= bytesRead;
+     HEAPU8.set(msg, dst);
+     return msg.byteLength;
+   },
+@@ -733,9 +743,9 @@
+     // Create wrapper div if necessary (so input textbox shows in fullscreen on android)
+     var agent  = navigator.userAgent;  
+     var canvas = Module['canvas'];
+-    window.cc_container = document.body;
+-
+-    if (/Android/i.test(agent)) {
++    window.cc_container = canvas.parentNode;
++
++    if (false) { // LapisCube already has a fullscreen container.
+       var wrapper = document.createElement("div");
+       wrapper.id  = 'canvas_wrapper';
+ 
+@@ -1028,6 +1038,8 @@
+       // source -> gain -> output
+       src.source.connect(src.gain);
+       src.gain.connect(AUDIO.context.destination);
++      src.playing=true;
++      src.source.onended=function(){src.playing=false;};
+       src.source.start();
+       return 0;
+     } catch (err) {
+@@ -1037,7 +1049,7 @@
+   interop_AudioPlay__deps: ['interop_AudioDownload'],
+   interop_AudioDownload: function(name) {
+     var xhr = new XMLHttpRequest();
+-    xhr.open('GET', '/static/sounds/' + name + '.wav', true);   
++    xhr.open('GET', 'sounds/' + name + '.wav', true);   
+     xhr.responseType = 'arraybuffer';
+     
+     xhr.onload = function() {
+--- a/src/webclient/Window_Web.c
++++ b/src/webclient/Window_Web.c
+@@ -17,6 +17,7 @@
+ extern int interop_ScreenHeight(void);
+ 
+ static cc_bool keyboardOpen, needResize;
++static cc_bool LapisTouch(void) { return EM_ASM_INT({return !!Module["lapisTouch"];}); }
+ static int RawDpiScale(int x)    { return (int)(x * emscripten_get_device_pixel_ratio()); }
+ static int GetScreenWidth(void)  { return RawDpiScale(interop_ScreenWidth()); }
+ static int GetScreenHeight(void) { return RawDpiScale(interop_ScreenHeight()); }
+@@ -274,7 +275,7 @@
+ static EM_BOOL OnKeyDown(int type, const EmscriptenKeyboardEvent* ev, void* data) {
+ 	int key = MapNativeKey(ev->keyCode, ev->location);
+ 	/* iOS safari still sends backspace key events, don't intercept those */
+-	if (key == CCKEY_BACKSPACE && Input_TouchMode && keyboardOpen) return false;
++	if (key == CCKEY_BACKSPACE && LapisTouch() && keyboardOpen) return false;
+ 	
+ 	if (key) Input_SetPressed(key);
+ 	DeferredEnableRawMouse();
+@@ -316,7 +317,7 @@
+ 	/* - This causes problems such as attempting to backspace all text later to */
+ 	/*   not actually backspace everything. (because the HTML text input does not */
+ 	/*   have these intercepted key presses in its text buffer) */
+-	if (Input_TouchMode && keyboardOpen) return false;
++	if (LapisTouch() && keyboardOpen) return false;
+ 
+ 	/* Safari on macOS still sends a keypress event, which must not be cancelled */
+ 	/*  (otherwise copy/paste doesn't work, as it uses Win+C / Win+V) */
+@@ -394,14 +395,15 @@
+ 
+ 	Input.Sources = INPUT_SOURCE_NORMAL;
+ 
+-	DisplayInfo.ScaleX = emscripten_get_device_pixel_ratio();
++	DisplayInfo.ScaleX = 1;
+ 	DisplayInfo.ScaleY = DisplayInfo.ScaleX;
+ 	interop_AddClipboardListeners();
+ 
+ 	droid  = interop_IsAndroid();
+ 	is_ios = interop_IsIOS();
+-	Input_SetTouchMode(is_ios || droid);
+-	Gui_SetTouchUI(is_ios || droid);
++	/* LapisCube supplies multi-pointer touch controls around the C canvas. */
++	Input_SetTouchMode(false);
++	Gui_SetTouchUI(false);
+ 
+ 	/* iOS shifts the whole webpage up when opening chat, which causes problems */
+ 	/*  as the chat/send butons are positioned at the top of the canvas - they */
+@@ -410,7 +412,7 @@
+ 	Window_Main.SoftKeyboard = is_ios ? SOFT_KEYBOARD_SHIFT : SOFT_KEYBOARD_RESIZE;
+ 
+ 	/* Let the webpage know it needs to force a mobile layout */
+-	if (!Input_TouchMode) return;
++	if (!LapisTouch()) return;
+ 	interop_ForceTouchPageLayout();
+ }
+ 
+@@ -471,7 +473,7 @@
+ 
+ 	/* If text input is active, then let it handle pasting text */
+ 	/*  (otherwise text gets pasted twice on mobile) */
+-	if (Input_TouchMode && keyboardOpen) pasteStr.length = 0;
++	if (LapisTouch() && keyboardOpen) pasteStr.length = 0;
+ 	
+ 	String_Copy(value, &pasteStr);
+ 	pasteStr.length = 0;
+@@ -712,7 +714,7 @@
+ void OnscreenKeyboard_Open(struct OpenKeyboardArgs* args) {
+ 	char str[NATIVE_STR_LEN];
+ 	keyboardOpen = true;
+-	if (!Input_TouchMode) return;
++	if (!LapisTouch()) return;
+ 
+ 	String_EncodeUtf8(str, args->text);
+ 	Platform_LogConst("OPEN SESAME");
+@@ -722,7 +724,7 @@
+ 
+ void OnscreenKeyboard_SetText(const cc_string* text) {
+ 	char str[NATIVE_STR_LEN];
+-	if (!Input_TouchMode) return;
++	if (!LapisTouch()) return;
+ 
+ 	String_EncodeUtf8(str, text);
+ 	interop_SetKeyboardText(str);
+@@ -730,7 +732,7 @@
+ 
+ void OnscreenKeyboard_Close(void) {
+ 	keyboardOpen = false;
+-	if (!Input_TouchMode) return;
++	if (!LapisTouch()) return;
+ 	interop_CloseKeyboard();
+ }
+ 

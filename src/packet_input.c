@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #endif
 #include "packet_input.h"
+#include "webclient.h"
 
 /* One shared frame, no per-client payload allocation or per-packet heap churn. */
 static uint8_t frame[PACKET_INPUT_LIMIT+3u];
@@ -22,6 +23,9 @@ static bool would_block (void) {
 #endif
 }
 static int receive (int fd, size_t size, int flags) {
+#if defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1
+  if (webclient_has(fd)) return webclient_recv(fd,frame,size,flags == MSG_PEEK);
+#endif
 #ifdef _WIN32
   return recv(fd,(char *)frame,(int)size,flags);
 #else

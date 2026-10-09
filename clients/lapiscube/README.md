@@ -163,3 +163,11 @@ The offline, uncompressed server profile rejects encryption, compression,
 unexpected registry NBT and unsupported configuration semantics explicitly.
 No server security checks have been relaxed. Offline UUIDs are deterministic
 identities, not authentication. See the matrix for exact coverage.
+
+## WebAssembly browser client
+
+Build the C client for desktop browsers and landscape fullscreen touch play with
+`make web` (Emscripten 4.0.23). From the repository root,
+`LAPIS_ENABLE_WEBCLIENT=1 ./build.sh` builds the browser package and optional HTTP /
+WebSocket host. The default server build remains TCP-only. See
+[web build and hosting](docs/web.md) for packaging, HTTPS, controls and tests.

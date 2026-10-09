@@ -15,6 +15,8 @@
 #include <string.h>
 
 static struct Screen inventoryScreen, signScreen;
+static int touchClickMode;
+void LapisGui_TouchClickMode(int mode) { touchClickMode=mode>=0 && mode<=2?mode:0; }
 static char signLines[4][97];
 static int signLine,signDirty[4];
 static struct FontDesc font;
@@ -119,10 +121,10 @@ static void Click(int right) {
     struct LapisGameplay* g=LapisBackend_Gameplay();
     if(!g->window && g->refreshMask && hover>=0 && hover<=4)return;
     if(hover>=0 && hover<Slots())
-        LapisGameplay_Click(LapisBackend_Gameplay(),LapisBackend_Protocol(),hover,right,Input_IsShiftPressed());
+        LapisGameplay_Click(LapisBackend_Gameplay(),LapisBackend_Protocol(),hover,right,Input_IsShiftPressed() || touchClickMode==2);
 }
 static int PointerDown(void* s,int id,int x,int y) {
-    PointerMove(s,id,x,y);Click(0);return true;
+    PointerMove(s,id,x,y);Click(touchClickMode==1);return true;
 }
 static int KeyDown(void* s,int key,struct InputDevice* device) {
     struct LapisGameplay* g=LapisBackend_Gameplay();struct LapisProtocol* p=LapisBackend_Protocol();(void)s;
@@ -233,14 +235,32 @@ static int SignChar(void* screen,char key) {
     return true;
 }
 static int SignText(void* screen,const cc_string* value) {
-    int i;for(i=0;i<value->length;i++)SignChar(screen,value->buffer[i]);return true;
+    int i;
+#ifdef CC_BUILD_WEB
+    signLines[signLine][0]=0;signDirty[signLine]=1;
+#endif
+    for(i=0;i<value->length;i++)SignChar(screen,value->buffer[i]);return true;
 }
 static int SignPointer(void* screen,int id,int x,int y) {
     (void)screen;(void)id;
-    if(x>=left && x<left+signWidth && y>=top+28 && y<top+148)signLine=(y-top-28)/30;
+    if(x>=left && x<left+signWidth && y>=top+28 && y<top+148) {
+        signLine=(y-top-28)/30;
+#ifdef CC_BUILD_WEB
+        {
+            struct OpenKeyboardArgs args;cc_string text=String_FromReadonly(signLines[signLine]);
+            OpenKeyboardArgs_Init(&args,&text,KEYBOARD_TYPE_TEXT);
+            args.placeholder="Sign line";OnscreenKeyboard_Open(&args);
+        }
+#endif
+    }
     return true;
 }
-static void SignFree(void* screen) { (void)screen;LapisBackend_Signs()->editing=0; }
+static void SignFree(void* screen) {
+    (void)screen;LapisBackend_Signs()->editing=0;
+#ifdef CC_BUILD_WEB
+    OnscreenKeyboard_Close();
+#endif
+}
 static int SignMove(void* screen,int id,int x,int y) { (void)screen;(void)id;(void)x;(void)y;return true; }
 static const struct ScreenVTABLE signTable={
     Empty,Update,SignFree,SignRender,Empty,SignDown,Screen_InputUp,SignChar,SignText,

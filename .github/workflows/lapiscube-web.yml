@@ -1,0 +1,64 @@
+name: LapisCube web client
+on:
+  push:
+    branches: [testing-cube]
+    paths: ['clients/lapiscube/**', 'src/**', 'include/**', 'build.sh', '.github/workflows/lapiscube-web.yml']
+  pull_request:
+    paths: ['clients/lapiscube/**', 'src/**', 'include/**', 'build.sh', '.github/workflows/lapiscube-web.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Install Emscripten and browser test tools
+        run: |
+          git clone --depth 1 --branch 4.0.23 https://github.com/emscripten-core/emsdk.git clients/lapiscube/build/emsdk
+          clients/lapiscube/build/emsdk/emsdk install 4.0.23
+          clients/lapiscube/build/emsdk/emsdk activate 4.0.23
+          python3 -m pip install playwright==1.51.0
+          python3 -m playwright install --with-deps chromium
+      - name: Build default and opt-in servers
+        run: |
+          ./build.sh
+          cp lapis-obsidian clients/lapiscube/build/default-server
+          source clients/lapiscube/build/emsdk/emsdk_env.sh
+          LAPIS_ENABLE_WEBCLIENT=1 ./build.sh
+          cp lapis-obsidian clients/lapiscube/build/web-server
+          cp clients/lapiscube/build/default-server lapis-obsidian
+      - name: Protocol, malformed input and transport acceptance
+        run: |
+          make -C clients/lapiscube test web-test
+          gcc -std=c11 -Wall -Wextra -Werror -Iinclude -fsanitize=address,undefined -fno-pie -no-pie clients/lapiscube/tests/web_host.c -o clients/lapiscube/build/web-host-sanitize
+          clients/lapiscube/build/web-host-sanitize
+      - name: Desktop and touch browser acceptance
+        run: python3 clients/lapiscube/tests/web_browser.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: LapisCube-web
+          path: clients/lapiscube/build/LapisCube-web.zip
+      - name: Bundle optional Linux host
+        run: |
+          mkdir -p clients/lapiscube/build/LapisCube-web-server
+          cp clients/lapiscube/build/web-server clients/lapiscube/build/LapisCube-web-server/lapis-obsidian
+          cp -r webclient clients/lapiscube/build/LapisCube-web-server/
+          cp LICENSE clients/lapiscube/build/LapisCube-web-server/LICENSE-server
+          cp clients/lapiscube/docs/web.md clients/lapiscube/build/LapisCube-web-server/README.md
+          tar -C clients/lapiscube/build -czf clients/lapiscube/build/LapisCube-web-server-linux.tar.gz LapisCube-web-server
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: LapisCube-web-server-linux
+          path: clients/lapiscube/build/LapisCube-web-server-linux.tar.gz
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: LapisCube-web-evidence
+          path: |
+            clients/lapiscube/build/web-evidence
+            clients/lapiscube/build/web-transport-results.json
+            clients/lapiscube/build/web-probe-*.log

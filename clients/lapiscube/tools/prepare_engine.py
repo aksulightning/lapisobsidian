@@ -13,7 +13,7 @@ PIN = 'd41c3f7eef2038f59702b58bdb373483fb0d28f9'
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', choices=['native', 'terminal', 'windows'], default='native')
+    parser.add_argument('--mode', choices=['native', 'terminal', 'windows', 'web'], default='native')
     mode = parser.parse_args().mode
     head = subprocess.check_output(['git', '-C', str(UPSTREAM), 'rev-parse', 'HEAD'], text=True).strip()
     if head != PIN:
@@ -33,6 +33,9 @@ def main():
         shutil.copy2(path, DEST / 'src' / path.name)
     subprocess.run(['patch', '-p1', '--binary', '--forward', '-i', str(ROOT / 'patches' / 'engine.patch')],
                    cwd=DEST, check=True)
+    if mode == 'web':
+        subprocess.run(['patch', '-p1', '--binary', '--forward', '-i', str(ROOT/'patches/web.patch')],
+                       cwd=DEST, check=True)
     subprocess.run(['python3', str(ROOT/'tools/package.py'), '--stage-only'], check=True)
     stamp.write_text(build_key)
 

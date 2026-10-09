@@ -330,8 +330,10 @@ static void Begin(void) {
     if (res || !count) { Disconnect("Could not resolve Lapis address"); return; }
     res = Socket_Create(&connection, &addresses[0]);
     if (res) { Disconnect("Could not create TCP socket"); return; }
+#ifndef CC_BUILD_WEB
     res = Socket_SetNonBlocking(connection, true);
     if (res) { Disconnect("Could not enable nonblocking TCP"); return; }
+#endif
     res = Socket_Connect(connection, addresses[0].data, addresses[0].size);
     if (res && res != ReturnCode_SocketInProgess && res != ReturnCode_SocketWouldBlock) {
         Disconnect("Could not connect to Lapis server"); return;

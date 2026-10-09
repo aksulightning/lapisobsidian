@@ -3,13 +3,39 @@
 #include <math.h>
 #include <string.h>
 
+#ifdef CC_BUILD_WEB
+#include <emscripten.h>
+/* WebAudio buffers hold the same original synthesized PCM as the native port. */
+EM_JS(void,PlayPCM,(int voice,const void* samples,int count,int rate,int volume),{
+    var ctx=window.AUDIO && AUDIO.context;if(!ctx)return;
+    var bank=Module.lapisSounds || (Module.lapisSounds={buffers:[],active:0});
+    if(bank.active>=16)return;
+    var buffer=bank.buffers[voice];
+    if(!buffer) {
+        buffer=ctx.createBuffer(1,count,22050);var dst=buffer.getChannelData(0);
+        for(var i=0;i<count;i++)dst[i]=HEAP16[(samples>>1)+i]/32768;
+        bank.buffers[voice]=buffer;
+    }
+    var src=ctx.createBufferSource(),gain=ctx.createGain();
+    src.buffer=buffer;src.playbackRate.value=Math.max(.05,rate/100);
+    gain.gain.value=volume/100;src.connect(gain);gain.connect(ctx.destination);
+    bank.active++;src.onended=function(){bank.active--;src.disconnect();gain.disconnect();};src.start();
+});
+#endif
 #define SAMPLES 11025
+#ifdef CC_BUILD_WEB
+static cc_int16 pcm[8][SAMPLES];
+#endif
 static struct AudioChunk bank[8];
 static int allocated;
 static int Init(void) {
     int i,j;cc_int16* samples;double t,signal,envelope;cc_uint32 noise=772;
     if(allocated)return 1;
+#ifdef CC_BUILD_WEB
+    for(j=0;j<8;j++) { bank[j].data=pcm[j];bank[j].size=SAMPLES*2; }
+#else
     if(Audio_AllocChunks(SAMPLES*2,bank,8))return 0;
+#endif
     for(j=0;j<8;j++) {
         samples=(cc_int16*)bank[j].data;
         for(i=0;i<SAMPLES;i++) {
@@ -26,7 +52,10 @@ static int Init(void) {
 }
 void LapisAudio_Free(void) {
     if(!allocated)return;
-    AudioPool_Close();Audio_FreeChunks(bank,8);memset(bank,0,sizeof(bank));allocated=0;
+#ifndef CC_BUILD_WEB
+    AudioPool_Close();Audio_FreeChunks(bank,8);
+#endif
+    memset(bank,0,sizeof(bank));allocated=0;
 }
 void LapisAudio_Play(const struct LapisSoundEvent* s,double x,double y,double z) {
     struct AudioData data;double distance;int voice=3;float gain;
@@ -45,5 +74,9 @@ void LapisAudio_Play(const struct LapisSoundEvent* s,double x,double y,double z)
     else if(strstr(s->name,"water") || strstr(s->name,"lava"))voice=7;
     memset(&data,0,sizeof(data));data.chunk=bank[voice];data.channels=1;data.sampleRate=22050;
     data.rate=(int)(s->pitch*100);data.volume=(int)(Audio_SoundsVolume*(gain>1?1:gain));
+#ifdef CC_BUILD_WEB
+    PlayPCM(voice,data.chunk.data,SAMPLES,data.rate,data.volume);
+#else
     AudioPool_Play(&data);
+#endif
 }
