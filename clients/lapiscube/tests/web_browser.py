@@ -89,11 +89,21 @@ def main():
                             page.wait_for_timeout(700)
                             look={'x':410,'y':140,'id':4}
                             yaw=outbound.positions()[-1][3]
+                            page.evaluate('''() => {
+                              window.lookTrace=[];
+                              for(const type of ['pointerdown','pointermove','pointerup','pointercancel'])
+                                canvas.addEventListener(type,e=>lookTrace.push([type,e.offsetX,e.offsetY,e.pointerType,menu,blocked,pointers.size]));
+                              const look=Module._LapisWeb_Look;
+                              Module._LapisWeb_Look=(x,y)=>{lookTrace.push(['C look',x,y]);look(x,y);};
+                            }''')
                             cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[look]})
+                            page.wait_for_timeout(80)
                             cdp.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{**look,'x':455,'y':155}]})
+                            page.wait_for_timeout(120)
                             cdp.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
                             page.wait_for_timeout(300)
-                            assert abs(outbound.positions()[-1][3]-yaw)>1,'Touch drag must turn the C camera'
+                            assert abs(outbound.positions()[-1][3]-yaw)>1,('Touch drag must turn the C camera',yaw,
+                                outbound.positions()[-1],page.evaluate('({trace:lookTrace,rect:canvas.getBoundingClientRect().toJSON(),state:Module._LapisWeb_State()})'))
                             page.locator('#toolbar [data-action="9"]').tap()
                         else:
                             page.keyboard.down('w');page.keyboard.down('Space');page.wait_for_timeout(450)
@@ -147,14 +157,13 @@ def main():
                         page.screenshot(path=str(EVIDENCE/f'{label}-last.png'))
                         (EVIDENCE/f'{label}.log').write_text('\n'.join(messages+errors)+'\n')
                         (EVIDENCE/f'{label}-wire.json').write_text(json.dumps({'sent':[p.hex() for p in outbound.packets],'received_ids':[p[0] for p in inbound.packets if p]},indent=2))
+                        if os.environ.get('LAPIS_WEB_REVIEW_IMAGES')=='1':
+                            for name in (f'{label}-world.png',f'{label}-inventory.png',f'{label}-portrait-gate.png'):
+                                if (EVIDENCE/name).exists():
+                                    print('LAPISCUBE_SCREENSHOT '+name+' '+base64.b64encode((EVIDENCE/name).read_bytes()).decode(),flush=True)
                         context.close()
                 browser.close()
                 (EVIDENCE/'results.json').write_text(json.dumps(outcomes,indent=2)+'\n');print(outcomes)
-                # Optional log transport for reviewing CI images in restricted agents
-                # whose artifact-download surface cannot expose binary files.
-                if os.environ.get('LAPIS_WEB_REVIEW_IMAGES')=='1':
-                    for name in ('desktop-world.png','touch-world.png','touch-inventory.png','touch-portrait-gate.png'):
-                        print('LAPISCUBE_SCREENSHOT '+name+' '+base64.b64encode((EVIDENCE/name).read_bytes()).decode(),flush=True)
         finally:
             server.terminate();server.wait(5)
 
