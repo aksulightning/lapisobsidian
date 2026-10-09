@@ -1,0 +1,1 @@
+export const originalTiles=["fallback","water","magma","frost","soot","blue","copper","amber","crystal","ember","gateway","plaque","bench","box","clay","sprout","bloom","grain","tool","blade","bow","morsel","vessel","mineral","explorer","grazer","crawler","spirit","mote","panel","button","heart","food"];

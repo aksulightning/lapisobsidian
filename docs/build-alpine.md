@@ -86,8 +86,8 @@ preservation of an existing output after failure.
 
 These checks ran on an Ubuntu host using musl built locally for verification;
 they are not a native Alpine OS test. No compiler or musl sources are included
-in Lapis Obsidian. ARM64 and RISC-V builds/runtime have not been exercised in
-this environment; native validation on those machines remains required. Existing
+in Lapis Obsidian. RISC-V builds and gameplay are checked under QEMU in CI;
+native ARM64/RISC-V hardware validation remains required. Existing
 world/player files use the inherited raw layouts; cross-architecture save-file
 portability is not established by providing a build script.
 
@@ -99,6 +99,31 @@ Sanitizer tests additionally require target sanitizer support. The portable
 Reference: Alpine's [GCC guide](https://wiki.alpinelinux.org/wiki/GCC) documents
 `build-base`; its [package index](https://pkgs.alpinelinux.org/packages?name=build-base)
 provides packages by release and architecture.
+
+## Push and pull-request builds
+
+`.github/workflows/build.yml` builds static musl binaries for AMD64 (`amd64`,
+also called x86-64) and 64-bit RISC-V (`riscv64`) on pushes, pull requests and
+manual runs. Each target has two variants: `native` compiles with
+`LAPIS_OBSIDIAN_WEB_CLIENT=0`; `web` compiles with the value `1` and embeds the
+HTML5 client. Choose the web artifact to use `web-address` and `web-port` from
+`server.txt`; see [web-client setup](web-client.md).
+
+The jobs use `alpine:3.23.6`, running AMD64 directly and RISC-V through QEMU.
+Each verifies static linkage, executes the binary's argument validation, runs
+configuration tests, and checks that web symbols match the selected variant.
+Web variants also run HTTP/WebSocket transport tests and the full live-server
+integration (login, terrain, two players, gameplay and reconnect) on the target
+CPU/emulator, with a longer test deadline for emulated terrain generation.
+The existing Ubuntu jobs retain the full regression/sanitizer, live gameplay
+and Chromium tests. Emulation does not establish performance on RISC-V hardware.
+
+In a successful run's **Artifacts**, select
+`lapis-obsidian-alpine-<amd64|riscv64>-<native|web>`. Each artifact contains a
+binary tarball, the matching source archive, build metadata and SHA-256 checksums.
+Extract the binary tarball to preserve executable permissions. Artifacts are
+retained for 14 days; a failed matrix job does not upload a package or cancel the
+other targets. Builds have a 45-minute timeout and read-only repository access.
 
 ## Nightly GitHub Actions builds
 

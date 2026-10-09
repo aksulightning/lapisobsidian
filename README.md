@@ -22,6 +22,47 @@ Set `CC` to select a compiler. `DEBUG=1 ./build.sh` enables ASan/UBSan and addit
 conversion/shadow diagnostics. The existing MinGW `--9x` build option is retained.
 Embedded ESP-IDF support is inherited and has not been validated by this fork.
 
+## Lapis Obsidian Client
+
+```sh
+LAPIS_OBSIDIAN_WEB_CLIENT=1 ./build.sh
+./lapis-obsidian
+```
+
+**Lapis Obsidian Client** is an independent browser voxel client that connects to
+this server's real protocol-772 gameplay over its embedded WebSocket endpoint.
+It includes textured terrain, desktop/mobile controls, multiplayer, block actions,
+inventory/crafting, chat, original synthesized audio and settings. The client is
+embedded only when compiled with the exact value `1`; a runtime variable cannot
+enable it in a default binary. The C build requires no Node/npm or downloads.
+
+Open **http://localhost:8080/** in a WebGL browser. Configure `web-address` and
+`web-port` in `server.txt`; native clients use `port` (25565 by default). Both
+share the same authoritative world. The menu accepts the server's web address.
+AMD64, ARM64 and RISC-V C builds support the opt-in; desktop and touch browser
+rendering runs on the connecting device, independently of the server CPU.
+
+Separate development/production asset commands (Node 22+, no dependencies):
+
+```sh
+npm --prefix client run build   # client/dist
+npm --prefix client test
+npm --prefix client run dev     # loopback :8081; web-enabled C server on :8080
+```
+
+The client uses selected creator-verified CC0 terrain art and original CC0 pixel
+art/sound designs. Code retains the project's GPL license. It ships no proprietary
+game assets. See [architecture](docs/client-architecture.md),
+[development and controls](docs/client-development.md),
+[protocol coverage and limitations](docs/client-protocol.md),
+[asset provenance](docs/client-asset-sources.md),
+[third-party code](docs/client-third-party-code.md) and
+[license compliance](docs/client-license-compliance.md).
+
+> **Unofficial Project Disclaimer**
+>
+> Lapis Obsidian and Lapis Obsidian Client are independent, community-developed open-source projects. They are not affiliated with, endorsed by, sponsored by, or officially associated with Mojang Studios, Microsoft Corporation, or Minecraft. Minecraft is a trademark of Mojang Studios. All visual and audio assets distributed with Lapis Obsidian Client are independently created or sourced from verified CC0-licensed materials. No proprietary Mojang or Microsoft game assets are included.
+
 ## Configuration
 
 The first startup creates `server.txt` in the working directory. Edit it and
@@ -46,6 +87,11 @@ for toolchain requirements and validation limits. No Java or vanilla JAR is need
 Nightly static binaries for all three targets are configured in
 [GitHub Actions](https://github.com/aksulightning/lapisobsidian/actions/workflows/nightly.yml),
 with tests, source archives and checksums; see the guide for download details.
+The [Build and test workflow](https://github.com/aksulightning/lapisobsidian/actions/workflows/build.yml)
+also builds AMD64 and RISC-V 64-bit on pushes, pull requests and manual runs.
+Download the `native` artifact for a default server, `web2` for the alternative
+client with separate files/licenses, or `web` for the optional
+HTML5 client; each contains a static binary, matching source and checksums.
 
 ## Tests
 
@@ -57,7 +103,7 @@ SANITIZE=1 ./tests/run.sh
 The tests include a source-only build with a restricted PATH that excludes Java
 and JavaScript runtimes. Maintainers can additionally run
 `node build_registries.js` and check that the generated C files have no diff.
-Node is only used for optional snapshot maintenance.
+Node is only used for optional snapshot maintenance and web-client tests.
 
 `node build_registries.js --check` verifies deterministic generation without
 rewriting files. New C modules and unit tests compile with `-Wall -Wextra
@@ -201,3 +247,46 @@ Farm state persists in `farming.bin`. Animals and mobs have nearby ambient,
 hurt and death sounds using the client's own resources.
 
 See [farming, controls, recipes and limits](docs/farming-and-controls.md).
+
+### Alternative js-minecraft client (compile-time mode 2)
+
+`LAPIS_OBSIDIAN_WEB_CLIENT=2` selects **Lapis Obsidian Client**, a separately
+licensed adaptation of LabyStudio/js-minecraft's Three.js renderer, player
+physics and Canvas menus, with a protocol-772 adapter for this server.
+Mode `1` is preserved; default builds have neither client enabled.
+
+```sh
+npm --prefix client2 run build
+LAPIS_OBSIDIAN_WEB_CLIENT=2 ./build.sh
+LAPIS_OBSIDIAN_CLIENT2_DIR="$PWD/client2/dist" ./lapis-obsidian
+```
+
+Open the configured web address (default port 8080), choose Multiplayer and
+connect to that **web** port. The separate client directory must be shipped
+alongside the executable; it is intentionally not embedded in the GPL binary.
+The C build remains independent of Node.js. Modern WebGL desktop browsers are
+supported; use mode 1 for full touch controls. AMD64 and RISC-V server builds
+support both modes.
+
+The adapted upstream code remains **CC BY-NC 4.0 (noncommercial)**, separately
+from the GPL server; see [license boundary](docs/client2-license-compliance.md).
+All unverified upstream textures and sounds are excluded. This mode uses fresh
+original procedural artwork and synthesized audio, and adds no asset repository.
+
+**Unofficial Project Disclaimer:** Lapis Obsidian Client is an independent
+community project, not affiliated with, endorsed by, or associated with Mojang
+Studios, Microsoft, or Minecraft. Minecraft is a trademark of Mojang Studios.
+No proprietary Mojang/Microsoft assets are included.
+
+Documentation: [setup/testing](docs/client2-development.md),
+[architecture](docs/client2-architecture.md), [protocol/limitations](docs/client2-protocol.md),
+[asset provenance](docs/client2-asset-sources.md),
+[third-party code](docs/client2-third-party-code.md),
+[license compliance](docs/client2-license-compliance.md).
+
+Mode 2 survival controls: hold left mouse to mine/attack; hold right mouse to
+use/eat/interact; release to cancel. E opens inventory/crafting (right-click to
+split/place one, Shift-click to transfer), Q drops one item and R respawns after
+death. Animals, drops and projectiles have original procedural models; sounds
+are original synthesized cues, enabled by a click. Validate these paths with
+`node tests/web2_survival.mjs ./lapis-obsidian` after the mode-2 build.

@@ -1,0 +1,62 @@
+/|client/index.html|text/html; charset=utf-8
+/style.css|client/style.css|text/css; charset=utf-8
+/catalog.mjs|@catalog|text/javascript; charset=utf-8
+/src/assets/loader.mjs|client/src/assets/loader.mjs|text/javascript; charset=utf-8
+/src/assets/original-tiles.mjs|client/src/assets/original-tiles.mjs|text/javascript; charset=utf-8
+/src/assets/registry.mjs|client/src/assets/registry.mjs|text/javascript; charset=utf-8
+/src/audio/audio.mjs|client/src/audio/audio.mjs|text/javascript; charset=utf-8
+/src/core/client.mjs|client/src/core/client.mjs|text/javascript; charset=utf-8
+/src/network/protocol.mjs|client/src/network/protocol.mjs|text/javascript; charset=utf-8
+/src/rendering/material.mjs|client/src/rendering/material.mjs|text/javascript; charset=utf-8
+/src/rendering/renderer.mjs|client/src/rendering/renderer.mjs|text/javascript; charset=utf-8
+/src/ui/settings.mjs|client/src/ui/settings.mjs|text/javascript; charset=utf-8
+/src/world/world.mjs|client/src/world/world.mjs|text/javascript; charset=utf-8
+/assets/LICENSE.md|client/public/assets/LICENSE.md|text/plain; charset=utf-8
+/assets/audio/events.json|client/public/assets/audio/events.json|application/json
+/assets/manifest.json|client/public/assets/manifest.json|application/json
+/assets/textures/original/amber.svg|client/public/assets/textures/original/amber.svg|image/svg+xml
+/assets/textures/original/bench.svg|client/public/assets/textures/original/bench.svg|image/svg+xml
+/assets/textures/original/blade.svg|client/public/assets/textures/original/blade.svg|image/svg+xml
+/assets/textures/original/bloom.svg|client/public/assets/textures/original/bloom.svg|image/svg+xml
+/assets/textures/original/blue.svg|client/public/assets/textures/original/blue.svg|image/svg+xml
+/assets/textures/original/bow.svg|client/public/assets/textures/original/bow.svg|image/svg+xml
+/assets/textures/original/box.svg|client/public/assets/textures/original/box.svg|image/svg+xml
+/assets/textures/original/button.svg|client/public/assets/textures/original/button.svg|image/svg+xml
+/assets/textures/original/clay.svg|client/public/assets/textures/original/clay.svg|image/svg+xml
+/assets/textures/original/copper.svg|client/public/assets/textures/original/copper.svg|image/svg+xml
+/assets/textures/original/crawler.svg|client/public/assets/textures/original/crawler.svg|image/svg+xml
+/assets/textures/original/crystal.svg|client/public/assets/textures/original/crystal.svg|image/svg+xml
+/assets/textures/original/ember.svg|client/public/assets/textures/original/ember.svg|image/svg+xml
+/assets/textures/original/explorer.svg|client/public/assets/textures/original/explorer.svg|image/svg+xml
+/assets/textures/original/fallback.svg|client/public/assets/textures/original/fallback.svg|image/svg+xml
+/assets/textures/original/food.svg|client/public/assets/textures/original/food.svg|image/svg+xml
+/assets/textures/original/frost.svg|client/public/assets/textures/original/frost.svg|image/svg+xml
+/assets/textures/original/gateway.svg|client/public/assets/textures/original/gateway.svg|image/svg+xml
+/assets/textures/original/grain.svg|client/public/assets/textures/original/grain.svg|image/svg+xml
+/assets/textures/original/grazer.svg|client/public/assets/textures/original/grazer.svg|image/svg+xml
+/assets/textures/original/heart.svg|client/public/assets/textures/original/heart.svg|image/svg+xml
+/assets/textures/original/magma.svg|client/public/assets/textures/original/magma.svg|image/svg+xml
+/assets/textures/original/mineral.svg|client/public/assets/textures/original/mineral.svg|image/svg+xml
+/assets/textures/original/morsel.svg|client/public/assets/textures/original/morsel.svg|image/svg+xml
+/assets/textures/original/mote.svg|client/public/assets/textures/original/mote.svg|image/svg+xml
+/assets/textures/original/panel.svg|client/public/assets/textures/original/panel.svg|image/svg+xml
+/assets/textures/original/plaque.svg|client/public/assets/textures/original/plaque.svg|image/svg+xml
+/assets/textures/original/soot.svg|client/public/assets/textures/original/soot.svg|image/svg+xml
+/assets/textures/original/spirit.svg|client/public/assets/textures/original/spirit.svg|image/svg+xml
+/assets/textures/original/sprout.svg|client/public/assets/textures/original/sprout.svg|image/svg+xml
+/assets/textures/original/tool.svg|client/public/assets/textures/original/tool.svg|image/svg+xml
+/assets/textures/original/vessel.svg|client/public/assets/textures/original/vessel.svg|image/svg+xml
+/assets/textures/original/water.svg|client/public/assets/textures/original/water.svg|image/svg+xml
+/assets/textures/terrain/bark.png|client/public/assets/textures/terrain/bark.png|image/png
+/assets/textures/terrain/boards.png|client/public/assets/textures/terrain/boards.png|image/png
+/assets/textures/terrain/dune.png|client/public/assets/textures/terrain/dune.png|image/png
+/assets/textures/terrain/foliage.png|client/public/assets/textures/terrain/foliage.png|image/png
+/assets/textures/terrain/frost.png|client/public/assets/textures/terrain/frost.png|image/png
+/assets/textures/terrain/loam.png|client/public/assets/textures/terrain/loam.png|image/png
+/assets/textures/terrain/meadow-edge.png|client/public/assets/textures/terrain/meadow-edge.png|image/png
+/assets/textures/terrain/meadow.png|client/public/assets/textures/terrain/meadow.png|image/png
+/assets/textures/terrain/pane.png|client/public/assets/textures/terrain/pane.png|image/png
+/assets/textures/terrain/pebble.png|client/public/assets/textures/terrain/pebble.png|image/png
+/assets/textures/terrain/rings.png|client/public/assets/textures/terrain/rings.png|image/png
+/assets/textures/terrain/rock.png|client/public/assets/textures/terrain/rock.png|image/png
+/assets/textures/terrain/void.png|client/public/assets/textures/terrain/void.png|image/png

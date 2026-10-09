@@ -26,6 +26,22 @@ static bool decimal (const char *text, unsigned min, unsigned max, uint16_t *out
   if (value < min) return false;
   *out = (uint16_t)value; return true;
 }
+/* Canonical dotted IPv4, matching the server's IPv4 sockets. Reject octal-like
+ * leading zeroes so the validated address cannot be reinterpreted at bind(). */
+static bool web_address_valid (const char *text) {
+  if (strlen(text) > CONFIG_WEB_ADDRESS_MAX) return false;
+  for (unsigned part = 0; part < 4; part++) {
+    const char *start = text; unsigned value = 0, digits = 0;
+    while (*text >= '0' && *text <= '9') {
+      value = value*10+(unsigned)(*text++-'0');
+      if (++digits > 3 || value > 255) return false;
+    }
+    if (!digits || (digits > 1 && *start == '0')) return false;
+    if (part == 3) return *text == 0;
+    if (*text++ != '.') return false;
+  }
+  return false;
+}
 static bool boolean (const char *text, bool *out) {
   if (!strcmp(text,"true")) *out = true;
   else if (!strcmp(text,"false")) *out = false;
@@ -53,12 +69,13 @@ static bool message_valid (const char *text) {
   return true;
 }
 static bool setting (ServerConfig *c, char *line, unsigned *seen) {
-  static const char *const names[] = {"port","motd","gamemode","seed","mirror-horizontal","wheat-growth-seconds","experimental_enable_plates"};
+  static const char *const names[] = {"port","motd","gamemode","seed","mirror-horizontal","wheat-growth-seconds","experimental_enable_plates","web-address","web-port"};
   char *key = trim(line); if (!*key || *key == '#') return true;
   char *value = strchr(key,'='); if (!value) return false;
   *value++ = 0; key = trim(key); value = trim(value);
-  unsigned id = 0; while (id < 7 && strcmp(key,names[id])) id++;
-  if (id == 7 || (*seen&(1u<<id))) return false;
+  const unsigned count = sizeof(names)/sizeof(names[0]);
+  unsigned id = 0; while (id < count && strcmp(key,names[id])) id++;
+  if (id == count || (*seen&(1u<<id))) return false;
   *seen |= 1u<<id;
   switch (id) {
     case 0: return decimal(value,1,65535,&c->port);
@@ -76,6 +93,10 @@ static bool setting (ServerConfig *c, char *line, unsigned *seen) {
     case 4: return boolean(value,&c->mirror_horizontal);
     case 5: return decimal(value,1,600,&c->wheat_growth_seconds);
     case 6: return boolean(value,&c->experimental_enable_plates);
+    case 7:
+      if (!web_address_valid(value)) return false;
+      memcpy(c->web_address,value,strlen(value)+1); return true;
+    case 8: return decimal(value,1,65535,&c->web_port);
     default: return false;
   }
 }
@@ -86,9 +107,11 @@ static bool create_defaults (const char *path, const ServerConfig *c) {
     "# Lapis Obsidian - edit and restart the server to apply changes.\n"
     "# Lines beginning with # are comments. Values are literal, without quotes.\n"
     "port=%u\nmotd=%s\ngamemode=%u\n"
+    "# Used only when compiled with LAPIS_OBSIDIAN_WEB_CLIENT=1 or 2.\n"
+    "web-address=%s\nweb-port=%u\n"
     "# Empty seed uses the saved world seed, or the default for a new world.\n"
     "seed=\nmirror-horizontal=false\nwheat-growth-seconds=%u\nexperimental_enable_plates=false\n",
-    (unsigned)c->port,c->motd,(unsigned)c->gamemode,(unsigned)c->wheat_growth_seconds) >= 0;
+    (unsigned)c->port,c->motd,(unsigned)c->gamemode,c->web_address,(unsigned)c->web_port,(unsigned)c->wheat_growth_seconds) >= 0;
   if (fclose(file)) ok = false;
   return ok;
 }

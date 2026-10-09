@@ -18,14 +18,19 @@ int main (void) {
   remove(path); ServerConfig c;
   assert(server_config_load(path,&c,error,sizeof(error)));
   assert(c.port == PORT && c.gamemode == GAMEMODE && !c.seed_set && c.seed == INITIAL_WORLD_SEED);
+  assert(c.web_port == 8080 && !strcmp(c.web_address,"0.0.0.0"));
   assert(!c.experimental_enable_plates && !c.mirror_horizontal && c.wheat_growth_seconds == 30 && !strcmp(c.motd,"Lapis Obsidian"));
   assert(server_config_load(path,&c,error,sizeof(error))); /* generated file round-trip */
   const char valid[] = " # comment\r\n port = 65535 \r\nmotd=My \"world\" \\ #1 = hyvä\n"
-    "gamemode = creative\nseed=-9223372036854775808\nmirror-horizontal=true\nwheat-growth-seconds=600\nexperimental_enable_plates=true";
+    "web-address=127.0.0.1\nweb-port=65535\ngamemode = creative\nseed=-9223372036854775808\nmirror-horizontal=true\nwheat-growth-seconds=600\nexperimental_enable_plates=true";
   write_bytes(valid,sizeof(valid)-1); assert(server_config_load(path,&c,error,sizeof(error)));
+  assert(c.web_port == 65535 && !strcmp(c.web_address,"127.0.0.1"));
   assert(c.port == 65535 && c.gamemode == 1 && c.seed == UINT64_C(0x8000000000000000) && c.seed_set);
   assert(c.experimental_enable_plates && c.mirror_horizontal && c.wheat_growth_seconds == 600 && !strcmp(c.motd,"My \"world\" \\ #1 = hyvä"));
-  const char *bad[] = {"experimental_enable_plates=yes","experimental_enable_plates=true\nexperimental_enable_plates=false","port=0","port=-1","port=65536","port=9999999999999999999999","port=2x","port=1\nport=2",
+  const char *bad[] = {"web-port=0","web-port=-1","web-port=65536","web-port=6553600000000000000000","web-port=80x","web-port=80\nweb-port=81",
+    "web-address=","web-address=localhost","web-address=::1","web-address=256.0.0.1","web-address=127.1","web-address=127.0.0.1:80",
+    "web-address=127.0.0.1.2","web-address=127..0.1","web-address=127.0.0.","web-address=01.2.3.4","web-address=127.0.0.1/8",
+    "web-address=127.0.0.1\nweb-address=0.0.0.0","experimental_enable_plates=yes","experimental_enable_plates=true\nexperimental_enable_plates=false","port=0","port=-1","port=65536","port=9999999999999999999999","port=2x","port=1\nport=2",
     "gamemode=4","gamemode=builder","mirror-horizontal=1","seed=9223372036854775808","seed=-9223372036854775809",
     "wheat-growth-seconds=0","wheat-growth-seconds=601","unknown=true","port 25565","motd=a\tb", "motd=\xc0\xaf",
     "motd=\xed\xa0\x80","motd=\xf4\x90\x80\x80","motd=\xe2\x82"};
@@ -35,8 +40,9 @@ int main (void) {
   memset(big,'\n',sizeof(big)); rejects(big,sizeof(big));
   char motd[128] = "motd="; memset(motd+5,'a',121); rejects(motd,126);
   write_bytes(motd,125); assert(server_config_load(path,&c,error,sizeof(error)) && strlen(c.motd) == 120);
-  const char minimum[] = "port=1\ngamemode=3\nseed=\nwheat-growth-seconds=1\n";
+  const char minimum[] = "port=1\nweb-port=1\nweb-address=255.255.255.255\ngamemode=3\nseed=\nwheat-growth-seconds=1\n";
   write_bytes(minimum,sizeof(minimum)-1); assert(server_config_load(path,&c,error,sizeof(error)));
+  assert(c.web_port == 1 && !strcmp(c.web_address,"255.255.255.255"));
   assert(c.port == 1 && c.gamemode == 3 && !c.seed_set && c.wheat_growth_seconds == 1);
   char *args[] = {"lapis-obsidian","--seed","-17","--mirror-horizontal"};
   assert(server_config_arguments(&c,4,args,error,sizeof(error)) && c.seed == UINT64_MAX-16 && c.seed_set && c.mirror_horizontal);

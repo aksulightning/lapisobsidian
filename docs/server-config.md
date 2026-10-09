@@ -7,6 +7,8 @@ copy `server.txt.example` to `server.txt`.
 
 ```ini
 port=25565
+web-address=0.0.0.0
+web-port=8080
 motd=Lapis Obsidian
 gamemode=survival
 seed=
@@ -17,7 +19,9 @@ experimental_enable_plates=false
 
 | Setting | Values | Default |
 | --- | --- | --- |
-| `port` | TCP port, 1–65535 | 25565 |
+| `port` | Minecraft TCP port, 1–65535 | 25565 |
+| `web-address` | Web bind address: dotted IPv4, e.g. 127.0.0.1 for local access | 0.0.0.0 (all IPv4 interfaces) |
+| `web-port` | HTTP/WebSocket TCP port, 1–65535 | 8080 |
 | `motd` | Server-list message, up to 120 UTF-8 bytes | Lapis Obsidian |
 | `gamemode` | survival, creative, adventure, spectator; or 0–3 | survival |
 | `seed` | Empty, or a signed 64-bit decimal integer | Saved seed; otherwise the built-in seed |
@@ -36,6 +40,26 @@ Unknown or duplicate keys, invalid values, lines longer than 255 bytes, embedded
 NULs and files over 8 KiB stop startup with a line-numbered error. Invalid files
 are never partly applied or overwritten. No heap-backed configuration tables,
 scripting runtime or additional libraries are used.
+
+## Web listener
+
+`web-address` and `web-port` take effect only in a binary built with
+`LAPIS_OBSIDIAN_WEB_CLIENT=1`. Default binaries parse and validate the settings
+but open no web listener. The Minecraft listener continues to use `port`.
+HTTP/WebSocket traffic is accepted only on the web listener; native game traffic
+is accepted only on the Minecraft listener. Both share the same player capacity.
+
+`web-address` is a **bind address**, not a public URL or hostname. Use `0.0.0.0`
+for all IPv4 interfaces, `127.0.0.1` for local/reverse-proxy access, or a specific
+IPv4 address assigned to the server. Hostnames, IPv6 and octal-style leading
+zeroes are not supported. `web-port` must differ from `port` in a web-enabled
+build. An unavailable bind address or occupied web port stops startup with an
+error rather than silently disabling the web client.
+
+For example, `web-address=127.0.0.1` and `web-port=8080` serve the client at
+`http://127.0.0.1:8080/`. Restart after editing. Existing configurations that omit
+the two keys use their defaults; files are not automatically rewritten. See
+[web-client controls and deployment](web-client.md).
 
 ## World options and precedence
 

@@ -85,8 +85,9 @@ jobs:
               # creating a world or starting a long-lived server.
               result=0
               "$package/lapis-obsidian" --nightly-abi-check > .tests/nightly-smoke.log 2>&1 || result=$?
+              cat .tests/nightly-smoke.log
               test "$result" -eq 1
-              grep -F "Usage: lapis-obsidian" .tests/nightly-smoke.log
+              grep -F "usage: lapis-obsidian" .tests/nightly-smoke.log
               ./tests/run.sh
 
               cp LICENSE NOTICE.md README.md "$package/"
