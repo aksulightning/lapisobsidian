@@ -11,12 +11,14 @@ or assets were used.
 | Check | Actual result |
 | --- | --- |
 | Unchanged server build | Passed |
-| `make test` | 2,396 protocol assertions + 7,828 world/gameplay assertions passed under strict C89 warnings |
+| `make test` | 2,396 protocol assertions + 8,111 world/gameplay assertions passed under strict C89 warnings |
 | ASan/UBSan (`SANITIZER_FLAGS=-DLAPIS_SANDBOX_SANITIZERS`) | Both suites passed; leak scanning disabled because `/proc` is unavailable in this runner |
 | `make integration` | Actual status/pong, configuration, Play, decoded chunks, keepalive, same-identity reconnect and interaction sequence passed |
-| Core C++ build | All six pure modules compiled with C++11 and warnings as errors |
+| Core C++ build | Pure modules compiled with C++11 and warnings as errors |
 | Linux X11/OpenGL build | Linked successfully using installed versioned runtime library names; packaged builds normally use development libraries |
 | Windowed visual/input smoke | Actual native world rendered under Xvfb/Mesa; world, look, movement/jump and inventory screenshots inspected |
+| `make survival` | Two real clients passed 2×2 and 3×3 crafting, chest deposit/reopen/withdraw, furnace recipe checks/output, eating, Unicode sign editing, command teleport, lethal sword damage and respawn |
+| Native survival visual/input smoke | Held food consumed once; sign editor/saved reading overlay, mining progress/cancellation and server-command day/night shading inspected |
 | Lapis skins | Lapis skin request path disabled; final visual run produced no skin HTTP request |
 | Native terminal and Classic regression | Passed: decoded native world/loaded transition and original 131-byte Classic login |
 | Linux package | Created 1.5 MiB ZIP; hashes and ZIP CRCs verified; packaged binary loaded the actual world and inventory in a fresh server visual smoke |
@@ -69,17 +71,69 @@ package. Windows cross-compiled with MinGW and packaged successfully. Both
 command used normal leak detection, without the local sandbox exception.
 This is build/test evidence; Windows runtime gameplay remains untested.
 
+## Expanded survival acceptance
+
+`make survival` writes an isolated saved-game fixture using the pinned server's
+save structures, with a level test platform, workstations, items and two saved
+players. It runs the **unchanged** server and shared product decoders/action API.
+The client never injects inventory state or predicts crafting results. This proves
+these server interactions, not resource gathering or a fresh-world survival run.
+
+The first player crafts planks in 2×2, then a furnace in 3×3; deposits/reopens and
+withdraws that furnace from a chest; verifies an unsupported smelting recipe
+retains its inputs; smelts wood into charcoal; holds one food-use request until
+hunger rises and the stack drops by one; places/edits a sign and receives accented
+text plus an emoji encoded as modified-UTF-8 surrogate pairs; attacks the second
+player; and uses `/spawn` then the server respawn path. The second player separately
+observes lethal damage and requests respawn, verifying health and world reload.
+
+```text
+survival: 2x2 crafting consumed four logs and produced sixteen planks
+survival: 3x3 crafting produced a furnace with no local predictions
+survival: chest deposit, reopen and withdrawal preserved the stack
+survival: unsupported smelting recipe retained inputs and produced no output
+survival: furnace consumed fuel and input and returned server charcoal
+survival: held food consumed once and raised authoritative hunger
+survival: sign placement and UTF-8/modified-UTF-8 edit echo passed
+survival: server command teleport synchronized
+survival: respawn rebuilt the world and reset inventory/health
+combat: second real client confirmed lethal damage and respawn
+```
+
+This exposed and fixed container player-slot initialization, repeated native Use
+resetting the eating timer, and rejecting Lapis's valid negative saturation.
+Unit tests additionally cover Unicode validation/surrogates, every truncation of
+the sign NBT fixture, unchanged authoritative sign text before echo, chunk text
+invalidation, all three menu aliases, mining tool/material/mode pacing, clock
+bounds and dawn/day/dusk/night levels. New modules use the same sanitizer checks.
+
+A native X11/Mesa session used the same seed/save supplies. Right-button holding
+consumed one apple and raised food from 10 to 13. Four-line sign editing and its
+saved overlay were inspected. Mining progress and release cancellation were
+inspected. `/time set night` and `/time set day` changed native shading after
+normal administrator authentication on the isolated test server; permissions
+were unchanged. UI text remains CP437; unsupported glyphs may be substituted,
+while untouched sign lines retain their original Unicode when saved.
+
+Simultaneous initial joins revealed a reference-server issue: its join broadcast
+can send Play packets to another client still in Configuration. The harness now
+joins clients sequentially; strict client state validation remains intact. This
+limitation is recorded in the packet matrix, not hidden by accepting wrong-state
+packets. Repeated sequential reconnects remain covered by `make integration`.
+
 ## Remaining acceptance gates
 
-- Long-distance/chunk-boundary walking, Far Lands, cache hitches and teleport travel.
-- Tool-specific mining durations, food/buckets, crafting results, chest/furnace use,
-  armour/equipment, combat/damage/death/respawn and mode-specific gameplay sessions.
-- Species art/metadata, drops/projectiles, particles, signs, redstone/fluid interaction
-  and musicbox/audio listening QA. Shared models/synthesis are initial coverage.
+- Long-distance/chunk-boundary walking, Far Lands, cache hitches and long sessions.
+- Fresh-world progression, full-inventory crafting-close recovery, buckets,
+  armour/equipment and complete mode-specific gameplay sessions.
+- Mining pace balancing and animation; server owns drops/durability but does not
+  provide a timed hardness table. Current non-instant timings are client choices.
+- Species art/metadata, drops/projectiles, particles, text on sign planes,
+  redstone/fluid interactions and musicbox/audio listening QA.
 - Full Classic world/CPE regression, beyond the original login and untouched
   packet implementation. Atlas slots have independent compatibility substitutes.
 - Windows runtime, other engine ports, clean-machine dependencies and performance.
-- Unicode chat conversion, accessibility/resizing and final asset/provenance review.
+- Full Unicode font/input, accessibility/resizing and final asset/provenance review.
 
 No generic vanilla-772 or completed M2–M6 compatibility claim is made. Finish
 these gates before calling the project a complete survival release.

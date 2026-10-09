@@ -1,4 +1,5 @@
 #include "LapisGameplay.h"
+#include "LapisText.h"
 #include <string.h>
 
 struct Writer { cc_uint8 data[512]; int n; };
@@ -25,23 +26,28 @@ static int Stack(struct LapisReader* r, struct LapisStack* s) {
     return !r->failed;
 }
 static int NbtText(struct LapisReader* r, char* text, int capacity) {
-    int n;
     if (LapisReader_Byte(r) != 8) return 0;
-    n = (int)LapisReader_Big(r, 2);
-    if (n >= capacity || n > r->size - r->pos) return 0;
-    memcpy(text, r->data + r->pos, (size_t)n); text[n] = 0;
-    return LapisReader_Skip(r, n);
+    return LapisText_Nbt(r,text,capacity);
 }
 void LapisGameplay_Init(struct LapisGameplay* g) {
     memset(g, 0, sizeof(*g)); g->health = 20; g->food = 20;
 }
+static void MirrorPlayer(struct LapisGameplay* g, int slot) {
+    if (slot < 9 || slot > 44) return;
+    g->slots[2][slot+18] = g->slots[0][slot];
+    g->slots[12][slot+1] = g->slots[0][slot];
+    g->slots[14][slot-6] = g->slots[0][slot];
+}
 int LapisGameplay_Packet(struct LapisGameplay* g, struct LapisProtocol* p, int id, const cc_uint8* data, int size) {
     struct LapisReader r; struct LapisStack stack; int w, slot, state; float health, saturation;
-    char dimension[128];
+    char dimension[128],title[128];
     LapisReader_Init(&r, data, size);
     switch (id) {
     case 0x14:
-        w = LapisReader_Count(&r, 15); state = LapisReader_Count(&r, 0x7FFFFFFF);
+        w = (cc_int32)LapisReader_VarInt(&r); state = LapisReader_Count(&r, 0x7FFFFFFF);
+        /* The server also uses the direct player inventory window -2. */
+        if (w == -2) w = 0;
+        if (w != 0 && w != 2 && w != 12 && w != 14) return 0;
         slot = (int)LapisReader_Big(&r, 2);
         if (slot >= 64 || !Stack(&r, &stack) || !LapisReader_Done(&r)) return 0;
         g->slots[w][slot] = stack; g->stateId[w] = state;
@@ -49,6 +55,7 @@ int LapisGameplay_Packet(struct LapisGameplay* g, struct LapisProtocol* p, int i
         if(w==2 && slot>=27 && slot<63)g->slots[0][slot-18]=stack;
         if(w==12 && slot>=10 && slot<46)g->slots[0][slot-1]=stack;
         if(w==14 && slot>=3 && slot<39)g->slots[0][slot+6]=stack;
+        if(w==0)MirrorPlayer(g,slot);
         break;
     case 0x59:
         if (!Stack(&r, &stack) || !LapisReader_Done(&r)) return 0;
@@ -59,12 +66,17 @@ int LapisGameplay_Packet(struct LapisGameplay* g, struct LapisProtocol* p, int i
         g->selected = slot; break;
     case 0x34:
         w = LapisReader_Count(&r, 15); state = LapisReader_Count(&r, 32);
-        if ((w != 2 && w != 12 && w != 14) || w != state || !NbtText(&r, g->title, sizeof(g->title)) || !LapisReader_Done(&r)) return 0;
+        if ((w != 2 && w != 12 && w != 14) || w != state || !NbtText(&r, title, sizeof(title)) || !LapisReader_Done(&r)) return 0;
+        strcpy(g->title,title);
         g->window = w; g->menu = state;
-        memset(g->slots[w], 0, sizeof(g->slots[w])); break;
+        memset(g->slots[w], 0, sizeof(g->slots[w]));
+        /* Lapis sends no full inventory on Open Screen. These are aliases of
+           already-authoritative player slots, never newly created items. */
+        for(slot=9;slot<45;slot++)MirrorPlayer(g,slot);
+        break;
     case 0x61:
         health = LapisReader_Float(&r); slot = LapisReader_Count(&r, 20); saturation = LapisReader_Float(&r);
-        if (health < 0 || health > 20 || saturation < 0 || !LapisReader_Done(&r)) return 0;
+        if (health < 0 || health > 20 || saturation < -0.4f || saturation > 131 || !LapisReader_Done(&r)) return 0;
         g->health = health; g->food = slot; g->saturation = saturation; break;
     case 0x39:
         slot = LapisReader_Byte(&r); LapisReader_Float(&r); LapisReader_Float(&r);
@@ -146,7 +158,7 @@ int LapisGameplay_Close(struct LapisGameplay* g, struct LapisProtocol* p) {
 }
 int LapisGameplay_Chat(struct LapisProtocol* p, const char* text, int length) {
     struct Writer w; int command; w.n = 0;
-    if (length < 1 || length > 224) return 0;
+    if (length < 1 || length > 224 || !LapisText_Valid(text,length)) return 0;
     command = text[0] == '/';
     if (command) { text++; length--; if (!length) return 0; }
     Var(&w, (cc_uint32)length); memcpy(w.data+w.n, text, (size_t)length); w.n += length;

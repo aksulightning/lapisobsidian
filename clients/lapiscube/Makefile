@@ -5,10 +5,10 @@ ENGINE := engine
 CPPFLAGS += -Isrc -I$(ENGINE)/src
 CFLAGS ?= -O2 -g
 WARN := -std=c89 -Wall -Wextra -Werror -Wshadow -Wconversion
-CORE := src/LapisProtocol.c src/LapisSession.c src/LapisWorld.c src/LapisGameplay.c src/LapisEntities.c src/LapisEffects.c
+CORE := src/LapisProtocol.c src/LapisSession.c src/LapisWorld.c src/LapisGameplay.c src/LapisEntities.c src/LapisEffects.c src/LapisText.c src/LapisSigns.c src/LapisMining.c
 IDENTITY := src/LapisIdentity.c build/md5.o build/dec32le.o build/enc32le.o
 
-.PHONY: all test sanitize probe integration native-smoke engine-prepare native terminal windows package clean
+.PHONY: all test sanitize probe integration survival native-smoke engine-prepare native terminal windows package clean
 all: test probe
 build:
 	mkdir -p build
@@ -26,9 +26,13 @@ sanitize: build/md5.o build/dec32le.o build/enc32le.o | build
 	./build/protocol-sanitize
 	$(CC) $(CPPFLAGS) $(SANITIZER_FLAGS) -O1 -g $(WARN) -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie tests/gameplay.c $(CORE) -o build/gameplay-sanitize
 	./build/gameplay-sanitize
-build/lapiscube-probe: tools/probe.c $(CORE) $(IDENTITY) src/*.h | build
+build/lapiscube-probe: tools/probe.c tools/survival_scenario.h $(CORE) $(IDENTITY) src/*.h | build
 	$(CC) $(CPPFLAGS) $(CFLAGS) -std=c99 -Wall -Wextra -Werror -Wshadow -Wconversion tools/probe.c $(CORE) $(IDENTITY) -o $@
 probe: build/lapiscube-probe
+build/survival-fixture: tests/survival_fixture.c | build
+	$(CC) -std=c99 -O2 -Wall -Wextra -Werror -I../../include $< -o $@
+survival: probe build/survival-fixture
+	$(PYTHON) tests/survival.py
 integration: probe
 	$(PYTHON) tests/integration.py
 native-smoke: terminal

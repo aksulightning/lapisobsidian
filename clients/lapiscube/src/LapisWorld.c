@@ -127,3 +127,17 @@ int LapisWorld_Get(struct LapisWorld* w, int x, int y, int z) {
     if (!c || y < 0 || y > 255) return -1;
     return c->blocks[y*256 + (z-cz*16)*16 + x-cx*16];
 }
+int LapisWorld_Time(struct LapisWorld* w,const cc_uint8* data,int size) {
+    struct LapisReader r;cc_uint64 age,ticks;int running;
+    LapisReader_Init(&r,data,size);age=LapisReader_Big(&r,8);ticks=LapisReader_Big(&r,8);running=LapisReader_Byte(&r);
+    /* Lapis transmits world_time modulo 24000, not signed vanilla frozen time. */
+    if(!LapisReader_Done(&r) || ticks>=24000 || running>1)return 0;
+    w->age=age;w->dayTicks=(int)ticks;w->dayTicking=running;w->clockValid=1;return 1;
+}
+int LapisWorld_Daylight(const struct LapisWorld* w) {
+    int time=w->dayTicks;
+    if(!w->clockValid || time<12000)return 16;
+    if(time<14000)return (14000-time)*16/2000;
+    if(time<22000)return 0;
+    return (time-22000)*16/2000;
+}

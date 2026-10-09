@@ -10,6 +10,8 @@
 #include "Block.h"
 #include "Chat.h"
 #include "LapisWorld.h"
+#include "LapisSigns.h"
+#include "LapisMining.h"
 #include "LapisBlocks.h"
 #include "LapisGui.h"
 #include "LapisMobs.h"
@@ -36,12 +38,14 @@ static unsigned lastStage;
 static struct LapisWorld world;
 static struct LapisGameplay gameplay;
 static struct LapisEntities entities;
+static struct LapisSigns signs;
 static int originX, originZ, mapDirty, ready, selected, sneak, sprint;
-static int digging, digX, digY, digZ, digFace;
+static int digging, digX, digY, digZ, digFace, digState, digItem, digSlot, digDuration;
 static int usingItem;
 static cc_uint64 digStart, lastUse;
 
 struct LapisGameplay* LapisBackend_Gameplay(void) { return &gameplay; }
+struct LapisSigns* LapisBackend_Signs(void) { return &signs; }
 struct LapisProtocol* LapisBackend_Protocol(void) { return &session.protocol; }
 static cc_uint64 Now(void);
 static float JavaYaw(float yaw) { return yaw - 180.0f; }
@@ -81,6 +85,15 @@ static void FillMap(void) {
     if(ready) { Lighting.Refresh();MapRenderer_Refresh(); }
     mapDirty=0;
 }
+static void Daylight(void) {
+    int light=LapisWorld_Daylight(&world);
+    /* Quantize changes to avoid rebuilding terrain colours every network tick.
+       This remains engine shading, not modern per-voxel light simulation. */
+    Env_SetSkyCol(PackedCol_Make(13+7*light,20+10*light,38+12*light,255));
+    Env_SetFogCol(PackedCol_Make(18+11*light,25+12*light,42+12*light,255));
+    Env_SetSunCol(PackedCol_Make(72+11*light,76+11*light,90+10*light,255));
+    Env_SetShadowCol(PackedCol_Make(42+7*light,46+7*light,59+6*light,255));
+}
 static void LoadWorld(struct LapisProtocol* p) {
     BlockRaw *lower,*upper;struct Screen* s;int volume=LAPIS_WORLD_SIDE*256*LAPIS_WORLD_SIDE;
     static const cc_string model=String_FromConst("lapis-person");
@@ -90,6 +103,7 @@ static void LoadWorld(struct LapisProtocol* p) {
     FillMap();
     Env.EdgeBlock=0;Env.SidesBlock=0;Env.EdgeHeight=0;Env.CloudsHeight=132;
     World_SetNewMap(lower,LAPIS_WORLD_SIDE,256,LAPIS_WORLD_SIDE);
+    Daylight();
     ready=1;Position(p);Inventory.Offset=0;
     Entity_SetModel(&Entities.CurPlayer->Base,&model);
     s=Gui_GetScreen(GUI_PRIORITY_LOADING);if(s)Gui_Remove(s);
@@ -102,16 +116,21 @@ static void Packet(struct LapisProtocol* p, int state, int id, const cc_uint8* d
     (void)context;
     if (state != LAPIS_PLAY) return;
     LapisReader_Init(&r,data,size);
-    if(id==0x57) {
+    if(id==0x6A) {
+        if(!LapisWorld_Time(&world,data,size))goto malformed;
+        if(ready)Daylight();
+    } else if(id==0x57) {
         x=(cc_int32)LapisReader_VarInt(&r);z=(cc_int32)LapisReader_VarInt(&r);
         if(!LapisReader_Done(&r) || LapisWorld_Center(&world,x,z)<0)goto malformed;
         Recenter();
     } else if(id==0x27) {
         if(!LapisWorld_Chunk(&world,data,size))goto malformed;
+        x=(cc_int32)LapisReader_Big(&r,4);z=(cc_int32)LapisReader_Big(&r,4);LapisSigns_Chunk(&signs,x,z);
         mapDirty=1;
     } else if(id==0x08) {
         LapisWorld_Position(LapisReader_Big(&r,8),&x,&y,&z);value=LapisReader_Count(&r,65535);
         if(!LapisReader_Done(&r) || !LapisWorld_Block(&world,x,y,z,value))goto malformed;
+        LapisSigns_Block(&signs,x,y,z,value);
         if(ready && x>=originX && x<originX+World.Width && z>=originZ && z<originZ+World.Length)
             Game_UpdateBlock(x-originX,y,z-originZ,LapisBlocks_State(value));
     } else if(id==0x41) {
@@ -120,17 +139,21 @@ static void Packet(struct LapisProtocol* p, int state, int id, const cc_uint8* d
     }
     result=LapisGameplay_Packet(&gameplay,p,id,data,size);
     if(!result)goto malformed;
-    if(!LapisEntities_Packet(&entities,id,data,size))goto malformed;
+    if(!LapisEntities_Packet(&entities,id,data,size) || !LapisSigns_Packet(&signs,id,data,size))goto malformed;
+    if(id==0x35)LapisGui_ShowSign();
     if(id==0x4B) {
         LapisGui_Close();LapisMobs_Clear();LapisEntities_Init(&entities);
-        World_NewMap();LapisWorld_Init(&world);ready=0;digging=0;mapDirty=0;
+        World_NewMap();LapisSigns_Init(&signs);LapisWorld_Init(&world);ready=0;digging=0;mapDirty=0;
     }
     if(id==0x6E) {
         if(!LapisEffects_Sound(&sound,data,size))goto malformed;
         LapisAudio_Play(&sound,Entities.CurPlayer->Base.Position.x+originX,Entities.CurPlayer->Base.Position.y,Entities.CurPlayer->Base.Position.z+originZ);
     }
     if(id==0x34)LapisGui_ShowInventory();
-    if(id==0x72)Chat_AddRaw(gameplay.message);
+    if(id==0x72) {
+        char buffer[2048];cc_string message=String_FromArray(buffer);
+        String_AppendUtf8(&message,gameplay.message,(int)strlen(gameplay.message));Chat_Add(&message);
+    }
     if(id==0x62) { Inventory.SelectedIndex=gameplay.selected;selected=gameplay.selected; }
     if (id == 0x2B) Platform_LogConst("LapisCube native: Play login accepted");
     if (id == 0x41 && p->teleports == 2) {
@@ -206,11 +229,14 @@ static void PlayerTick(void) {
     if(selected!=Inventory.SelectedIndex) {
         selected=Inventory.SelectedIndex;gameplay.selected=selected;LapisGameplay_Select(p,selected);
     }
-    if(digging && (Gui.InputGrab || !KeyBind_IsPressed(BIND_DELETE_BLOCK) || !Game_SelectedPos.valid ||
+    if(digging && (Gui.InputGrab || gameplay.health<=0 || p->gamemode>=2 ||
+        selected!=digSlot || gameplay.slots[0][36+selected].item!=digItem ||
+        LapisWorld_Get(&world,digX,digY,digZ)!=digState ||
+        !KeyBind_IsPressed(BIND_DELETE_BLOCK) || !Game_SelectedPos.valid ||
         Game_SelectedPos.pos.x+originX!=digX || Game_SelectedPos.pos.y!=digY || Game_SelectedPos.pos.z+originZ!=digZ)) {
         LapisGameplay_Dig(&gameplay,p,1,digX,digY,digZ,digFace);digging=0;
     }
-    if(digging && Now()-digStart>=650) {
+    if(digging && Now()-digStart>=(cc_uint64)digDuration) {
         LapisGameplay_Dig(&gameplay,p,2,digX,digY,digZ,digFace);digging=0;
     }
     if(usingItem && (Gui.InputGrab || !KeyBind_IsPressed(BIND_PLACE_BLOCK))) {
@@ -246,7 +272,7 @@ static void Begin(void) {
     cc_sockaddr addresses[SOCKET_MAX_ADDRS]; int count;
     cc_result res; cc_uint8 uuid[16]; char host[256], username[16];
     LapisBackend_Close();
-    World_NewMap();LapisWorld_Init(&world);LapisGameplay_Init(&gameplay);LapisBlocks_Init();
+    World_NewMap();LapisSigns_Init(&signs);LapisWorld_Init(&world);LapisGameplay_Init(&gameplay);LapisBlocks_Init();
     LapisEntities_Init(&entities);LapisMobs_Init();TexturePack_ExtractCurrent(true);
     Blocks.Draw[255]=DRAW_GAS;Blocks.Collide[255]=COLLIDE_SOLID;Blocks.BlocksLight[255]=false;Block_DefineCustom(255,false);
     originX=originZ=0;mapDirty=0;selected=0;sneak=sprint=0;lastUse=0;
@@ -279,24 +305,45 @@ static void SendBlock(int x, int y, int z, BlockID old, BlockID now) {
     (void)x; (void)y; (void)z; (void)old; (void)now;
     Platform_LogConst("LapisCube: rejected legacy optimistic block edit");
 }
-static void SendChat(const cc_string* text) { LapisGameplay_Chat(&session.protocol,text->buffer,text->length); }
+static void SendChat(const cc_string* text) {
+    cc_uint8 utf8[STRING_SIZE*3];int n;
+    if(text->length>STRING_SIZE)return;
+    n=String_EncodeUtf8(utf8,text);LapisGameplay_Chat(&session.protocol,(const char*)utf8,n);
+}
 static int TargetFace(void) {
     static const int map[6]={4,5,2,3,0,1};return Game_SelectedPos.closest<6?map[Game_SelectedPos.closest]:1;
 }
+struct LapisSign* LapisBackend_TargetSign(void) {
+    if(!ready || !Game_SelectedPos.valid)return NULL;
+    return LapisSigns_Find(&signs,Game_SelectedPos.pos.x+originX,Game_SelectedPos.pos.y,Game_SelectedPos.pos.z+originZ);
+}
 static float Cursor(float value) { return value<0?0:value>1?1:value; }
 void LapisBackend_Dig(void) {
-    int target;
+    int target;char block[STRING_SIZE];cc_string name,text=String_Init(block,0,STRING_SIZE-1);
     if(!ready || gameplay.health<=0)return;
     target=LapisMobs_Target(&entities);
     if(target>=0) { LapisGameplay_Attack(&session.protocol,entities.list[target].id);return; }
     if(!Game_SelectedPos.valid || digging)return;
     digX=Game_SelectedPos.pos.x+originX;digY=Game_SelectedPos.pos.y;digZ=Game_SelectedPos.pos.z+originZ;digFace=TargetFace();
-    LapisGameplay_Dig(&gameplay,&session.protocol,0,digX,digY,digZ,digFace);
-    digging=1;digStart=Now();
+    digState=LapisWorld_Get(&world,digX,digY,digZ);if(digState<0)return;
+    name=Block_UNSAFE_GetName(LapisBlocks_State(digState));String_Copy(&text,&name);block[text.length]=0;
+    digSlot=Inventory.SelectedIndex;digItem=gameplay.slots[0][36+digSlot].item;
+    digDuration=LapisMining_Delay(block,LapisBlocks_ItemName(digItem),session.protocol.gamemode);
+    if(digDuration<0)return;
+    /* Selection must precede the action even between network ticks. */
+    if(selected!=digSlot) { selected=digSlot;gameplay.selected=selected;LapisGameplay_Select(&session.protocol,selected); }
+    if(!LapisGameplay_Dig(&gameplay,&session.protocol,0,digX,digY,digZ,digFace))return;
+    digging=digDuration>0;digStart=Now();
+}
+float LapisBackend_DigProgress(void) {
+    float value;if(!digging || digDuration<=0)return -1;
+    value=(float)(Now()-digStart)/(float)digDuration;return value>1?1:value;
 }
 void LapisBackend_Use(void) {
     struct Entity* e=&Entities.CurPlayer->Base;
-    if(!ready || gameplay.health<=0 || Now()-lastUse<250)return;
+    /* Repeating Use every input tick restarts Lapis's eating timer. Hold one
+       request until release; a second click starts the next interaction. */
+    if(!ready || gameplay.health<=0 || usingItem || Now()-lastUse<250)return;
     lastUse=Now();
     usingItem=1;
     if(Game_SelectedPos.valid)
@@ -317,11 +364,14 @@ void LapisBackend_Init(void) {
     for (i = 0; i < BLOCK_COUNT; i++) { Blocks.CanPlace[i] = false; Blocks.CanDelete[i] = false; }
 }
 #else
+struct LapisSigns* LapisBackend_Signs(void) { return NULL; }
+struct LapisSign* LapisBackend_TargetSign(void) { return NULL; }
 void LapisBackend_Close(void) { }
 void LapisBackend_Init(void) { Server.Disconnected = true; }
 struct LapisGameplay* LapisBackend_Gameplay(void) { return NULL; }
 struct LapisProtocol* LapisBackend_Protocol(void) { return NULL; }
 void LapisBackend_Dig(void) { }
+float LapisBackend_DigProgress(void) { return -1; }
 void LapisBackend_Use(void) { }
 void LapisBackend_Drop(void) { }
 #endif

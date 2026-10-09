@@ -64,13 +64,13 @@ Source is `src/packets.c` unless another source is listed.
 | 04 | `sc_acknowledgeBlockChange` | Action sequence VarInt | Sequence acknowledgment retained; server decides mutations |
 | 39 | `sc_playerAbilities` | Flags, flying/walking speeds | Parsed; initial flying permission/mode controls, incomplete mode UX |
 | 22 | `sc_startWaitingForChunks`, `command_packets.c` | Event 13 waiting for chunks; event 3 gamemode change | Gamemode stored; native world load governs loaded transition |
-| 6A | `sc_updateTime` | Two i64 clocks + day-tick boolean | Deferred M2 |
-| 14 | `sc_setContainerSlot` | Window/state/slot + component-aware item stack (zero components here) | Atomic server-owned stacks and mirrored container/player views; real inventory transfer tested |
+| 6A | `sc_updateTime` | Two i64 clocks + day-tick boolean | Validated server clock; quantized native sky/fog/sun/shadow shading; real day/night commands inspected |
+| 14 | `sc_setContainerSlot` | Window/state/slot + component-aware item stack (zero components here) | Atomic server-owned stacks, including direct window -2; mirrored container/player views; crafting/chest/furnace scenarios passed |
 | 59 | `sc_setCursorItem` | Item stack for carried cursor | Authoritative cursor; real transfer tested |
 | 62 | `sc_setHeldItem` | Selected slot byte | Selected slot synchronization and native hotbar |
-| 34 | `sc_openScreen` | Window ID, menu ID, NBT title | Native player/crafting/chest/furnace grids; full container session unverified |
-| 61 | `sc_setHealth` | Health float, food VarInt, saturation float | Health/food/saturation state and HUD; damage/eating acceptance pending |
-| 4B | `sc_respawn` | Dimension/mode/death/portal/sea/data-kept fields | Validated reset and reload path + Enter request; parser tested, death session pending |
+| 34 | `sc_openScreen` | Window ID, menu ID, NBT title | Native player/crafting/chest/furnace grids; player-slot aliases seeded on open; real container scenario passed |
+| 61 | `sc_setHealth` | Health float, food VarInt, saturation float | Health/food/saturation state and HUD; saturation can be -0.4 in Lapis; eating and lethal damage verified |
+| 4B | `sc_respawn` | Dimension/mode/death/portal/sea/data-kept fields | Validated reset and native reload path + Enter request; two-client lethal damage/respawn passed |
 | 3F | `sc_playerInfoUpdateAddPlayer`, `command_packets.c` | Add-player + mode or mode-only action mask | Deferred M4 |
 | 01 | `sc_spawnEntity` | Entity ID, UUID, type, XYZ, angles, object data, velocity | Bounded snapshots and original shared native models; species detail incomplete |
 | 5C | `sc_setEntityMetadata`, `mob_packets.c` | Typed indexed metadata terminated by FF; items, pose, creeper fuse, arrows | Lapis metadata types 0/1/7/8/21 parsed; partial visual application |
@@ -84,10 +84,10 @@ Source is `src/packets.c` unless another source is listed.
 | 1E | `sc_entityEvent` | i32 entity ID + status | Deferred M4 |
 | 46 | `sc_removeEntity` | VarInt count/IDs | Native entity removal and fixed slot reuse |
 | 75 | `sc_pickupItem` | Collected ID, collector ID, count | Deferred M3/M4 |
-| 72 | `sc_systemChat` | Anonymous NBT TAG_String using modified UTF-8 + overlay boolean | ASCII text displayed; real chat round trip; modified UTF-8 conversion incomplete |
+| 72 | `sc_systemChat` | Anonymous NBT TAG_String using modified UTF-8 + overlay boolean | Validated modified UTF-8 → UTF-8 → engine CP437; UTF-8 wire text retained, font repertoire limited |
 | 10 | `sc_commands`, `command_packets.c` | Brigadier node graph | Deferred M4; command strings need not use this graph to be sent |
-| 06 | `sc_sign`, `sign_packets.c` | Packed position, sign block-entity type 7, bounded sign NBT | Deferred M5 |
-| 35 | `sc_signEditor`, `sign_packets.c` | Packed position + front/back boolean | Deferred M5 |
+| 06 | `sc_sign`, `sign_packets.c` | Packed position, sign block-entity type 7, bounded sign NBT | Exact Lapis NBT profile, 128-sign cache, native reading overlay; Unicode echo verified |
+| 35 | `sc_signEditor`, `sign_packets.c` | Packed position + front/back boolean | Native four-line editor; no speculative cached text mutation |
 | 6E | `mob_packets.c`, `notes.c` | Inline named sound holder=0, optional range, category, fixed XYZ, volume/pitch/seed | Inline name/category/position/volume/pitch parsed; original synthesis including note timbres; listening QA pending |
 | 29 | `sc_firecracker`, `mob_packets.c` | Particle 29 firework, position/spread/speed/count | Deferred M4/M5 |
 
@@ -138,20 +138,29 @@ Authoritative dispatch: `src/main.c:handlePacket`.
 | 2A | `cs_playerInput` | One flag byte; bit 20 hex controls sneaking | Native sneaking bit 20 hex |
 | 28 | `cs_playerAction`, `sign_packets.c` | Action 0..6, packed position, face, sequence; mining/drop | Start/abort/finish mining, drop-one, release-use; mining/drop real-server tested |
 | 3F | `cs_useItemOn`, `sign_packets.c` | Hand, position, face, three cursor floats, two booleans, sequence | Native cursor/face/position action; placement real-server tested |
-| 40 | `cs_useItem`, `sign_packets.c` | Hand, sequence, yaw/pitch; finite angles, pitch ±90; food/bucket use | Held-item use request; food/bucket loop unverified |
+| 40 | `cs_useItem`, `sign_packets.c` | Hand, sequence, yaw/pitch; finite angles, pitch ±90; food/bucket use | One request per native press, release action 5; held food verified in real-server scenario and native window; buckets unverified |
 | 34 | `cs_setHeldItem` | u16 slot, exactly 2 bytes | Native hotbar selection; real interaction test |
 | 11 | `cs_clickContainer`, `inventory_packets.c` | Window/state, clicked i16 slot, button/mode, bounded changed slots, cursor stack | Zero predictions, absent cursor HashedSlot; server-owned results; real inventory transfer tested |
 | 12 | `cs_closeContainer` | One window byte | Sent on UI close; real inventory test |
 | 37 | `cs_creativeSlot`, `command_packets.c` | Slot + stack; gated by living/loaded/creative mode | Deferred M4; never sent for survival item creation |
-| 19 | `cs_interact`, `mob_packets.c` | Entity VarInt, action, optional hit position/hand, sneaking | Attack action + native ray targeting; full combat unverified |
+| 19 | `cs_interact`, `mob_packets.c` | Entity VarInt, action, optional hit position/hand, sneaking | Attack action + native ray targeting; two actual clients verified lethal sword damage and respawn |
 | 3C | `cs_swingArm` | Hand VarInt | Deferred M4 |
-| 0B | `cs_clientStatus` | Action 0 requests respawn | Enter on death requests respawn; end-to-end death unverified |
+| 0B | `cs_clientStatus` | Action 0 requests respawn | Enter on death requests respawn; real-server death/respawn scenario passed |
 | 06 / 07 | `cs_chatCommand`, `command_packets.c` | Unsigned/signed command forms with strict payload checks | Unsigned 06 command text implemented; signed 07 not sent |
-| 08 | `cs_chat`, `command_packets.c` | Text with timestamp/salt/signature/ack fields, bounded validated UTF-8 | Unsigned chat encoding; real round trip (ASCII only native conversion) |
-| 3B | `cs_updateSign`, `sign_packets.c` | Position, front/back, four strings | Deferred M5 |
+| 08 | `cs_chat`, `command_packets.c` | Text with timestamp/salt/signature/ack fields, bounded validated UTF-8 | Validated UTF-8 chat; native CP437 input encoded to UTF-8; real ASCII chat round trip |
+| 3B | `cs_updateSign`, `sign_packets.c` | Position, front/back, four strings | Bounded UTF-8 lines; placement/edit/server echo tested, including surrogate-pair NBT |
 | 0C | Dispatch ignored | Client tick | Not sent |
 
 Position validation rejects NaN/Inf, enforces the server's Y limits and runs world
 border/plate guards. Mining, placement, containers, admin commands and creative
 slots retain their existing security and mode checks. This change modifies no
 server dispatch, validation, authentication or gameplay code.
+
+## Reference-server limitation observed in acceptance
+
+When two clients join simultaneously, `procedures.c:handlePlayerJoin` may broadcast
+Play chat/player/entity packets to the other connection before it leaves
+Configuration. The client correctly rejects the unexpected state. The two-client
+survival harness waits for the first loaded notification before joining the next
+client; no security/state checks were weakened. Concurrent-join correction belongs
+in the reference server and is outside this client change.

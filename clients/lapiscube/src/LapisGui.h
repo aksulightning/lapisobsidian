@@ -3,6 +3,7 @@
 #include "Core.h"
 CC_BEGIN_HEADER
 void LapisGui_ShowInventory(void);
+void LapisGui_ShowSign(void);
 void LapisGui_Close(void);
 void LapisGui_RenderHUD(void);
 void LapisGui_ContextLost(void);

@@ -2,6 +2,9 @@
 #include "LapisGameplay.h"
 #include "LapisEntities.h"
 #include "LapisEffects.h"
+#include "LapisText.h"
+#include "LapisSigns.h"
+#include "LapisMining.h"
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -117,7 +120,90 @@ static void EntityTests(void) {
     CHECK(LapisEntities_Packet(&entities,0x5C,data,n));CHECK(entities.list[index].flags==2 && entities.list[index].pose==5);
     n=0;Var(1);Var((cc_uint32)-2);CHECK(LapisEntities_Packet(&entities,0x46,data,n));CHECK(LapisEntities_Find(&entities,-2)==-1);
 }
+
+static void Text16(const char* text) { int len=(int)strlen(text);Big((cc_uint64)len,2);memcpy(data+n,text,(size_t)len);n+=len; }
+static void Tag(int type,const char* name) { Byte(type);Text16(name); }
+static void SignTests(void) {
+    static struct LapisSigns signs;struct LapisReader r;struct LapisSign* sign;
+    char text[97];int i,j,size;unsigned before;
+    const char lines[4][97]={"edited","", "Hyv\xC3\xA4", "\xF0\x9F\x8C\x9F"};
+    LapisSigns_Init(&signs);
+    n=0;Text16("Hyv\xC3\xA4 \xED\xA0\xBC\xED\xBC\x9F");LapisReader_Init(&r,data,n);
+    CHECK(LapisText_Nbt(&r,text,sizeof(text)));CHECK(!strcmp(text,"Hyv\xC3\xA4 \xF0\x9F\x8C\x9F"));
+    n=0;Text16("\xED\xA0\xBC");LapisReader_Init(&r,data,n);CHECK(!LapisText_Nbt(&r,text,sizeof(text)));
+    CHECK(!LapisText_Valid("\xC0\xAF",2));CHECK(!LapisText_Valid("\xED\xA0\x80",3));CHECK(LapisText_Valid(lines[3],4));
+    n=0;Big(70,8);Var(7);Byte(10);Tag(8,"id");Text16("minecraft:sign");Tag(1,"is_waxed");Byte(0);
+    for(i=0;i<2;i++) {
+        Tag(10,i?"back_text":"front_text");Tag(8,"color");Text16("black");Tag(1,"has_glowing_text");Byte(0);
+        Tag(9,"messages");Byte(8);Big(4,4);
+        for(j=0;j<4;j++)Text16(j?"":"Original");
+        Byte(0);
+    }
+    Byte(0);size=n;
+    CHECK(LapisSigns_Packet(&signs,0x06,data,size));sign=LapisSigns_Find(&signs,0,70,0);CHECK(sign && !strcmp(sign->lines[0][0],"Original"));
+    before=signs.revision;
+    for(i=0;i<size;i++)CHECK(!LapisSigns_Packet(&signs,0x06,data,i));
+    CHECK(signs.revision==before && !strcmp(sign->lines[0][0],"Original"));
+    n=0;Big(70,8);Byte(1);CHECK(LapisSigns_Packet(&signs,0x35,data,n));CHECK(signs.editing && signs.front);
+    LapisProtocol_Init(&protocol,NULL,NULL);protocol.state=LAPIS_PLAY;protocol.loaded=1;
+    CHECK(LapisSigns_Submit(&signs,&protocol,lines));CHECK(!signs.editing && !strcmp(sign->lines[0][0],"Original"));
+    CHECK(!LapisSigns_Submit(&signs,&protocol,lines));
+    LapisSigns_Block(&signs,0,70,0,0);CHECK(!LapisSigns_Find(&signs,0,70,0));
+    signs.list[0].valid=1;signs.list[0].x=-1;signs.list[0].z=-17;
+    LapisSigns_Chunk(&signs,0,0);CHECK(signs.list[0].valid);
+    LapisSigns_Chunk(&signs,-1,-2);CHECK(!signs.list[0].valid);
+}
+static void ContainerTests(void) {
+    int w;
+    LapisProtocol_Init(&protocol,NULL,NULL);LapisGameplay_Init(&game);
+    SlotPacket(0,36,28,7);CHECK(LapisGameplay_Packet(&game,&protocol,0x14,data,n));
+    for(w=2;w<=14;w+=w==2?10:2) {
+        n=0;Var((cc_uint32)w);Var((cc_uint32)w);Byte(8);Text16("Container");
+        CHECK(LapisGameplay_Packet(&game,&protocol,0x34,data,n));
+        CHECK(game.slots[w][w==2?54:w==12?37:30].item==28);
+        CHECK(game.slots[w][w==2?54:w==12?37:30].count==7);
+    }
+    SlotPacket(-2,36,28,6);CHECK(LapisGameplay_Packet(&game,&protocol,0x14,data,n));CHECK(game.slots[14][30].count==6);
+    n=0;Float(12);Var(10);Float(-.4f);CHECK(LapisGameplay_Packet(&game,&protocol,0x61,data,n));CHECK(game.saturation==-.4f);
+    n=0;Float(12);Var(10);Float(-1);CHECK(!LapisGameplay_Packet(&game,&protocol,0x61,data,n));CHECK(game.saturation==-.4f);
+}
+
+static void MiningTests(void) {
+    int wood=LapisMining_Delay("stone","wooden_pickaxe",0),iron=LapisMining_Delay("stone","iron_pickaxe",0);
+    CHECK(wood>iron && iron>=100);
+    CHECK(LapisMining_Delay("stone","empty",0)>wood);
+    CHECK(LapisMining_Delay("stone","iron_shovel",0)>wood);
+    CHECK(LapisMining_Delay("sandstone","iron_pickaxe",0)<LapisMining_Delay("sandstone","iron_shovel",0));
+    CHECK(LapisMining_Delay("oak_log","wooden_axe",0)<LapisMining_Delay("oak_log","iron_pickaxe",0));
+    CHECK(LapisMining_Delay("dirt","wooden_shovel",0)<LapisMining_Delay("dirt","iron_axe",0));
+    CHECK(LapisMining_Delay("bedrock","diamond_pickaxe",0)==-1);
+    CHECK(LapisMining_Delay("bedrock","empty",1)==0);
+    CHECK(LapisMining_Delay("stone","iron_pickaxe",2)==-1);
+    CHECK(LapisMining_Delay("stone","iron_pickaxe",3)==-1);
+    CHECK(LapisMining_Delay("torch","empty",0)==0);
+    CHECK(LapisMining_Delay("brown_mushroom_block","empty",0)>0);
+    CHECK(LapisMining_Delay("oak_leaves","shears",0)==0);
+    CHECK(LapisMining_Delay("snow","stone_shovel",0)==0);
+    CHECK(LapisMining_Delay("snow","wooden_shovel",0)>0);
+    CHECK(LapisMining_Delay("water","empty",1)==-1);
+}
+static void TimeTests(void) {
+    int i,before=world.dayTicks;
+    n=0;Big(123456,8);Big(13000,8);Byte(1);
+    for(i=0;i<n;i++)CHECK(!LapisWorld_Time(&world,data,i));
+    CHECK(world.dayTicks==before);
+    CHECK(LapisWorld_Time(&world,data,n));CHECK(world.age==123456 && world.dayTicks==13000 && world.dayTicking);
+    CHECK(LapisWorld_Daylight(&world)==8);
+    n=0;Big(123457,8);Big(18000,8);Byte(0);
+    CHECK(LapisWorld_Time(&world,data,n));CHECK(!world.dayTicking && LapisWorld_Daylight(&world)==0);
+    n=0;Big(123458,8);Big(6000,8);Byte(1);
+    CHECK(LapisWorld_Time(&world,data,n));CHECK(LapisWorld_Daylight(&world)==16);
+    n=0;Big(123459,8);Big(23000,8);Byte(1);
+    CHECK(LapisWorld_Time(&world,data,n));CHECK(LapisWorld_Daylight(&world)==8);
+    n=0;Big(123460,8);Big(24000,8);Byte(1);
+    CHECK(!LapisWorld_Time(&world,data,n));CHECK(world.dayTicks==23000);
+}
 int main(void) {
-    WorldTests();GameplayTests();EntityTests();
+    WorldTests();GameplayTests();EntityTests();SignTests();ContainerTests();MiningTests();TimeTests();
     printf("world/gameplay: %u assertions passed (palettes, height, boundaries, truncation, inventory authority, actions, entities, sounds)\n",checks);return 0;
 }

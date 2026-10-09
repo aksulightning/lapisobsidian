@@ -14,11 +14,13 @@
 #include <stdio.h>
 #include <string.h>
 
-static struct Screen inventoryScreen;
+static struct Screen inventoryScreen, signScreen;
+static char signLines[4][97];
+static int signLine,signDirty[4];
 static struct FontDesc font;
 static int fontReady, hover=-1, cell=44, left, top;
 static int slotX[64],slotY[64];
-static struct { struct Texture tex; char value[192]; } labels[80];
+static struct { struct Texture tex; char value[192]; } labels[96];
 static void Empty(void* s) { (void)s; }
 static void Update(void* s,float dt) { (void)s;(void)dt; }
 static void Text(int index,const char* value,int x,int y) {
@@ -34,7 +36,7 @@ static void Text(int index,const char* value,int x,int y) {
 }
 void LapisGui_ContextLost(void) {
     int i;
-    for(i=0;i<80;i++)Gfx_DeleteTexture(&labels[i].tex.ID);
+    for(i=0;i<96;i++)Gfx_DeleteTexture(&labels[i].tex.ID);
     if(fontReady)Font_Free(&font);fontReady=0;
 }
 static void Icon(int item,int x,int y,int size) {
@@ -126,6 +128,7 @@ void LapisGui_ShowInventory(void) {
 }
 void LapisGui_Close(void) {
     if(Gui_GetScreen(GUI_PRIORITY_INVENTORY)==&inventoryScreen)Gui_Remove(&inventoryScreen);
+    if(Gui_GetScreen(GUI_PRIORITY_INVENTORY)==&signScreen)Gui_Remove(&signScreen);
 }
 void LapisGui_RenderHUD(void) {
     struct LapisGameplay* g=LapisBackend_Gameplay();char buffer[160];int i,x,y,size=40;
@@ -136,5 +139,94 @@ void LapisGui_RenderHUD(void) {
     for(i=0;i<9;i++)Slot(70+i,g->slots[0][36+i],x+i*size,y,size,i==Inventory.SelectedIndex);
     sprintf(buffer,"Health %.0f/20    Food %d/20    %s",g->health,g->food,LapisBlocks_ItemName(g->slots[0][36+Inventory.SelectedIndex].item));
     Text(68,buffer,x,y-26);
+    {
+        float progress=LapisBackend_DigProgress();int mid=Window_Main.Width/2;
+        if(progress>=0) {
+            Gfx_Draw2DFlat(mid-42,Window_Main.Height/2+18,84,8,PackedCol_Make(15,26,37,235));
+            Gfx_Draw2DFlat(mid-40,Window_Main.Height/2+20,(int)(80*progress),4,PackedCol_Make(131,194,205,255));
+        }
+    }
+    {
+        struct LapisSign* sign=LapisBackend_TargetSign();int line;char text[192];cc_string converted;
+        if(sign && !Gui.InputGrab) {
+            Gfx_Draw2DFlat(12,32,330,214,PackedCol_Make(15,26,37,225));
+            for(line=0;line<8;line++) {
+                converted=String_Init(text,0,191);
+                String_AppendUtf8(&converted,sign->lines[line/4][line%4],(int)strlen(sign->lines[line/4][line%4]));text[converted.length]=0;
+                Text(87+line,text,20,56+line*22);
+            }
+            Text(95,"Sign: front / back",20,34);
+        }
+    }
     if(g->health<=0)Text(69,"You died. Press Enter to respawn.",20,Window_Main.Height/2);
+}
+
+static void SignLayout(void* screen) {
+    (void)screen;left=(Window_Main.Width-420)/2;top=(Window_Main.Height-230)/2;
+}
+static void SignRender(void* screen,float dt) {
+    int i;(void)screen;(void)dt;
+    Gfx_Draw2DFlat(left-12,top-12,444,246,PackedCol_Make(15,26,37,245));
+    Text(80,LapisBackend_Signs()->front?"Edit sign: front":"Edit sign: back",left,top);
+    for(i=0;i<4;i++) {
+        Gfx_Draw2DFlat(left,top+32+i*34,420,30,i==signLine?PackedCol_Make(93,83,53,255):PackedCol_Make(31,49,62,255));
+        Text(81+i,signLines[i][0]?signLines[i]:" ",left+5,top+35+i*34);
+    }
+    Text(85,"Tab: next line   Enter: save   Escape: cancel",left,top+184);
+    Text(86,"Up/Down: choose line   Backspace: erase",left,top+208);
+}
+static int SignDown(void* screen,int key,struct InputDevice* device) {
+    struct LapisSigns* signs=LapisBackend_Signs();char lines[4][97];int i,n,side=signs->front?0:1;
+    cc_uint8 utf8[291];cc_string value;(void)screen;(void)device;
+    if(key==CCKEY_ESCAPE) { LapisGui_Close();return true; }
+    if(key==CCKEY_TAB || key==CCKEY_DOWN)signLine=(signLine+1)%4;
+    if(key==CCKEY_UP)signLine=(signLine+3)%4;
+    if(key==CCKEY_BACKSPACE) { n=(int)strlen(signLines[signLine]);if(n) { signLines[signLine][n-1]=0;signDirty[signLine]=1; } }
+    if(key==CCKEY_ENTER) {
+        for(i=0;i<4;i++) {
+            /* Preserve untouched Unicode, even outside the engine's CP437 font. */
+            if(!signDirty[i]) { strcpy(lines[i],signs->edit.lines[side][i]);continue; }
+            value=String_FromReadonly(signLines[i]);n=String_EncodeUtf8(utf8,&value);
+            if(n>96)return true;
+            memcpy(lines[i],utf8,(size_t)n);lines[i][n]=0;
+        }
+        if(LapisSigns_Submit(signs,LapisBackend_Protocol(),lines))LapisGui_Close();
+    }
+    return true;
+}
+static int SignChar(void* screen,char key) {
+    int n,bytes;cc_uint8 utf8[291];cc_string value;(void)screen;
+    if((unsigned char)key<32 || key==127)return true;
+    n=(int)strlen(signLines[signLine]);if(n>=96)return true;
+    signLines[signLine][n]=key;signLines[signLine][n+1]=0;
+    value=String_FromReadonly(signLines[signLine]);bytes=String_EncodeUtf8(utf8,&value);
+    if(bytes>96)signLines[signLine][n]=0;
+    else signDirty[signLine]=1;
+    return true;
+}
+static int SignText(void* screen,const cc_string* value) {
+    int i;for(i=0;i<value->length;i++)SignChar(screen,value->buffer[i]);return true;
+}
+static int SignPointer(void* screen,int id,int x,int y) {
+    (void)screen;(void)id;
+    if(x>=left && x<left+420 && y>=top+32 && y<top+168)signLine=(y-top-32)/34;
+    return true;
+}
+static void SignFree(void* screen) { (void)screen;LapisBackend_Signs()->editing=0; }
+static int SignMove(void* screen,int id,int x,int y) { (void)screen;(void)id;(void)x;(void)y;return true; }
+static const struct ScreenVTABLE signTable={
+    Empty,Update,SignFree,SignRender,Empty,SignDown,Screen_InputUp,SignChar,SignText,
+    SignPointer,Screen_PointerUp,SignMove,Scroll,SignLayout,Empty,Empty,NULL
+};
+void LapisGui_ShowSign(void) {
+    struct LapisSigns* signs=LapisBackend_Signs();cc_string value;int i,side=signs->front?0:1;
+    if(!signs->editing)return;
+    LapisGui_Close();signs->editing=1;signLine=0;
+    for(i=0;i<4;i++) {
+        signDirty[i]=0;
+        value=String_Init(signLines[i],0,96);
+        String_AppendUtf8(&value,signs->edit.lines[side][i],(int)strlen(signs->edit.lines[side][i]));signLines[i][value.length]=0;
+    }
+    signScreen.VTABLE=&signTable;signScreen.grabsInput=true;signScreen.closable=true;
+    Gui_Add(&signScreen,GUI_PRIORITY_INVENTORY);
 }

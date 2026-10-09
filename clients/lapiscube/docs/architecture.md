@@ -21,13 +21,15 @@ The original engine submodule stays untouched; the patch is applied to a build c
 | `LapisProtocol` | Framing, state machine, identifiers, login, teleport/keepalive and output queue |
 | `LapisSession` | Nonblocking partial I/O, deadlines and budgets |
 | `LapisIdentity` | Offline UUIDv3 with existing BearSSL MD5 |
-| `LapisWorld` | Pure bounded palette/chunk/light validation, cache and block updates |
+| `LapisWorld` | Pure bounded palette/chunk/light validation, cache, block updates and authoritative world clock |
 | `LapisGameplay` | Server-owned stacks/containers/health; bounded outgoing action encoding |
 | `LapisEntities` | Bounded entity snapshots, movement and metadata parsing |
+| `LapisSigns` / `LapisText` | Bounded sign cache/editor requests and validated modified-UTF-8 ↔ UTF-8 text |
+| `LapisMining` | Pure local material/tool pacing; no world or inventory mutations |
 | `LapisEffects` | Named sound packet decoding |
 | `LapisBackend` | Engine sockets/lifecycle, moving map origin, player controls and packet routing |
 | `LapisBlocks` / generated `LapisFacts` | Numeric state/item facts and native visual/collision definitions |
-| `LapisGui` | Native HUD and server-backed inventory/container screens |
+| `LapisGui` | Native HUD and server-backed inventory/container screens, sign editor/reading overlay and mining progress |
 | `LapisMobs` | Original geometric models, native entity interpolation and targeting |
 | `LapisAudio` | Original bounded synthesis and existing audio-pool playback |
 | `engine/src/Protocol.c` | Untouched Classic/CPE protocol |
@@ -58,6 +60,7 @@ Tiny-console compatibility or a total process-memory ceiling is not claimed.
 - Per-pump input budget 256 KiB, 16 KiB read scratch; partial writes retained.
 - Connection/incomplete-frame timeout 15 seconds; idle receive timeout 30 seconds.
 - Three-byte bounded frame lengths, five-byte field VarInts, checked arrays/palettes.
+- At most 128 signs × two sides × four 96-byte UTF-8 lines; refreshed chunks invalidate cached text.
 - Eight synthesized audio banks/voices; UI caches bounded text textures.
 - Unsupported configuration fails explicitly. Unknown Play packets remain bounded;
   the core `skipped` counter means delegated to gameplay, not necessarily ignored.
@@ -69,3 +72,25 @@ The desktop build requires extended block/texture support. Other upstream ports
 need explicit memory/platform work before they can be called supported. Classic
 packet selection is tested independently. See milestone and validation documents
 for behavior that is implemented but not yet accepted through actual gameplay.
+
+## Survival compatibility details
+
+Opening a container does not resend the player inventory at this server revision.
+The client aliases the already-authoritative slots into each menu and mirrors
+updates back. Direct window -2 is also handled. Crafting, smelting and cursor
+results always come from server slot packets; no recipe execution runs locally.
+
+One right-button press emits one use request. Holding it lets the server's eating
+timer complete; release emits action 5. Repeated Use requests reset that timer.
+The server's saturation conversion can yield -0.4, so that valid wire range is
+accepted instead of disconnecting a hungry player.
+
+The server has instant-break rules but no timed hardness enforcement. Non-instant
+mining durations are explicitly client presentation choices. The client cancels
+when the target state, selected tool, mode or input changes. Authoritative updates
+still decide removal, loot and tool durability.
+
+Clock packet 6A carries world age, day ticks modulo 24000 and a ticking boolean.
+Sixteen brightness steps tint engine sky/fog/sun/shadow colours only when their
+values change. Time is not advanced independently and terrain is never generated
+locally. This shading does not replace a full block-light implementation.

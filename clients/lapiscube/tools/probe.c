@@ -28,6 +28,8 @@ static cc_uint64 Now(void) {
     clock_gettime(CLOCK_MONOTONIC, &t);
     return (cc_uint64)t.tv_sec * 1000 + (cc_uint64)t.tv_nsec / 1000000;
 }
+#include "survival_scenario.h"
+
 static int Read(void* context, cc_uint8* data, int capacity) {
     int fd = *(int*)context;
     ssize_t n = recv(fd, data, (size_t)capacity, 0);
@@ -48,7 +50,12 @@ static void Packet(struct LapisProtocol* p, int state, int id, const cc_uint8* d
         printf("packet state=%d id=0x%02X bytes=%d next=%d\n", state, id, size, p->state);
     if(state==LAPIS_PLAY) {
         LapisReader_Init(&r,data,size);
-        if(id==0x27 && !LapisWorld_Chunk(&world,data,size))LapisProtocol_Fail(p,"Chunk decoding failed");
+        if(id==0x27) {
+            if(!LapisWorld_Chunk(&world,data,size))LapisProtocol_Fail(p,"Chunk decoding failed");
+            x=(cc_int32)LapisReader_Big(&r,4);z=(cc_int32)LapisReader_Big(&r,4);LapisSigns_Chunk(&signs,x,z);
+            LapisReader_Init(&r,data,size);
+        }
+        if(id==0x6A && !LapisWorld_Time(&world,data,size))LapisProtocol_Fail(p,"Time decoding failed");
         if(id==0x57) {
             x=(cc_int32)LapisReader_VarInt(&r);z=(cc_int32)LapisReader_VarInt(&r);
             if(!LapisReader_Done(&r) || LapisWorld_Center(&world,x,z)<0)LapisProtocol_Fail(p,"Center failed");
@@ -57,7 +64,9 @@ static void Packet(struct LapisProtocol* p, int state, int id, const cc_uint8* d
             LapisWorld_Position(LapisReader_Big(&r,8),&x,&y,&z);value=LapisReader_Count(&r,65535);
             if(!LapisReader_Done(&r) || !LapisWorld_Block(&world,x,y,z,value))LapisProtocol_Fail(p,"Update failed");
         }
-        if(!LapisGameplay_Packet(&gameplay,p,id,data,size))LapisProtocol_Fail(p,"Gameplay decode failed");
+        if(!LapisGameplay_Packet(&gameplay,p,id,data,size)) { fprintf(stderr,"gameplay rejected id=%02X size=%d\n",id,size);LapisProtocol_Fail(p,"Gameplay decode failed"); }
+        if(!LapisSigns_Packet(&signs,id,data,size))LapisProtocol_Fail(p,"Sign decode failed");
+        if(id==0x4B) { LapisWorld_Init(&world);LapisEntities_Init(&entities);LapisSigns_Init(&signs); }
         if(!LapisEntities_Packet(&entities,id,data,size))LapisProtocol_Fail(p,"Entity decode failed");
         if(id==0x6E && !LapisEffects_Sound(&sound,data,size))LapisProtocol_Fail(p,"Sound decode failed");
     }
@@ -128,13 +137,14 @@ int main(int argc, char** argv) {
     int fd, status, ok = 0, port; cc_uint8 uuid[16]; cc_uint64 start;
     struct LapisIO io; struct pollfd poller; struct LapisProtocol* p = &session.protocol;
     char* end; long parsed;
-    if (argc != 5 || (strcmp(argv[1], "status") && strcmp(argv[1], "login") && strcmp(argv[1],"exercise"))) {
-        fprintf(stderr, "usage: %s status|login|exercise host port username\n", argv[0]); return 2;
+    setvbuf(stdout,NULL,_IOLBF,0);
+    if (argc != 5 || (strcmp(argv[1], "status") && strcmp(argv[1], "login") && strcmp(argv[1],"exercise") && strcmp(argv[1],"survival") && strcmp(argv[1],"combat"))) {
+        fprintf(stderr, "usage: %s status|login|exercise|survival host port username\n", argv[0]); return 2;
     }
     parsed = strtol(argv[3], &end, 10);
     if (*end || parsed < 1 || parsed > 65535) return 2;
     port = (int)parsed; status = !strcmp(argv[1], "status");
-    exercise=!strcmp(argv[1],"exercise");
+    exercise=!strcmp(argv[1],"exercise");scenario=!strcmp(argv[1],"survival");combat=!strcmp(argv[1],"combat");
     start = Now(); LapisSession_Init(&session, start, Packet, NULL);
     LapisWorld_Init(&world);LapisGameplay_Init(&gameplay);LapisEntities_Init(&entities);
     LapisIdentity_OfflineUUID(argv[4], uuid);
@@ -145,11 +155,13 @@ int main(int argc, char** argv) {
     if (fd < 0) { fputs("TCP connection failed\n", stderr); return 1; }
     io.read = Read; io.write = Write; io.context = &fd;
     poller.fd = fd;
-    while (Now() - start < 45000) {
+    while (Now() - start < ((scenario||combat)?120000u:45000u)) {
         if (!LapisSession_Pump(&session, &io, Now())) break;
         if(exercise)Exercise(p);
+        if(scenario)Survival(p);
+        if(combat)Combat(p);
         if ((status && p->statusPong) || (!status && p->loaded && p->teleports >= 2 &&
-             p->keepalives && !p->outputSize && (!exercise || stage==9))) { ok = 1; break; }
+             p->keepalives && world.clockValid && !p->outputSize && (!exercise || stage==9) && (!scenario || stage==36) && (!combat || combatStage==2))) { ok = 1; break; }
         poller.events = (short)(POLLIN | (p->outputSize ? POLLOUT : 0));
         poller.revents = 0;
         if (poll(&poller, 1, 50) < 0 && errno != EINTR) break;

@@ -11,7 +11,10 @@ components are included in this change.
 are original LapisCube work under the accompanying BSD-3-Clause `LICENSE`.
 Protocol identifiers and wire behavior were studied from the Lapis testing
 source; the client does not link or copy Lapis server implementation code.
-The test server remains a separate executable.
+The test server remains a separate executable. `tests/survival_fixture.c` includes
+the root server headers solely to write its pinned saved-game structures. That
+test utility is not part of the shipped client or binary packages; server headers
+retain their existing GPLv3 notices and terms.
 
 ## Modified upstream code
 

@@ -5,8 +5,9 @@ renderer, input, windowing, audio, collision and UI infrastructure.
 
 **Milestones 2–6 have started; they are not complete.** The native client now
 renders a server world, moves and jumps, displays health/hunger and authoritative
-item stacks, and has mining/placement and inventory controls. A real-server test
-passes mining, pickup, cursor transfers, dropping, placement and chat. This is
+item stacks, and has mining/placement and inventory controls. Real-server tests
+pass mining, pickup/drop, placement, crafting, chest/furnace use, food, signs,
+combat, death and respawn; advanced survival tests use an isolated seeded save. This is
 an early playable development slice, not a finished survival release.
 
 The client uses an independent CC0 atlas, geometric models/UI and synthesized
@@ -68,7 +69,7 @@ these desktop-oriented modules.
 | --- | --- |
 | Move / look / jump | WASD / mouse (arrow keys also available in package) / Space |
 | Mine / attack | Hold left mouse / target entity and click |
-| Place / open container / use held item | Right mouse |
+| Place / open container / use held item | Right mouse; hold to eat, release before the next use |
 | Select hotbar | 1–9 or wheel |
 | Inventory / crafting | B; Escape or B closes |
 | Inventory operation | Left: stack, right: one, Shift: transfer |
@@ -76,13 +77,19 @@ these desktop-oriented modules.
 | Sneak / sprint | Left Ctrl / Left Shift |
 | Chat / command | T; type `/command` in chat |
 | Respawn | Enter when health is zero and no other screen owns input |
+| Edit sign | Right-click sign; Tab/Up/Down chooses line, Enter saves, Escape cancels |
+| Read sign | Aim at it to show front/back text |
 | Settings | Escape, existing ClassiCube options |
 
-Mining currently uses a fixed 650 ms request interval; the server decides whether
-the action is allowed and supplies block/item results. Tool-dependent progress
-and mining animation are unfinished. Crafting and container grids submit clicks
-without predicted item changes. Food/use/release and attack/respawn requests are
-wired, but their full gameplay loops have not passed acceptance testing.
+Mining has a progress bar and material/tool-dependent delays. These are initial
+LapisCube pacing choices: the reference server specifies instant-break cases but
+no timed hardness table. Releasing, changing target or changing tool cancels the
+current request. Only server updates remove blocks or award drops. Crafting and
+container clicks never predict or create items locally.
+
+Signs support four lines per side. Text appears in an aimed-at overlay; it is not
+yet painted onto the model. Wire text supports UTF-8 and modified UTF-8; the
+engine font/input remains CP437. Unedited sign lines retain their original Unicode.
 
 ## Validation commands
 
@@ -90,11 +97,14 @@ wired, but their full gameplay loops have not passed acceptance testing.
 make test
 make sanitize
 make integration
+make survival
 make native-smoke
 ```
 
 `integration` starts the unchanged server in a temporary save with seed 42; its
-headless probe shares the product decoders. `native-smoke` builds the existing
+headless probe shares the product decoders. `survival` generates a clearly
+labelled saved-game fixture with supplies and workstations, then exercises two
+clients against the unchanged server. It is not fresh-world progression evidence. `native-smoke` builds the existing
 terminal/software renderer and checks actual engine world loading plus the
 original Classic login. Rebuild `make native` before packaging a windowed client.
 On restricted runners without `/proc`, use
@@ -108,10 +118,13 @@ block changes are authoritative. Cache recentering refreshes the dense map and
 may hitch; efficient incremental remeshing remains work. Lighting is an engine
 approximation of the server's placeholder light arrays. Special shapes, water
 levels, mob distinctions/metadata and item/projectile rendering need refinement.
-Signs have no text editor yet; particles and several entity effects are omitted.
-Creative/adventure/spectator handling is partial. Full crafting, furnace,
-combat, food, death and Far Lands sessions remain unverified. Unicode chat still
-needs proper modified-UTF-8-to-engine-font conversion.
+Particles and several entity effects are omitted. Creative/adventure/spectator
+handling is partial. Full fresh-world progression, inventory-full crafting-close
+recovery, armour, Far Lands and long-distance sessions remain unverified. Sky and
+terrain shading follow server time; per-voxel modern lighting remains approximate.
+The pinned server can broadcast Play packets to another connection that is still
+configuring during simultaneous joins; sequential joins are the tested path.
+The client does not accept Play packets in Configuration to hide that server issue.
 
 The offline, uncompressed server profile rejects encryption, compression,
 unexpected registry NBT and unsupported configuration semantics explicitly.
