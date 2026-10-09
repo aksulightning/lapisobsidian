@@ -2,6 +2,238 @@
   "schema_version": 1,
   "project": "LapisCube",
   "default_asset_license": "CC0-1.0",
-  "status": "No gameplay assets bundled in milestone 1",
-  "assets": []
+  "status": "Initial independent atlas, geometric UI and synthesized sound bank; see docs/assets.md for coverage limits",
+  "assets": [
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/gui.png",
+      "sha256": "60f6db6136f9362d1765a9219f6b7c34213f455b1c4a3edfa068d0fe81bf816b",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/gui_classic.png",
+      "sha256": "60f6db6136f9362d1765a9219f6b7c34213f455b1c4a3edfa068d0fe81bf816b",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/icons.png",
+      "sha256": "19d50dc4bfb71288bd86da750422a344410c27e6f18ff2d6f39ed0e6571d5ca7",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/lapis-entities.png",
+      "sha256": "636f9dacce1c22607c2da5b464978643a6ac0a73e724f8eb1be4baf5be779085",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://kenney.nl/media/pages/assets/voxel-pack/a3a73d0ff7-1677662501/kenney_voxel-pack.zip",
+      "author": "Kenney Vleugels",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Tiles resized 128 to 32, water/ice alpha adjusted, Classic cloth tinted, packed with Classic/CPE compatibility cells; see atlas.json",
+      "destination_filename": "assets/terrain.png",
+      "sha256": "a0edfc7bc6dd725741b15478658f0e1a114ead8b8c1095923f71b1b703ef5e28",
+      "attribution": "Kenney (kenney.nl)",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/cloth.wav",
+      "sha256": "d415e993ec14a9e9ab903768fa3e7569d19c3c8efe105d9f8e82548cd471a84c",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/door.wav",
+      "sha256": "08e279a871564ad8e7b1208e015635b74919b2f7f18ba29bcfae299e25c534c2",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/eat.wav",
+      "sha256": "f132076183ff231ef7a4c436ed06b774c8827694fb8e664e9f5e5630eb064745",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/glass.wav",
+      "sha256": "d4d394c7d759c039ee68e0e07be38f022af187e4b23dc8a2537fbc643124c2e6",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/grass.wav",
+      "sha256": "8a2a59434c09d606dad89675b5bcf35d3fac68dc2b0c0e0d50366b262ebddf29",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/gravel.wav",
+      "sha256": "bc0b6283cae80e9e52e7a2000fede5acde375e680dc86a6ae25571cbb379d250",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/hurt.wav",
+      "sha256": "f2b7b72695874eb7646d0de8b5813053883f48fc4b048db939bf591bf6450f78",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/lava.wav",
+      "sha256": "47fc9a659ec4a647e6912049d50226da27d7079fad264919e99f5a6dcd20591e",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/metal.wav",
+      "sha256": "7db70bb1e219d8d728d0edc2a9af102494bc96e89912bfa17439f6bebd0869d0",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/note.wav",
+      "sha256": "2467d5d3cedc6c688bc4054867464fc00b3527a29cf88a1203961a2ad5931aef",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/pickup.wav",
+      "sha256": "231ae831b57a28e747ad891a07511610784e5b5246998e0959ee2f3acf42d2dc",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/sand.wav",
+      "sha256": "2c081a369e334bb4515d869cf558af3da5764e96576cd2d41170d880051421a3",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/snow.wav",
+      "sha256": "72dfd03de1f3a6555668fbd16f7a3a8ceda89790e3d0cb8741824db143a73b26",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/stone.wav",
+      "sha256": "93dd69aa56adf8ef202441eb751e197fc2ab69ac7cee33df6640ff80cf547d24",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/water.wav",
+      "sha256": "08f765a39886eccb3a4ce18c8ef723de40db427595b316cbbd879e4c7132d05f",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/audio/wood.wav",
+      "sha256": "55dffffc5b6ce4fb75a2978148d18b3e5144d6b2e641ff76c45634ee49fe9aae",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    }
+  ]
 }

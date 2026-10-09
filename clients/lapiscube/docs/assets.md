@@ -1,39 +1,61 @@
-# Independent asset collection: investigation and next steps
+# Independent assets
 
-No gameplay assets have been imported or generated for milestone 1. The empty
-machine-readable manifest describes that actual state. Do not package an upstream
-Minecraft asset cache as a substitute.
+The committed bundle contains a verified Kenney CC0 atlas and original geometric
+UI/models and synthesized sounds. No official Minecraft files are bundled or
+fetched by the Lapis path. The launcher asset downloader is not an entrypoint;
+Lapis entity skin downloads are disabled. Fonts come from the host's installed
+system fonts and are not bundled.
 
-Initial source review (2026-10-09):
+## Admitted sources
 
-| Candidate | Evidence reviewed | Admission decision |
-| --- | --- | --- |
-| [Kenney Voxel Pack](https://kenney.nl/assets/voxel-pack) | Author's page explicitly lists Creative Commons CC0, 190 files and 128×128 tiles | Suitable candidate; inspect downloaded archive/license and specific files before import; choose a cohesive downsampling treatment |
-| [Minetest conversion](https://github.com/minetest-mods/voxelpack_by_kenney) | README only states it is a WIP texture pack using Kenney textures; README blob `d753cc2537176c7cbdc180128dcc23f5f0c27e2b` | Not enough per-file/derivative licensing evidence from README; prefer author archive or verify every conversion's provenance |
-| [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Author's page lists Creative Commons CC0, 130 files | Candidate for material/contact sounds; archive and per-file mapping still needed |
-| [Freesound](https://freesound.org/help/faq/#licenses) | Official FAQ lists CC0, attribution, noncommercial and legacy licensing | Only individually verified CC0 recordings; website membership is not proof |
-| [OpenGameArt](https://opengameart.org/content/faq) | Official FAQ describes multiple license choices and compliance | Only individually verified CC0 submissions by default; no downloads approved by site-wide assumption |
+Kenney's [Voxel Pack](https://kenney.nl/assets/voxel-pack) author archive:
+https://kenney.nl/media/pages/assets/voxel-pack/a3a73d0ff7-1677662501/kenney_voxel-pack.zip
 
-For each admitted file, record `source_url`, `author`, exact `license` and
-`license_url`, `modifications`, `destination_filename`, output `sha256`,
-`attribution`, and `redistribution_notes` under `assets/manifest.json`.
-Non-CC0 candidates require an explicit documented licensing decision. Keep the
-source license evidence alongside the eventual bundle. Originals synthesized by
-the project should have their generator path/revision as source and CC0 dedication.
+SHA-256: `667c05e3f6d95718aaef888c7fc06f7137ba5dede95f4574deb17d4436257958`.
+Its included License.txt explicitly identifies Kenney Vleugels and Creative
+Commons Zero. The exact notice is retained in `assets/licenses/Kenney-Voxel.txt`.
+141 tile/item PNGs were resized from 128 to 32 pixels and packed into a 512×1024
+atlas; water/ice alpha was adjusted, and Classic cloth colors were tinted.
+The first 256 atlas cells preserve the Classic/CPE texture layout with independent
+substitutes. `assets/atlas.json` records locations. The rest hold Lapis images.
 
-M2 asset work starts with an original atlas and mapping for terrain, fluids,
-plants and transparent blocks. Later add oriented utility blocks, item icons,
-eight mob models/animations, players, drops/projectiles, and survival UI. A
-packet identifier such as `minecraft:block.note_block.harp` is a mapping key,
-not permission to ship the corresponding official sound file.
+`tools/build_assets.py` authors the UI geometry and 16 deterministic PCM effects.
+`LapisMobs.c` authors six geometric shape families shared by the initial animals,
+hostiles, players, items and projectiles. `LapisAudio.c` creates eight runtime
+synthesis banks for named protocol events. The audiovisual output and geometric
+model designs are dedicated under CC0; generator/renderer code remains BSD-3-Clause.
+See `assets/licenses/LapisCube-Originals.txt`.
 
-For sound, implement a deterministic small synthesis pipeline for UI clicks,
-pickup/drop/eating/damage/impact/arrow effects and note timbres, supplemented by
-verified CC0 material/animal recordings. Cover grass/stone/wood/dirt/sand/gravel
-footsteps, break/place, fluids, doors/trapdoors/levers/plates, combat and mobs.
-Lapis musicbox already emits named note events; map those to independent local
-instruments, volume and pitch through ClassiCube's audio facilities. No official
-Minecraft sounds or General MIDI soundfont of unverified licensing should be used.
+Every bundled PNG/WAV has source URL, author, license, modifications, destination
+and SHA-256 in `assets/manifest.json`. Packaging verifies those hashes. Sound
+families/fallbacks are documented in `assets/sound-map.json`. Step/dig sounds reuse
+the engine audio bank; protocol sounds use the native audio pool. Musicbox MIDI
+is already interpreted by the server; the client plays its named note events.
 
-The complete collection, mappings, listening/visual QA and installation packaging
-remain milestones 2–6; these investigation notes are not an asset delivery.
+To reproduce the assets, put the pinned author ZIP at `build/kenney-voxel.zip`,
+install Pillow, and run `python3 tools/build_assets.py`. It verifies the source
+hash/license and regenerates the atlas, WAVs, manifest and numeric compatibility
+facts from the pinned server. Ordinary builds use the committed generated files.
+
+## Coverage and quality limits
+
+The collection is an initial cohesive resource set, not complete original art for
+every item. Several utility blocks/items use material fallbacks. Cow, pig and
+sheep share a grazer shape; players/zombie/skeleton share an upright shape with
+different tints. Drops/projectiles are simple cuboids. Metadata/equipment and
+species-specific models/voices need further work. Animal events currently use
+synthesis fallbacks. Note timbres are simple tones/noise, not a General MIDI bank.
+Particle art, full sign text, armor visualization and complete menu art are pending.
+Sounds have parser coverage but no listening acceptance session yet.
+
+## Investigated but not imported
+
+- Minetest `voxelpack_by_kenney`: prefer the author's archive because conversion
+  README alone does not establish every derivative file's provenance.
+- Kenney Impact Sounds: official CC0 candidate, no recordings imported here.
+- Freesound and OpenGameArt: each hosts multiple licenses. No site-wide license
+  assumption was made and no recordings were admitted without individual review.
+
+Any future non-CC0 asset requires its own author/license/attribution and
+redistribution documentation. Identifier strings are interoperability keys,
+not a license to distribute another game's corresponding resources.

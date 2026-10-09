@@ -1,7 +1,15 @@
 #include "LapisProtocol.h"
 #include <string.h>
+#define Byte LapisReader_Byte
+#define Count LapisReader_Count
+#define Skip LapisReader_Skip
+#define Big LapisReader_Big
+#define Double LapisReader_Double
+#define Float LapisReader_Float
+#define Done LapisReader_Done
+#define Queue LapisProtocol_Queue
 
-static int Byte(struct LapisReader* r) {
+int Byte(struct LapisReader* r) {
     if (r->pos >= r->size) { r->failed = 1; return 0; }
     return r->data[r->pos++];
 }
@@ -22,13 +30,13 @@ cc_uint32 LapisReader_VarInt(struct LapisReader* r) {
     r->failed = 1; return 0;
 }
 
-static int Count(struct LapisReader* r, int max) {
+int Count(struct LapisReader* r, int max) {
     cc_uint32 n = LapisReader_VarInt(r);
     if (n > (cc_uint32)max) { r->failed = 1; return 0; }
     return (int)n;
 }
 
-static int Skip(struct LapisReader* r, int count) {
+int Skip(struct LapisReader* r, int count) {
     if (count < 0 || count > r->size - r->pos) { r->failed = 1; return 0; }
     r->pos += count; return 1;
 }
@@ -44,27 +52,27 @@ int LapisReader_String(struct LapisReader* r, char* dst, int capacity) {
     r->pos += n; return n;
 }
 
-static cc_uint64 Big(struct LapisReader* r, int bytes) {
+cc_uint64 Big(struct LapisReader* r, int bytes) {
     cc_uint64 v = 0;
     while (bytes--) v = (v << 8) | (cc_uint64)Byte(r);
     return v;
 }
 
-static double Double(struct LapisReader* r) {
+double Double(struct LapisReader* r) {
     cc_uint64 bits = Big(r, 8); double v;
     memcpy(&v, &bits, 8);
     if (!(v >= -1.0e12 && v <= 1.0e12)) r->failed = 1;
     return v;
 }
 
-static float Float(struct LapisReader* r) {
+float Float(struct LapisReader* r) {
     cc_uint32 bits = (cc_uint32)Big(r, 4); float v;
     memcpy(&v, &bits, 4);
     if (!(v >= -1.0e12f && v <= 1.0e12f)) r->failed = 1;
     return v;
 }
 
-static int Done(const struct LapisReader* r) { return !r->failed && r->pos == r->size; }
+int Done(const struct LapisReader* r) { return !r->failed && r->pos == r->size; }
 
 int LapisProtocol_EncodeVarInt(cc_uint8* dst, cc_uint32 value) {
     int n = 0;
@@ -86,7 +94,7 @@ int LapisProtocol_Fail(struct LapisProtocol* p, const char* reason) {
     return 0;
 }
 
-static int Queue(struct LapisProtocol* p, int id, const cc_uint8* data, int size) {
+int Queue(struct LapisProtocol* p, int id, const cc_uint8* data, int size) {
     cc_uint8 header[10]; int n, m;
     if (p->state == LAPIS_FAILED || size < 0 || size > LAPIS_MAX_OUTPUT - 10) return 0;
     m = LapisProtocol_EncodeVarInt(header + 5, (cc_uint32)id);
@@ -315,7 +323,8 @@ static int Play(struct LapisProtocol* p, int id, struct LapisReader* r) {
         n = LapisProtocol_EncodeVarInt(data, teleport);
         return Queue(p, 0, data, n);
     }
-    /* M1 measures chunk delivery but does not claim to decode or render it. */
+    /* Gameplay modules own these bounded payloads via the packet callback.
+       skipped counts packets delegated by the connection core, not missing features. */
     if (id == 0x27) p->chunks++;
     p->skipped++; return 1;
 }

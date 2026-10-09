@@ -41,6 +41,14 @@ struct LapisProtocol {
 void LapisReader_Init(struct LapisReader* r, const cc_uint8* data, int size);
 cc_uint32 LapisReader_VarInt(struct LapisReader* r);
 int LapisReader_String(struct LapisReader* r, char* dst, int capacity);
+int LapisReader_Byte(struct LapisReader* r);
+int LapisReader_Count(struct LapisReader* r, int max);
+int LapisReader_Skip(struct LapisReader* r, int count);
+cc_uint64 LapisReader_Big(struct LapisReader* r, int bytes);
+double LapisReader_Double(struct LapisReader* r);
+float LapisReader_Float(struct LapisReader* r);
+int LapisReader_Done(const struct LapisReader* r);
+int LapisProtocol_Queue(struct LapisProtocol* p, int id, const cc_uint8* data, int size);
 int LapisProtocol_EncodeVarInt(cc_uint8* dst, cc_uint32 value);
 void LapisProtocol_Init(struct LapisProtocol* p, LapisPacketHandler handler, void* context);
 int LapisProtocol_Begin(struct LapisProtocol* p, const char* host, int port,

@@ -4,9 +4,10 @@ Authority: Lapis testing commit `56300de744b9b859993f64d5c00d1637e42584c6`.
 Version constant: `include/protocol.h`: Java 1.21.8 / 772.
 All IDs below are hexadecimal and state/direction-specific.
 
-**Implemented** means exercised by the M1 tests unless described as defensive.
-**Deferred** means safely frame-skipped on receive or not sent; it is not gameplay
-support. The table inventories server behavior even where no client support exists.
+Connection foundation is tested against the real server. Gameplay entries
+distinguish implemented parsing/presentation from real-server interaction evidence.
+**Deferred** means safely frame-skipped or not sent. See validation.md for actual
+acceptance results; implementation alone is not proof that gameplay works.
 
 ## Framing and connection
 
@@ -54,40 +55,40 @@ Source is `src/packets.c` unless another source is listed.
 | ID | Packet / source | Important wire behavior | Client status |
 | --- | --- | --- | --- |
 | 2B | `sc_loginPlay` | i32 entity ID, dimension-key list, distances, dimension type/name, seed, modes, death/portal/sea/chat flags | Implemented, validated and stored |
-| 41 | `sc_synchronizePlayerPosition` | Teleport VarInt **-1**, XYZ doubles, velocity doubles, yaw/pitch floats, i32 flags=0 | Implemented, absolute coordinates + ack; no local movement yet |
+| 41 | `sc_synchronizePlayerPosition` | Teleport VarInt **-1**, XYZ doubles, velocity doubles, yaw/pitch floats, i32 flags=0 | Absolute synchronization + ack and native position/origin update |
 | 26 | `sc_keepAlive` | Opaque i64 (currently zero), once per second | Implemented, exact echo |
-| 27 | `sc_chunkDataAndUpdateLight` | i32 X/Z, empty heightmaps, sized section payload, block entities, light masks/arrays | Frames counted; decoding/rendering M2 |
-| 57 | `sc_setCenterChunk` | Signed chunk X/Z VarInts | Deferred M2 |
+| 27 | `sc_chunkDataAndUpdateLight` | i32 X/Z, empty heightmaps, sized section payload, block entities, light masks/arrays | All 24 sections validated; Y=0..255 cached/rendered; real 25-chunk world tested |
+| 57 | `sc_setCenterChunk` | Signed chunk X/Z VarInts | Bounded cache center, eviction and native origin shift; boundaries unit-tested |
 | 5A | `sc_setDefaultSpawnPosition` | Packed position + angle | Deferred M2 |
-| 08 | `sc_blockUpdate`; signs/doors/circuits/farming/fluid overlays | Packed position + modern state VarInt | Deferred M2/M5 |
-| 04 | `sc_acknowledgeBlockChange` | Action sequence VarInt | Deferred M3 |
-| 39 | `sc_playerAbilities` | Flags, flying/walking speeds | Deferred M2/M4 |
-| 22 | `sc_startWaitingForChunks`, `command_packets.c` | Event 13 waiting for chunks; event 3 gamemode change | Deferred M2/M4 |
+| 08 | `sc_blockUpdate`; signs/doors/circuits/farming/fluid overlays | Packed position + modern state VarInt | Authoritative cache/native updates; real mining and placement tested |
+| 04 | `sc_acknowledgeBlockChange` | Action sequence VarInt | Sequence acknowledgment retained; server decides mutations |
+| 39 | `sc_playerAbilities` | Flags, flying/walking speeds | Parsed; initial flying permission/mode controls, incomplete mode UX |
+| 22 | `sc_startWaitingForChunks`, `command_packets.c` | Event 13 waiting for chunks; event 3 gamemode change | Gamemode stored; native world load governs loaded transition |
 | 6A | `sc_updateTime` | Two i64 clocks + day-tick boolean | Deferred M2 |
-| 14 | `sc_setContainerSlot` | Window/state/slot + component-aware item stack (zero components here) | Deferred M3/M4 |
-| 59 | `sc_setCursorItem` | Item stack for carried cursor | Deferred M4 |
-| 62 | `sc_setHeldItem` | Selected slot byte | Deferred M3 |
-| 34 | `sc_openScreen` | Window ID, menu ID, NBT title | Deferred M4 |
-| 61 | `sc_setHealth` | Health float, food VarInt, saturation float | Deferred M4 |
-| 4B | `sc_respawn` | Dimension/mode/death/portal/sea/data-kept fields | Deferred M4 |
+| 14 | `sc_setContainerSlot` | Window/state/slot + component-aware item stack (zero components here) | Atomic server-owned stacks and mirrored container/player views; real inventory transfer tested |
+| 59 | `sc_setCursorItem` | Item stack for carried cursor | Authoritative cursor; real transfer tested |
+| 62 | `sc_setHeldItem` | Selected slot byte | Selected slot synchronization and native hotbar |
+| 34 | `sc_openScreen` | Window ID, menu ID, NBT title | Native player/crafting/chest/furnace grids; full container session unverified |
+| 61 | `sc_setHealth` | Health float, food VarInt, saturation float | Health/food/saturation state and HUD; damage/eating acceptance pending |
+| 4B | `sc_respawn` | Dimension/mode/death/portal/sea/data-kept fields | Validated reset and reload path + Enter request; parser tested, death session pending |
 | 3F | `sc_playerInfoUpdateAddPlayer`, `command_packets.c` | Add-player + mode or mode-only action mask | Deferred M4 |
-| 01 | `sc_spawnEntity` | Entity ID, UUID, type, XYZ, angles, object data, velocity | Deferred M4 |
-| 5C | `sc_setEntityMetadata`, `mob_packets.c` | Typed indexed metadata terminated by FF; items, pose, creeper fuse, arrows | Deferred M4 |
+| 01 | `sc_spawnEntity` | Entity ID, UUID, type, XYZ, angles, object data, velocity | Bounded snapshots and original shared native models; species detail incomplete |
+| 5C | `sc_setEntityMetadata`, `mob_packets.c` | Typed indexed metadata terminated by FF; items, pose, creeper fuse, arrows | Lapis metadata types 0/1/7/8/21 parsed; partial visual application |
 | 02 | `sc_entityAnimation` | Entity ID + animation | Deferred M4 |
-| 1F | `sc_teleportEntity` | Entity position/velocity/angles/grounded synchronization | Deferred M4 |
-| 2F | `sc_mob_move`, `mob_packets.c` | i16 deltas at 1/4096 block, yaw/pitch, grounded | Deferred M4 |
-| 31 | `sc_updateEntityRotation` | Entity ID, yaw/pitch bytes, grounded | Deferred M4 |
-| 4C | `sc_setHeadRotation` | Entity ID + head yaw | Deferred M4 |
+| 1F | `sc_teleportEntity` | Entity position/velocity/angles/grounded synchronization | Native interpolated entity position/rotation |
+| 2F | `sc_mob_move`, `mob_packets.c` | i16 deltas at 1/4096 block, yaw/pitch, grounded | Signed fixed-point deltas decoded and interpolated; unit tests |
+| 31 | `sc_updateEntityRotation` | Entity ID, yaw/pitch bytes, grounded | Rotation synchronization |
+| 4C | `sc_setHeadRotation` | Entity ID + head yaw | Head rotation retained; model animation limited |
 | 5F | `sc_mob_equipment`, `mob_packets.c` | Skeleton main-hand bow stack | Deferred M4 |
 | 19 | `sc_damageEvent` | Entity ID, damage registry ID, sources, optional position | Deferred M4 |
 | 1E | `sc_entityEvent` | i32 entity ID + status | Deferred M4 |
-| 46 | `sc_removeEntity` | VarInt count/IDs | Deferred M4 |
+| 46 | `sc_removeEntity` | VarInt count/IDs | Native entity removal and fixed slot reuse |
 | 75 | `sc_pickupItem` | Collected ID, collector ID, count | Deferred M3/M4 |
-| 72 | `sc_systemChat` | Anonymous NBT TAG_String using modified UTF-8 + overlay boolean | Deferred M4 |
+| 72 | `sc_systemChat` | Anonymous NBT TAG_String using modified UTF-8 + overlay boolean | ASCII text displayed; real chat round trip; modified UTF-8 conversion incomplete |
 | 10 | `sc_commands`, `command_packets.c` | Brigadier node graph | Deferred M4; command strings need not use this graph to be sent |
 | 06 | `sc_sign`, `sign_packets.c` | Packed position, sign block-entity type 7, bounded sign NBT | Deferred M5 |
 | 35 | `sc_signEditor`, `sign_packets.c` | Packed position + front/back boolean | Deferred M5 |
-| 6E | `mob_packets.c`, `notes.c` | Inline named sound holder=0, optional range, category, fixed XYZ, volume/pitch/seed | Deferred M5; local independent audio resources needed |
+| 6E | `mob_packets.c`, `notes.c` | Inline named sound holder=0, optional range, category, fixed XYZ, volume/pitch/seed | Inline name/category/position/volume/pitch parsed; original synthesis including note timbres; listening QA pending |
 | 29 | `sc_firecracker`, `mob_packets.c` | Particle 29 firework, position/spread/speed/count | Deferred M4/M5 |
 
 No chunk-unload, chunk-batch, standalone update-light, recipe synchronization or
@@ -95,7 +96,8 @@ feature-flags emission was found in the inspected revision. Do not invent them
 as Lapis requirements. A bounded client cache still needs eviction on center
 changes. Creeper behavior is the server's non-destructive firework burst, not a
 vanilla explosion. Plates additionally use ghast, zombified piglin and fireball
-entities and multiple world keys; these remain future work.
+entities and multiple world keys; generic entity/world reset paths exist, but
+plate travel and those additional species remain unverified.
 
 ### Chunk layout facts for milestone 2
 
@@ -109,13 +111,15 @@ biome container is single-valued (bits=0 and server-local biome ID).
 This protocol revision omits the old explicit paletted-container long-array
 length. Packed word counts are inferred from bits/entry and section size.
 Refer to `tests/chunk_packet.c` before decoding word ordering: wire bytes are
-big-endian 64-bit containers, not an arbitrary flat voxel order. Other valid
-indirect/direct palette sizes must be tested in the future decoder.
+big-endian 64-bit containers, not an arbitrary flat voxel order. The decoder also has automated tests for every valid block palette bit width
+(0 and 4..15), truncation and bounds.
 
 The server emits no initial block entities, and sends sign/entity and oriented
 block-state overlays after each chunk. Light uses 26 sky arrays, with the first
 eight dark and the next eighteen full bright; no block-light arrays are sent.
-Do not substitute client-generated terrain, lighting or registry ID assumptions.
+The client validates these arrays and uses ClassiCube terrain shading as an
+explicit approximation; it does not claim modern light-level parity. No terrain
+is generated locally and wire registry IDs are kept separate.
 
 ## Play: client to server
 
@@ -125,25 +129,25 @@ Authoritative dispatch: `src/main.c:handlePacket`.
 | --- | --- | --- | --- |
 | 00 | No Play branch in case 00 | Teleport acknowledgment VarInt is consumed/discarded by current dispatch | Sent correctly by M1; no claim server verifies it |
 | 1B | Dispatch discards 8-byte payload | Keep-alive response, currently ignored by server | Implemented |
-| 2B | `cs_playerLoaded` | Empty; completes join and entity/inventory synchronization | Explicit API; probe sends after spawn, native loading screen does not |
+| 2B | `cs_playerLoaded` | Empty; completes join and entity/inventory synchronization | Native and probe send after decoded terrain and both spawn teleports |
 | 1D | `cs_setPlayerPosition` | XYZ doubles + flags, exactly 25 bytes | Deferred M2 |
-| 1E | `cs_setPlayerPositionAndRotation` | XYZ doubles + yaw/pitch floats + flags, exactly 33 bytes | Deferred M2 |
+| 1E | `cs_setPlayerPositionAndRotation` | XYZ doubles + yaw/pitch floats + flags, exactly 33 bytes | Native position/rotation/ground state at tick rate; actual movement smoke |
 | 1F | `cs_setPlayerRotation` | Two floats + flags, exactly 9 bytes | Deferred M2 |
 | 20 | `cs_setPlayerMovementFlags` | One flags byte | Deferred M2 |
-| 29 | `cs_playerCommand` | Entity VarInt, action byte, boost VarInt; server actions **1/2 set/clear sprint** | Deferred M2; do not import unrelated vanilla action assumptions |
-| 2A | `cs_playerInput` | One flag byte; bit 20 hex controls sneaking | Deferred M2 |
-| 28 | `cs_playerAction`, `sign_packets.c` | Action 0..6, packed position, face, sequence; mining/drop | Deferred M3 |
-| 3F | `cs_useItemOn`, `sign_packets.c` | Hand, position, face, three cursor floats, two booleans, sequence | Deferred M3/M5 |
-| 40 | `cs_useItem`, `sign_packets.c` | Hand, sequence, yaw/pitch; finite angles, pitch ±90; food/bucket use | Deferred M4/M5 |
-| 34 | `cs_setHeldItem` | u16 slot, exactly 2 bytes | Deferred M3 |
-| 11 | `cs_clickContainer`, `inventory_packets.c` | Window/state, clicked i16 slot, button/mode, bounded changed slots, cursor stack | Deferred M4; predictions never authoritative |
-| 12 | `cs_closeContainer` | One window byte | Deferred M4 |
+| 29 | `cs_playerCommand` | Entity VarInt, action byte, boost VarInt; server actions **1/2 set/clear sprint** | Native sprint action 1/2 using Lapis-specific semantics |
+| 2A | `cs_playerInput` | One flag byte; bit 20 hex controls sneaking | Native sneaking bit 20 hex |
+| 28 | `cs_playerAction`, `sign_packets.c` | Action 0..6, packed position, face, sequence; mining/drop | Start/abort/finish mining, drop-one, release-use; mining/drop real-server tested |
+| 3F | `cs_useItemOn`, `sign_packets.c` | Hand, position, face, three cursor floats, two booleans, sequence | Native cursor/face/position action; placement real-server tested |
+| 40 | `cs_useItem`, `sign_packets.c` | Hand, sequence, yaw/pitch; finite angles, pitch ±90; food/bucket use | Held-item use request; food/bucket loop unverified |
+| 34 | `cs_setHeldItem` | u16 slot, exactly 2 bytes | Native hotbar selection; real interaction test |
+| 11 | `cs_clickContainer`, `inventory_packets.c` | Window/state, clicked i16 slot, button/mode, bounded changed slots, cursor stack | Zero predictions, absent cursor HashedSlot; server-owned results; real inventory transfer tested |
+| 12 | `cs_closeContainer` | One window byte | Sent on UI close; real inventory test |
 | 37 | `cs_creativeSlot`, `command_packets.c` | Slot + stack; gated by living/loaded/creative mode | Deferred M4; never sent for survival item creation |
-| 19 | `cs_interact`, `mob_packets.c` | Entity VarInt, action, optional hit position/hand, sneaking | Deferred M4; server validates reach/target |
+| 19 | `cs_interact`, `mob_packets.c` | Entity VarInt, action, optional hit position/hand, sneaking | Attack action + native ray targeting; full combat unverified |
 | 3C | `cs_swingArm` | Hand VarInt | Deferred M4 |
-| 0B | `cs_clientStatus` | Action 0 requests respawn | Deferred M4 |
-| 06 / 07 | `cs_chatCommand`, `command_packets.c` | Unsigned/signed command forms with strict payload checks | Deferred M4 |
-| 08 | `cs_chat`, `command_packets.c` | Text with timestamp/salt/signature/ack fields, bounded validated UTF-8 | Deferred M4 |
+| 0B | `cs_clientStatus` | Action 0 requests respawn | Enter on death requests respawn; end-to-end death unverified |
+| 06 / 07 | `cs_chatCommand`, `command_packets.c` | Unsigned/signed command forms with strict payload checks | Unsigned 06 command text implemented; signed 07 not sent |
+| 08 | `cs_chat`, `command_packets.c` | Text with timestamp/salt/signature/ack fields, bounded validated UTF-8 | Unsigned chat encoding; real round trip (ASCII only native conversion) |
 | 3B | `cs_updateSign`, `sign_packets.c` | Position, front/back, four strings | Deferred M5 |
 | 0C | Dispatch ignored | Client tick | Not sent |
 

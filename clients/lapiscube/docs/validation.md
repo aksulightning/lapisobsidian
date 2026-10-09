@@ -1,77 +1,75 @@
-# Milestone 1 validation — 2026-10-09
+# Validation — 2026-10-09
 
 Reference server: testing `56300de744b9b859993f64d5c00d1637e42584c6`.
 Engine: ClassiCube `d41c3f7eef2038f59702b58bdb373483fb0d28f9`.
-Host: Linux, GCC; isolated loopback server with seed 42 and ordinary survival
-configuration. No server source, security checks or gameplay settings were
-changed to accept the client. No proprietary client or game assets were used.
+Linux/GCC, isolated loopback servers, seed 42, ordinary survival. Server source,
+security checks and gameplay rules were not changed. No proprietary game client
+or assets were used.
 
 ## Executed checks
 
 | Check | Actual result |
 | --- | --- |
-| Root `./build.sh` | Unmodified Lapis server built successfully |
-| `make test` | 2,396 assertions passed with C89, warnings as errors, shadow/conversion warnings |
-| `make sanitize SANITIZER_FLAGS=-DLAPIS_SANDBOX_SANITIZERS` | Same 2,396 assertions passed under AddressSanitizer and UndefinedBehaviorSanitizer |
-| Core C++ compilation (`g++ -std=c++11 -Wall -Wextra -Werror`) | `LapisProtocol.c` compiled successfully |
-| `make integration` | Actual TCP status/pong, offline login/configuration/Play and same-identity reconnect passed |
-| Integrated native terminal/software-renderer build | Full engine executable linked successfully |
-| `tests/native_smoke.py`, Lapis case | Actual integrated engine accepted Play login, received 25 chunk frames and synchronized both spawn teleports |
-| `tests/native_smoke.py`, Classic case | Original Classic 131-byte login, version 7, username and mppass matched a synthetic Classic peer |
-| Windowed Linux build | All objects compiled; linker blocked by unavailable `-lX11`, `-lXi`, `-lGL` development libraries |
-| Windows | Not built or run; MinGW compiler not installed in this environment |
+| Unchanged server build | Passed |
+| `make test` | 2,396 protocol assertions + 7,828 world/gameplay assertions passed under strict C89 warnings |
+| ASan/UBSan (`SANITIZER_FLAGS=-DLAPIS_SANDBOX_SANITIZERS`) | Both suites passed; leak scanning disabled because `/proc` is unavailable in this runner |
+| `make integration` | Actual status/pong, configuration, Play, decoded chunks, keepalive, same-identity reconnect and interaction sequence passed |
+| Core C++ build | All six pure modules compiled with C++11 and warnings as errors |
+| Linux X11/OpenGL build | Linked successfully using installed versioned runtime library names; packaged builds normally use development libraries |
+| Windowed visual/input smoke | Actual native world rendered under Xvfb/Mesa; world, look, movement/jump and inventory screenshots inspected |
+| Lapis skins | Lapis skin request path disabled; final visual run produced no skin HTTP request |
+| Native terminal and Classic regression | Passed: decoded native world/loaded transition and original 131-byte Classic login |
+| Linux package | Created 1.5 MiB ZIP; hashes and ZIP CRCs verified; packaged binary loaded the actual world and inventory in a fresh server visual smoke |
+| Windows | Cross-build workflow supplied; no Windows runtime session yet |
 
-The first sanitizer invocation could not complete because LeakSanitizer cannot
-inspect `/proc` in this sandbox. The explicitly named sandbox option disables
-only leak detection. ASan/UBSan then completed without a detected memory/UB error;
-symbolization warnings remain an environment limitation. The engine and existing
-BearSSL objects were not sanitizer-instrumented in this targeted core test.
+The sanitizer configuration retains address and undefined-behavior checks. Core
+parser/model code is instrumented; the complete engine and existing BearSSL
+objects were not instrumented. The environment emitted symbolization warnings.
 
-Actual headless login and reconnect summary (both runs):
+Real-server interaction sequence (not a mocked protocol peer):
+
+1. Join and decode 25 server chunks; synchronize both spawn teleports.
+2. Start/finish mining spawn ground; wait for authoritative air update and dirt pickup.
+3. Click held stack to the server cursor; transfer to hotbar slot 8 and wait for updates.
+4. Drop one item; wait for removal from inventory and subsequent server pickup.
+5. Place it back; require a block update and inventory consumption.
+6. Send unsigned chat and require its server round trip.
 
 ```text
-result=PASS state=4 registries=11 entries=68 tags=1 joined=1 loaded=1 chunks=25 teleports=2 keepalives=1 skipped=77 queued=0
+result=PASS state=4 registries=11 entries=68 tags=1 joined=1 loaded=1 chunks=25 teleports=2 keepalives=3 delegated=107 queued=0
+decoded=25 block_updates=2 gameplay_updates=62 health=20 food=20 exercise_stage=9
 ```
 
-Native integration output:
+The diagnostic `delegated` count means frames routed out of the connection core;
+world/gameplay/entity modules handle many of them. It is not a missing-feature
+count. The test probe is an integration harness, not the game executable.
 
-```text
-native Lapis: Play login and both spawn teleports passed (25 chunk frames)
-native Classic: original 131-byte Classic login passed
-```
+New deterministic tests cover palettes at bits 0 and 4..15, inferred packed-word
+lengths/order, all stored heights, negative chunk boundaries, eviction, truncated
+chunk/light payloads, atomic inventory validation, no local click predictions,
+action wire format/bounds, health, sound payloads, negative entity IDs, relative
+movement, metadata/removal and respawn reset. Existing framing/identity/state,
+backpressure/deadline and 2,000-input adversarial tests remain.
 
-The probe's `loaded=1` is a test-only completion request after receiving the
-server's final spawn teleport. The native M1 UI stays on the loading screen and
-does not send that request. No world is rendered by either test. Skipped packets
-include inventory, health, entities, chunk bodies and other future gameplay data.
+The visual smoke used the native X11/OpenGL binary and actual server, sent key
+input for looking, walking/jumping and inventory, and captured screenshots. It is
+a scripted visual inspection, not a full human-played survival acceptance session.
+Mesa software rendering emitted the engine's performance/driver warnings. The
+initial GUI/art is rough and needs further visual polish. Audio was muted in this
+run; no listening acceptance is claimed. Local raw logs/screenshots are under
+`build/` and are not packaged as game resources.
 
-Tests cover field VarInt edge values/overflow/truncation, every fragmentation
-boundary of a status frame, byte-at-a-time and coalesced input, zero/oversized/
-overlong lengths, EOF in header/body, deterministic offline UUID, wrong login
-states, missing/duplicate registries, unsupported NBT, exact keepalive/negative
-teleport acknowledgment bytes, invalid floating-point positions/flags, maximum
-accepted frame size, partial writes, would-block retention, full output queue,
-connection/frame deadlines, state reset, and 2,000 deterministic adversarial inputs.
+## Remaining acceptance gates
 
-Raw reproduction logs are generated under `build/`: `integration-*.log`,
-`integration-results.json`, `native-lapis.log`, `native-classic-login.hex` and
-the server logs. Local build logs are not shipped as game assets or binaries.
+- Long-distance/chunk-boundary walking, Far Lands, cache hitches and teleport travel.
+- Tool-specific mining durations, food/buckets, crafting results, chest/furnace use,
+  armour/equipment, combat/damage/death/respawn and mode-specific gameplay sessions.
+- Species art/metadata, drops/projectiles, particles, signs, redstone/fluid interaction
+  and musicbox/audio listening QA. Shared models/synthesis are initial coverage.
+- Full Classic world/CPE regression, beyond the original login and untouched
+  packet implementation. Atlas slots have independent compatibility substitutes.
+- Windows runtime, other engine ports, clean-machine dependencies and performance.
+- Unicode chat conversion, accessibility/resizing and final asset/provenance review.
 
-## Not validated / remaining acceptance gates
-
-- No manual visual gameplay session: no chunk decoder, terrain display or player
-  movement exists yet. Receipt of chunks does not establish world compatibility.
-- No breaking/placing, hotbar/inventory consistency, pickup/drop/crafting/container
-  gameplay, mobs, combat/damage/death, audio/particles or mode-specific play.
-- No Classic world/CPE gameplay regression session, only unchanged source and the
-  original login exercised through the real engine.
-- No broad vanilla protocol-772 compatibility claim. Only the pinned Lapis
-  connection profile is verified, on a locally built actual Lapis server.
-- No Windows binary, cross-platform runtime matrix or distributable CC0 asset pack.
-- Full existing server test suite was not rerun: no server source was modified.
-  Client-specific automated and actual-server integration tests were run.
-
-Before calling LapisCube playable, complete M2–M4 and manually validate a fresh
-survival session. Before distribution, complete asset provenance, package licenses,
-Linux/Windows builds and clean-install tests. Keep this file specific to evidence,
-not the roadmap's intended capabilities.
+No generic vanilla-772 or completed M2–M6 compatibility claim is made. Finish
+these gates before calling the project a complete survival release.

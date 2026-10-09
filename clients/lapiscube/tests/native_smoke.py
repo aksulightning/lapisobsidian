@@ -8,6 +8,7 @@ import pathlib
 import pty
 import select
 import signal
+import shutil
 import socket
 import struct
 import subprocess
@@ -34,6 +35,7 @@ def launch(args, cwd):
     master, slave = pty.openpty()
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 40, 120, 0, 0))
     pathlib.Path(cwd, 'options.txt').write_text('soundsvolume=0\nmusicvolume=0\nfpslimit=Limit30FPS\n')
+    shutil.copytree(BUILD/'engine/texpacks', pathlib.Path(cwd)/'texpacks')
     process = subprocess.Popen([str(BUILD / 'engine' / 'LapisCube'), *args], cwd=cwd,
                                stdin=slave, stdout=slave, stderr=slave,
                                env={**os.environ, 'TERM': 'xterm-256color'})
@@ -84,13 +86,13 @@ def main():
                 run_dir.mkdir()
                 game, master = launch(['--lapis', 'NativeCube', '127.0.0.1', str(port)], run_dir)
                 try:
-                    output = collect(game, master, b'LapisCube native: spawn synchronized, received 25 chunk packets')
+                    output = collect(game, master, b'LapisCube native: world rendered and player loaded')
                     assert b'LapisCube native: Play login accepted' in output
                     (BUILD / 'native-lapis.log').write_bytes(output)
                 finally:
                     stop(game)
                     os.close(master)
-                print('native Lapis: Play login and both spawn teleports passed (25 chunk frames)')
+                print('native Lapis: Play login, decoded world, loaded notification and spawn synchronization passed')
             finally:
                 stop(server)
         # Synthetic Classic server verifies that ordinary arguments still select Classic.

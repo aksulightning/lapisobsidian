@@ -19,8 +19,8 @@ The test server remains a separate executable.
 `d41c3f7eef2038f59702b58bdb373483fb0d28f9` from
 https://github.com/ClassiCube/ClassiCube. Its `license.txt`, `credits.txt`, source
 headers and third-party licenses are retained. `patches/engine.patch` explicitly
-records the changes to `src/Server.c` and `src/main_impl.h`; no upstream copyright
-header is removed. Builds apply those changes only to a staged copy.
+records integration changes to Server, input, screens, font/skin paths, branding
+and the entrypoint; no upstream copyright header is removed. Builds apply those changes only to a staged copy.
 
 ClassiCube's principal source license is BSD-3-Clause. Source redistribution
 must preserve its notices, conditions and disclaimer. Binary redistribution
@@ -48,20 +48,24 @@ license and notices; it has not been relicensed. See root `LICENSE`, `NOTICE.md`
 and `docs/registries.md` for its provenance. The native client is a separate
 program communicating over TCP; its build does not link server source.
 
-No copied registry snapshot, textures or models from minecraft-data/mcmeta are
-bundled into the client in M1. Numeric packet IDs and identifier strings are
-used for interoperability. Any future imported tables must retain their specific
-source revision/license/provenance separately from original code.
+`src/LapisFacts.h` is generated numeric interoperability data: state/item IDs and
+identifier names from the pinned server registry snapshot, paired with original
+CC0 atlas mappings. No registry implementation, NBT pack, Minecraft textures or
+models are copied. Regeneration reads `generated/registry_snapshot.json`,
+`src/registries.c` and `include/registries.h`; see the server registry provenance
+document for upstream factual data sources. The client does not link server code.
 
 ## Assets
 
-M1 contains no gameplay texture/model/audio bundle. `assets/manifest.json` has
-an empty `assets` array intentionally; it is not a claim of a completed CC0 pack.
-The upstream launcher entrypoint is replaced by usage text so LapisCube does not
-offer its proprietary-asset download workflow. Existing user-chosen local
-texture packs are not redistributed by this project.
+The initial asset collection uses Kenney Vleugels' verified CC0 Voxel Pack and
+original geometric UI/model designs and synthesized effects dedicated under CC0.
+`assets/manifest.json` records hashes and per-file provenance; exact notices are
+in `assets/licenses`. Original audiovisual designs/output are CC0, independently
+of the BSD license of code that creates or renders them.
 
-See `docs/assets.md` for investigated candidate sources and admission rules.
-Before distributing binaries, ship this notice, this directory's license,
-the complete engine license/credits and licenses for every packaged asset or
-additional linked component. No distributable binary package is claimed in M1.
+The launcher entrypoint displays usage, and Lapis skin requests are disabled.
+The package script ships this notice, client license, full engine license and
+credits, third-party license files, asset sources and license evidence. Existing
+user-chosen texture packs are not redistributed. See `docs/assets.md` for coverage
+limits and `docs/validation.md` for tested builds. This experimental package is
+not a declaration that final release/provenance review is complete.

@@ -38,7 +38,7 @@ def main():
                             raise RuntimeError('Server startup timed out')
                         time.sleep(.05)
                 # Two independent joins with the SAME UUID exercise release of the player slot.
-                for label, mode in [('status', 'status'), ('login', 'login'), ('reconnect', 'login')]:
+                for label, mode in [('status', 'status'), ('login', 'login'), ('reconnect', 'login'), ('interaction', 'exercise')]:
                     run = subprocess.run([str(BUILD / 'lapiscube-probe'), mode, '127.0.0.1',
                                           str(port), 'LapisCubeTest'], text=True,
                                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=50)
@@ -52,6 +52,9 @@ def main():
                     else:
                         assert 'registries=11 entries=68 tags=1 joined=1 loaded=1' in run.stdout
                         assert 'teleports=2' in run.stdout and 'queued=0' in run.stdout
+                        assert 'decoded=25' in run.stdout
+                        if mode == 'exercise':
+                            assert 'exercise_stage=9' in run.stdout
                     outcomes.append({'case': label, 'returncode': run.returncode})
                     time.sleep(.15)
                 assert process.poll() is None, 'Server crashed during integration'

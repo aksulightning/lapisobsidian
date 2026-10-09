@@ -13,7 +13,7 @@ PIN = 'd41c3f7eef2038f59702b58bdb373483fb0d28f9'
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', choices=['native', 'terminal'], default='native')
+    parser.add_argument('--mode', choices=['native', 'terminal', 'windows'], default='native')
     mode = parser.parse_args().mode
     head = subprocess.check_output(['git', '-C', str(UPSTREAM), 'rev-parse', 'HEAD'], text=True).strip()
     if head != PIN:
@@ -21,7 +21,8 @@ def main():
     if subprocess.check_output(['git', '-C', str(UPSTREAM), 'status', '--porcelain'], text=True).strip():
         raise SystemExit('Engine submodule has local changes; keep modifications in the integration patch')
     stamp = DEST / '.lapiscube-build-mode'
-    if not stamp.exists() or stamp.read_text() != mode:
+    build_key = mode + '-release-v2'
+    if not stamp.exists() or stamp.read_text() != build_key:
         shutil.rmtree(DEST / 'build', ignore_errors=True)
         for name in ('LapisCube', 'LapisCube.exe'):
             (DEST / name).unlink(missing_ok=True)
@@ -32,7 +33,8 @@ def main():
         shutil.copy2(path, DEST / 'src' / path.name)
     subprocess.run(['patch', '-p1', '--binary', '--forward', '-i', str(ROOT / 'patches' / 'engine.patch')],
                    cwd=DEST, check=True)
-    stamp.write_text(mode)
+    subprocess.run(['python3', str(ROOT/'tools/package.py'), '--stage-only'], check=True)
+    stamp.write_text(build_key)
 
 
 if __name__ == '__main__':

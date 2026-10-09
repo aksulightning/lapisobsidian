@@ -9,6 +9,22 @@
 #include "Event.h"
 #include "Block.h"
 #include "Chat.h"
+#include "LapisWorld.h"
+#include "LapisBlocks.h"
+#include "LapisGui.h"
+#include "LapisMobs.h"
+#include "LapisAudio.h"
+#include "TexturePack.h"
+#include "World.h"
+#include "MapRenderer.h"
+#include "Lighting.h"
+#include "Entity.h"
+#include "Inventory.h"
+#include "Picking.h"
+#include "InputHandler.h"
+#include "Input.h"
+#include "Gui.h"
+#include "ExtMath.h"
 #include <string.h>
 
 cc_bool LapisBackend_Enabled;
@@ -17,16 +33,113 @@ static struct LapisSession session;
 static cc_socket connection = -1;
 static cc_bool connecting;
 static unsigned lastStage;
+static struct LapisWorld world;
+static struct LapisGameplay gameplay;
+static struct LapisEntities entities;
+static int originX, originZ, mapDirty, ready, selected, sneak, sprint;
+static int digging, digX, digY, digZ, digFace;
+static int usingItem;
+static cc_uint64 digStart, lastUse;
+
+struct LapisGameplay* LapisBackend_Gameplay(void) { return &gameplay; }
+struct LapisProtocol* LapisBackend_Protocol(void) { return &session.protocol; }
+static cc_uint64 Now(void);
+static float JavaYaw(float yaw) { return yaw - 180.0f; }
+static float JavaPitch(float pitch) { return pitch > 180 ? pitch - 360 : pitch; }
+static void Position(struct LapisProtocol* p) {
+    struct LocationUpdate u; struct Entity* e=&Entities.CurPlayer->Base;
+    memset(&u,0,sizeof(u));
+    u.flags=LU_HAS_POS|LU_HAS_YAW|LU_HAS_PITCH;
+    Vec3_Set(u.pos,(float)(p->x-originX),(float)p->y,(float)(p->z-originZ));
+    u.yaw=p->yaw+180;u.pitch=p->pitch;
+    e->VTABLE->SetLocation(e,&u);Vec3_Set(e->Velocity,0,0,0);
+}
+static void Recenter(void) {
+    int x=(world.centerX-3)*16,z=(world.centerZ-3)*16;
+    struct LocationUpdate u;struct Entity* e=&Entities.CurPlayer->Base;
+    if(ready && (x!=originX || z!=originZ)) {
+        memset(&u,0,sizeof(u));u.flags=LU_HAS_POS|LU_POS_RELATIVE_SHIFT;
+        Vec3_Set(u.pos,(float)(originX-x),0,(float)(originZ-z));e->VTABLE->SetLocation(e,&u);
+    }
+    originX=x;originZ=z;mapDirty=1;
+}
+static void FillMap(void) {
+    int i,x,y,z,dx,dz,index;BlockID b;struct LapisChunk* c;
+    if(!World.Blocks)return;
+    /* Unknown chunks are invisible solid barriers until their authoritative data arrives. */
+    memset(World.Blocks,255,(size_t)World.Volume);
+    memset(World.Blocks2,0,(size_t)World.Volume);
+    for(i=0;i<LAPIS_CACHE_COUNT;i++) {
+        c=&world.chunks[i];if(!c->valid)continue;
+        dx=c->x*16-originX;dz=c->z*16-originZ;
+        if(dx<0 || dz<0 || dx+16>World.Width || dz+16>World.Length)continue;
+        for(y=0;y<256;y++)for(z=0;z<16;z++)for(x=0;x<16;x++) {
+            b=LapisBlocks_State(c->blocks[y*256+z*16+x]);index=World_Pack(dx+x,y,dz+z);
+            World.Blocks[index]=(BlockRaw)b;World.Blocks2[index]=(BlockRaw)(b>>8);
+        }
+    }
+    if(ready) { Lighting.Refresh();MapRenderer_Refresh(); }
+    mapDirty=0;
+}
+static void LoadWorld(struct LapisProtocol* p) {
+    BlockRaw *lower,*upper;struct Screen* s;int volume=LAPIS_WORLD_SIDE*256*LAPIS_WORLD_SIDE;
+    static const cc_string model=String_FromConst("lapis-person");
+    lower=(BlockRaw*)Mem_TryAlloc(volume,1);upper=(BlockRaw*)Mem_TryAlloc(volume,1);
+    if(!lower || !upper) { Mem_Free(lower);Mem_Free(upper);LapisProtocol_Fail(p,"Not enough memory for the bounded world window");return; }
+    World_SetDimensions(LAPIS_WORLD_SIDE,256,LAPIS_WORLD_SIDE);World.Blocks=lower;World_SetMapUpper(upper);
+    FillMap();
+    Env.EdgeBlock=0;Env.SidesBlock=0;Env.EdgeHeight=0;Env.CloudsHeight=132;
+    World_SetNewMap(lower,LAPIS_WORLD_SIDE,256,LAPIS_WORLD_SIDE);
+    ready=1;Position(p);Inventory.Offset=0;
+    Entity_SetModel(&Entities.CurPlayer->Base,&model);
+    s=Gui_GetScreen(GUI_PRIORITY_LOADING);if(s)Gui_Remove(s);
+    LapisProtocol_MarkLoaded(p);
+    Platform_LogConst("LapisCube native: world rendered and player loaded (112x256x112 window)");
+}
 
 static void Packet(struct LapisProtocol* p, int state, int id, const cc_uint8* data, int size, void* context) {
-    int chunks;
-    (void)data; (void)size; (void)context;
+    struct LapisReader r;struct LapisSoundEvent sound;int chunks,x,y,z,value,result;
+    (void)context;
     if (state != LAPIS_PLAY) return;
+    LapisReader_Init(&r,data,size);
+    if(id==0x57) {
+        x=(cc_int32)LapisReader_VarInt(&r);z=(cc_int32)LapisReader_VarInt(&r);
+        if(!LapisReader_Done(&r) || LapisWorld_Center(&world,x,z)<0)goto malformed;
+        Recenter();
+    } else if(id==0x27) {
+        if(!LapisWorld_Chunk(&world,data,size))goto malformed;
+        mapDirty=1;
+    } else if(id==0x08) {
+        LapisWorld_Position(LapisReader_Big(&r,8),&x,&y,&z);value=LapisReader_Count(&r,65535);
+        if(!LapisReader_Done(&r) || !LapisWorld_Block(&world,x,y,z,value))goto malformed;
+        if(ready && x>=originX && x<originX+World.Width && z>=originZ && z<originZ+World.Length)
+            Game_UpdateBlock(x-originX,y,z-originZ,LapisBlocks_State(value));
+    } else if(id==0x41) {
+        if(!world.hasCenter) { LapisWorld_Center(&world,LapisWorld_ChunkCoord((int)p->x),LapisWorld_ChunkCoord((int)p->z));Recenter(); }
+        if(ready)Position(p);
+    }
+    result=LapisGameplay_Packet(&gameplay,p,id,data,size);
+    if(!result)goto malformed;
+    if(!LapisEntities_Packet(&entities,id,data,size))goto malformed;
+    if(id==0x4B) {
+        LapisGui_Close();LapisMobs_Clear();LapisEntities_Init(&entities);
+        World_NewMap();LapisWorld_Init(&world);ready=0;digging=0;mapDirty=0;
+    }
+    if(id==0x6E) {
+        if(!LapisEffects_Sound(&sound,data,size))goto malformed;
+        LapisAudio_Play(&sound,Entities.CurPlayer->Base.Position.x+originX,Entities.CurPlayer->Base.Position.y,Entities.CurPlayer->Base.Position.z+originZ);
+    }
+    if(id==0x34)LapisGui_ShowInventory();
+    if(id==0x72)Chat_AddRaw(gameplay.message);
+    if(id==0x62) { Inventory.SelectedIndex=gameplay.selected;selected=gameplay.selected; }
     if (id == 0x2B) Platform_LogConst("LapisCube native: Play login accepted");
     if (id == 0x41 && p->teleports == 2) {
         chunks = (int)p->chunks;
         Platform_Log1("LapisCube native: spawn synchronized, received %i chunk packets", &chunks);
     }
+    return;
+malformed:
+    LapisProtocol_Fail(p,"Malformed or unsupported Lapis world/gameplay packet");
 }
 
 static cc_uint64 Now(void) { return Stopwatch_ElapsedMicroseconds(0, Stopwatch_Measure()) / 1000; }
@@ -49,6 +162,7 @@ static int Write(void* context, const cc_uint8* data, int size) {
 void LapisBackend_Close(void) {
     if (connection != -1) Socket_Close(connection);
     connection = -1; connecting = false;
+    LapisGui_Close();LapisMobs_Clear();LapisAudio_Free();ready=0;digging=0;usingItem=0;
     LapisProtocol_Init(&session.protocol, NULL, NULL);
     Server.Disconnected = true;
 }
@@ -61,16 +175,46 @@ static void Disconnect(const char* reason) {
     Game_Disconnect(&title, &copy);
 }
 static void Progress(void) {
-    static const cc_string title = String_FromConst("LapisCube - protocol foundation");
+    static const cc_string title = String_FromConst("LapisCube");
     static const cc_string config = String_FromConst("Synchronising Lapis registry identifiers...");
-    static const cc_string play = String_FromConst("Connected. World rendering is the next milestone.");
+    static const cc_string play = String_FromConst("Loading the server world...");
     struct LapisProtocol* p = &session.protocol;
     if ((unsigned)p->state == lastStage) return;
     lastStage = (unsigned)p->state;
     if (p->state == LAPIS_CONFIG) LoadingScreen_Show(&title, &config);
     if (p->state == LAPIS_PLAY) {
-        LoadingScreen_Show(&title, &play);
-        Platform_LogConst("LapisCube: configuration complete, entered Play (world rendering pending)");
+        if(!ready)LoadingScreen_Show(&title, &play);
+    }
+}
+static void PlayerTick(void) {
+    struct LapisProtocol* p=&session.protocol;struct LocalPlayer* player=Entities.CurPlayer;
+    struct Entity* e=&player->Base;cc_uint8 data[16];int i,n,s;
+    player->Hacks.CanAnyHacks=false;player->Hacks.CanSpeed=false;player->Hacks.CanRespawn=false;
+    player->Hacks.CanFly=(gameplay.abilities&4)!=0;player->Hacks.CanNoclip=p->gamemode==3;
+    if(!player->Hacks.CanFly)player->Hacks.Flying=false;
+    player->Hacks.Noclip=p->gamemode==3;player->Hacks.MaxHorSpeed=1.0f;
+    player->Physics.JumpVel=.42f;player->Physics.ServerJumpVel=.42f;player->ReachDistance=4.5f;
+    s=!Gui.InputGrab && KeyBind_IsPressed(BIND_HALF_SPEED);
+    if(s!=sneak) { sneak=s;data[0]=(cc_uint8)(s?0x20:0);LapisProtocol_Queue(p,0x2A,data,1); }
+    s=!Gui.InputGrab && !sneak && KeyBind_IsPressed(BIND_SPEED) && gameplay.food>6;
+    if(s!=sprint) { sprint=s;n=LapisProtocol_EncodeVarInt(data,(cc_uint32)p->entityId);data[n++]=(cc_uint8)(s?1:2);data[n++]=0;LapisProtocol_Queue(p,0x29,data,n); }
+    player->Hacks.BaseHorSpeed=sneak?.3f:sprint?1.3f:1.0f;
+    if(gameplay.health<=0) { Vec3_Set(e->Velocity,0,0,0); }
+    else LapisGameplay_Move(p,e->next.pos.x+originX,e->next.pos.y,e->next.pos.z+originZ,JavaYaw(e->Yaw),JavaPitch(e->Pitch),e->OnGround);
+    Inventory.Offset=0;
+    for(i=0;i<9;i++)Inventory.Table[i]=LapisBlocks_Item(gameplay.slots[0][36+i].item);
+    if(selected!=Inventory.SelectedIndex) {
+        selected=Inventory.SelectedIndex;gameplay.selected=selected;LapisGameplay_Select(p,selected);
+    }
+    if(digging && (Gui.InputGrab || !KeyBind_IsPressed(BIND_DELETE_BLOCK) || !Game_SelectedPos.valid ||
+        Game_SelectedPos.pos.x+originX!=digX || Game_SelectedPos.pos.y!=digY || Game_SelectedPos.pos.z+originZ!=digZ)) {
+        LapisGameplay_Dig(&gameplay,p,1,digX,digY,digZ,digFace);digging=0;
+    }
+    if(digging && Now()-digStart>=650) {
+        LapisGameplay_Dig(&gameplay,p,2,digX,digY,digZ,digFace);digging=0;
+    }
+    if(usingItem && (Gui.InputGrab || !KeyBind_IsPressed(BIND_PLACE_BLOCK))) {
+        LapisGameplay_Dig(&gameplay,p,5,0,0,0,0);usingItem=0;
     }
 }
 static cc_bool Tick(struct ScheduledTask2* task) {
@@ -91,13 +235,21 @@ static cc_bool Tick(struct ScheduledTask2* task) {
     if (!LapisSession_Pump(&session, &io, Now())) {
         Disconnect(session.protocol.error); return true;
     }
-    Progress(); return true;
+    Progress();
+    if(!ready && session.protocol.teleports>=2 && world.decoded)LoadWorld(&session.protocol);
+    if(ready && mapDirty)FillMap();
+    if(ready) { PlayerTick();LapisMobs_Update(&entities,originX,originZ); }
+    return true;
 }
 static void Begin(void) {
     static const cc_string title = String_FromConst("Connecting to Lapis Obsidian...");
     cc_sockaddr addresses[SOCKET_MAX_ADDRS]; int count;
     cc_result res; cc_uint8 uuid[16]; char host[256], username[16];
     LapisBackend_Close();
+    World_NewMap();LapisWorld_Init(&world);LapisGameplay_Init(&gameplay);LapisBlocks_Init();
+    LapisEntities_Init(&entities);LapisMobs_Init();TexturePack_ExtractCurrent(true);
+    Blocks.Draw[255]=DRAW_GAS;Blocks.Collide[255]=COLLIDE_SOLID;Blocks.BlocksLight[255]=false;Block_DefineCustom(255,false);
+    originX=originZ=0;mapDirty=0;selected=0;sneak=sprint=0;lastUse=0;
     if (Server.Address.length > 255 || Game_Username.length > 15 || !Game_Username.length) {
         Disconnect("Use a host of at most 255 bytes and a 1-15 character offline username"); return;
     }
@@ -121,15 +273,38 @@ static void Begin(void) {
     Server.Disconnected = false; connecting = true; lastStage = 0;
     LoadingScreen_Show(&title, &String_Empty);
 }
-/* Gameplay actions are unavailable until their server-authoritative modules exist.
- * No Classic packet bytes are allowed onto the Lapis socket. */
+/* Legacy optimistic block edits cannot become Lapis actions. Input hooks send
+ * sequenced requests; only server block-update packets change the world. */
 static void SendBlock(int x, int y, int z, BlockID old, BlockID now) {
     (void)x; (void)y; (void)z; (void)old; (void)now;
-    Chat_AddRaw("&eLapis block interaction is not implemented in milestone 1.");
+    Platform_LogConst("LapisCube: rejected legacy optimistic block edit");
 }
-static void SendChat(const cc_string* text) {
-    (void)text; Chat_AddRaw("&eLapis chat is not implemented in milestone 1.");
+static void SendChat(const cc_string* text) { LapisGameplay_Chat(&session.protocol,text->buffer,text->length); }
+static int TargetFace(void) {
+    static const int map[6]={4,5,2,3,0,1};return Game_SelectedPos.closest<6?map[Game_SelectedPos.closest]:1;
 }
+static float Cursor(float value) { return value<0?0:value>1?1:value; }
+void LapisBackend_Dig(void) {
+    int target;
+    if(!ready || gameplay.health<=0)return;
+    target=LapisMobs_Target(&entities);
+    if(target>=0) { LapisGameplay_Attack(&session.protocol,entities.list[target].id);return; }
+    if(!Game_SelectedPos.valid || digging)return;
+    digX=Game_SelectedPos.pos.x+originX;digY=Game_SelectedPos.pos.y;digZ=Game_SelectedPos.pos.z+originZ;digFace=TargetFace();
+    LapisGameplay_Dig(&gameplay,&session.protocol,0,digX,digY,digZ,digFace);
+    digging=1;digStart=Now();
+}
+void LapisBackend_Use(void) {
+    struct Entity* e=&Entities.CurPlayer->Base;
+    if(!ready || gameplay.health<=0 || Now()-lastUse<250)return;
+    lastUse=Now();
+    usingItem=1;
+    if(Game_SelectedPos.valid)
+        LapisGameplay_UseOn(&gameplay,&session.protocol,Game_SelectedPos.pos.x+originX,Game_SelectedPos.pos.y,Game_SelectedPos.pos.z+originZ,TargetFace(),
+            Cursor(Game_SelectedPos.intersect.x-Game_SelectedPos.pos.x),Cursor(Game_SelectedPos.intersect.y-Game_SelectedPos.pos.y),Cursor(Game_SelectedPos.intersect.z-Game_SelectedPos.pos.z));
+    else LapisGameplay_Use(&gameplay,&session.protocol,JavaYaw(e->Yaw),JavaPitch(e->Pitch));
+}
+void LapisBackend_Drop(void) { if(ready)LapisGameplay_Dig(&gameplay,&session.protocol,4,0,0,0,0); }
 static void SendData(const cc_uint8* data, cc_uint32 size) {
     (void)data; (void)size;
     Platform_LogConst("LapisCube: rejected legacy raw packet send");
@@ -144,4 +319,9 @@ void LapisBackend_Init(void) {
 #else
 void LapisBackend_Close(void) { }
 void LapisBackend_Init(void) { Server.Disconnected = true; }
+struct LapisGameplay* LapisBackend_Gameplay(void) { return NULL; }
+struct LapisProtocol* LapisBackend_Protocol(void) { return NULL; }
+void LapisBackend_Dig(void) { }
+void LapisBackend_Use(void) { }
+void LapisBackend_Drop(void) { }
 #endif

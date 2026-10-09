@@ -1,0 +1,31 @@
+{
+  "license": "CC0-1.0",
+  "implementation": "src/LapisAudio.c",
+  "matching": "ordered substring families after note_block classification",
+  "protocol_772": {
+    "note_block.harp": "synth bank 0: sine C4",
+    "note_block.bass": "bank 1: sine C3",
+    "note_block.bell|note_block.chime": "bank 2: harmonic C4",
+    "note_block.snare|note_block.hat": "bank 3: noise",
+    "note_block.basedrum": "bank 4: modulated noise",
+    "hurt|death": "bank 5: low tone/noise",
+    "pickup|experience": "bank 6: 880 Hz",
+    "water|lava": "bank 7: noise",
+    "other": "bank 3: noise fallback"
+  },
+  "native_step_dig": [
+    "wood",
+    "gravel",
+    "grass",
+    "stone",
+    "metal",
+    "glass",
+    "cloth",
+    "sand",
+    "snow"
+  ],
+  "limits": [
+    "Shared synthesized fallback for most mob and interaction sounds",
+    "No musicbox listening acceptance yet"
+  ]
+}

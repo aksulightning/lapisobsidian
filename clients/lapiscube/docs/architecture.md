@@ -1,89 +1,71 @@
 # Architecture and implementation plan
 
-## Inspection before implementation
+## Inspection and scope
 
-ClassiCube's `doc/modules.md`, `doc/style.md`, `Server.c/.h`, `Protocol.c/.h`,
-`main_impl.h`, `Platform.h`, `Platform_Posix.c`, renderer/world/input APIs and
-Makefiles were reviewed at the pinned revision. Its separate C modules, fixed-size
-types and component lifecycle provide appropriate extension points.
+Before implementation, ClassiCube's module/style docs, Server/Protocol/main entry,
+platform sockets, renderer/world/input/audio/model/UI APIs and makefiles were
+reviewed. Lapis testing dispatch, packets, procedures, registry generator/snapshot,
+inventory, interaction, mob, sign/door/circuit/farming/fluid and musicbox code were
+inspected. The pinned Lapis source is authoritative; no vanilla behavior is
+substituted where the server differs.
 
-Lapis `main.c` dispatch, `packets.c`, `packet_input.c`, `procedures.c`, registry
-generator/snapshot, inventory, interaction, entity, command, sign, door, circuit,
-fluid and farming modules were inspected. Its testing branch, not a generic
-vanilla packet table, is the authority for this client profile.
+The incremental plan is: retain M1 framing/connection; decode bounded chunks and
+render through the engine; add server-authoritative actions and presentation;
+add entities/special blocks/audio; finish independent assets, builds and tests.
+The original engine submodule stays untouched; the patch is applied to a build copy.
 
-The implementation plan recorded before coding was: pin both sources; document
-actual packets; add a separate bounded parser and nonblocking connection path;
-test the unmodified server; integrate through the existing `Server` interface;
-preserve Classic packet code; publish verified milestone-1 work on `testing-cube`.
+## Module boundaries
 
-## Reuse and boundaries
-
-| Module | Role / decision |
+| Module | Responsibility |
 | --- | --- |
-| `LapisProtocol` | Socket-independent framing, state transitions, registry identifiers, Play login, teleport/keepalive acknowledgment, counters and errors |
-| `LapisSession` | Nonblocking partial I/O, outbound queue consumption, timeouts and per-tick budget; shared by product and test probe |
-| `LapisIdentity` | Offline UUIDv3 using the engine's existing BearSSL MD5; no new crypto dependency |
-| `LapisBackend` | ClassiCube `Server` adapter; platform sockets, clock, loading UI, reset/close lifecycle |
-| `engine/src/Protocol.c` | Original Classic/CPE implementation, unchanged |
-| `patches/engine.patch` | Explicit Lapis argument, backend selection/cleanup, usage screen instead of asset-downloading launcher |
-| `tools/probe.c` | POSIX automated integration driver around the same protocol/session, not a separate gameplay implementation |
-| Future world module | Bounded server chunk cache and palette mapping; no terrain generation |
-| Future presentation modules | Server-owned inventory, health, entities and interactions; submit actions and apply authoritative results |
+| `LapisProtocol` | Framing, state machine, identifiers, login, teleport/keepalive and output queue |
+| `LapisSession` | Nonblocking partial I/O, deadlines and budgets |
+| `LapisIdentity` | Offline UUIDv3 with existing BearSSL MD5 |
+| `LapisWorld` | Pure bounded palette/chunk/light validation, cache and block updates |
+| `LapisGameplay` | Server-owned stacks/containers/health; bounded outgoing action encoding |
+| `LapisEntities` | Bounded entity snapshots, movement and metadata parsing |
+| `LapisEffects` | Named sound packet decoding |
+| `LapisBackend` | Engine sockets/lifecycle, moving map origin, player controls and packet routing |
+| `LapisBlocks` / generated `LapisFacts` | Numeric state/item facts and native visual/collision definitions |
+| `LapisGui` | Native HUD and server-backed inventory/container screens |
+| `LapisMobs` | Original geometric models, native entity interpolation and targeting |
+| `LapisAudio` | Original bounded synthesis and existing audio-pool playback |
+| `engine/src/Protocol.c` | Untouched Classic/CPE protocol |
+| `tools/probe.c` | Headless test harness around shared decoders, not the product client |
 
-Retain `Graphics`, `Builder`, `MapRenderer`, `TexturePack`, `Input`, `Window`,
-`Audio`, `Gui`, `Entity` and `Model` where practical. ClassiCube's `World` is a
-finite dense array, whereas Lapis streams a moving chunk window. M2 must introduce
-a bounded chunk adapter/origin translation rather than allocate the whole world
-or pretend that unreceived terrain exists. Keep world coordinates separate from
-render coordinates to accommodate server Far Lands and negative chunk coordinates.
+`Graphics`, `Builder`, `MapRenderer`, `Input`, `Window`, `Audio`, `Gui`, `Entity`
+and `Model` remain engine components. Input hooks submit Lapis requests before
+Classic optimistic world edits. Only server block/slot packets mutate Lapis state.
+No client crafting recipe computation or item creation is used.
 
-ClassiCube's inventory currently represents creative blocks, not survival item
-stacks. Add a separate server-owned inventory model; do not reuse creative local
-edits as authoritative inventory. `Game_ChangeBlock` is optimistic and must not
-be called for Lapis survival actions until prediction/rollback is explicitly
-implemented. M1 prohibits block actions and stays on the loading screen.
+## World adapter and resource bounds
 
-## Resource bounds and behavior
+The fixed cache holds 49 chunks × 16×256×16 × two bytes (about 6.1 MiB), plus one
+128 KiB staging chunk. All 24 wire sections are validated; Y=0..255 is retained.
+A 112×256×112 engine map uses two byte arrays (about 6.1 MiB). Global coordinates
+stay separate from local render coordinates; negative chunk division is floored.
+An unloaded region is an invisible solid barrier. Center changes evict old cache
+entries and shift player/entity coordinates; no terrain is generated locally.
 
-- One 512 KiB incoming frame buffer, 32 KiB outbound queue; no allocation per packet.
-- At most 32 registries, 2,048 entries and 64 KiB of identifier storage.
-- Inbound work per pump at most 256 KiB; scratch reads 16 KiB. Writes preserve
-  unsent suffixes and never sleep waiting for the peer.
-- Frame length is at most three VarInt bytes; values must be in 1..524288.
-  Five-byte field VarInts reject overflow beyond 32 bits.
-- Connection/login deadline 15 seconds, incomplete frame deadline 15 seconds,
-  idle receive deadline 30 seconds. Queue overflow fails closed.
-- Unsupported configuration semantics fail explicitly. Unimplemented Play frames
-  are bounded and counted as skipped; they cannot trigger gameplay mutations.
-- EOF in a frame fails; close/reset clears protocol state and the platform socket.
-- Native DNS resolution currently uses synchronous `Socket_ParseAddress` and only
-  the first resolved address, like the upstream connection. Numeric IPs avoid DNS
-  stalls. Async DNS/address fallback remains a documented transport improvement.
-- The Lapis backend adds one fixed session under 640 KiB, including registry
-  storage, even before chunks are stored. Tiny-console memory tuning is not claimed.
+Cache updates currently refill/refresh the dense map. This bounds memory but can
+cause hitches; incremental column copies, lighting invalidation and mesh scheduling
+remain performance work. The existing engine adds its normal mesh/texture memory.
+Tiny-console compatibility or a total process-memory ceiling is not claimed.
 
-## Milestones and acceptance gates
+- One 512 KiB incoming frame, 32 KiB outbound queue; no per-packet heap allocation.
+- At most 32 registries, 2,048 identifiers and 64 KiB name storage.
+- At most 255 entity snapshots and 16 windows × 64 item slots.
+- Per-pump input budget 256 KiB, 16 KiB read scratch; partial writes retained.
+- Connection/incomplete-frame timeout 15 seconds; idle receive timeout 30 seconds.
+- Three-byte bounded frame lengths, five-byte field VarInts, checked arrays/palettes.
+- Eight synthesized audio banks/voices; UI caches bounded text textures.
+- Unsupported configuration fails explicitly. Unknown Play packets remain bounded;
+  the core `skipped` counter means delegated to gameplay, not necessarily ignored.
+- EOF, malformed frames and queue overflow close the connection with diagnostics.
+- DNS is synchronous and uses the first resolved address; async lookup/fallback
+  remains work. Numeric IP addresses avoid name-resolution stalls.
 
-1. **Protocol foundation (this change):** actual status/login/configuration/Play
-   connection, stored registry names, bounded diagnostics and framing tests.
-   Full vanilla registry semantics and arbitrary vanilla-server compatibility are
-   outside this profile.
-2. **World exploration:** decode all 24 wire sections (-64..319); display terrain
-   Y=0..255; bounded moving chunk window; actual mapped blocks; test negative
-   boundaries, palettes, lighting, updates, teleports and disconnect cleanup.
-   Emit movement only after collision/world synchronization is implemented.
-3. **Basic interaction:** targeting, mining/placement sequences, server-selected
-   hotbar, inventory slots, dropped items; server remains authoritative.
-4. **Survival:** health/hunger, stacks, server crafting/containers, models for the
-   eight supported mobs, players/items/projectiles, targeting, damage/death/food,
-   mode-specific controls. Exercise actual gameplay manually.
-5. **Lapis-specific:** oriented signs/doors, state overlays for circuits/trapdoors/
-   plates/crops/farmland/fluids, named sound holders and MIDI/musicbox sounds.
-   No client-side MIDI gameplay engine: reproduce the server's note events.
-6. **Packaging:** reviewed CC0 atlas/icons/UI/models/sounds and manifest; settings;
-   Linux and Windows builds; license/provenance review; clean-install and manual
-   survival sessions. Do not mark this complete based on compilation.
-
-Every stage must keep a Classic regression check and distinguish decoded packets
-from rendered, interacted-with and manually validated behavior.
+The desktop build requires extended block/texture support. Other upstream ports
+need explicit memory/platform work before they can be called supported. Classic
+packet selection is tested independently. See milestone and validation documents
+for behavior that is implemented but not yet accepted through actual gameplay.
