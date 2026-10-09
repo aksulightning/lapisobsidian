@@ -3,6 +3,7 @@
 Playwright's touch emulation covers input/gating, not physical device certification.
 """
 import json
+import base64
 import os
 import pathlib
 import secrets
@@ -86,14 +87,25 @@ def main():
                             page.wait_for_timeout(450)
                             cdp.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
                             page.wait_for_timeout(700)
+                            look={'x':410,'y':140,'id':4}
+                            yaw=outbound.positions()[-1][3]
+                            cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[look]})
+                            cdp.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{**look,'x':455,'y':155}]})
+                            cdp.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
+                            page.wait_for_timeout(300)
+                            assert abs(outbound.positions()[-1][3]-yaw)>1,'Touch drag must turn the C camera'
                             page.locator('#toolbar [data-action="9"]').tap()
                         else:
                             page.keyboard.down('w');page.keyboard.down('Space');page.wait_for_timeout(450)
                             page.keyboard.up('w');page.keyboard.up('Space');page.wait_for_timeout(700)
+                            yaw=outbound.positions()[-1][3]
+                            page.mouse.click(512,320);page.mouse.move(550,330);page.wait_for_timeout(300)
+                            assert abs(outbound.positions()[-1][3]-yaw)>1,'Mouse motion must turn the C camera'
                             page.keyboard.press('b')
                         page.wait_for_function('(Module._LapisWeb_State() & 2) !== 0');page.wait_for_timeout(300)
                         assert len(outbound.positions())>len(before)+1
                         moved=outbound.positions()[-1];assert abs(moved[0]-before[-1][0])+abs(moved[2]-before[-1][2])>.1
+                        assert max(p[1] for p in outbound.positions()[len(before):])>before[-1][1]+.2,'Jump must move upward'
                         page.screenshot(path=str(EVIDENCE/f'{label}-inventory.png'))
                         if mobile:
                             page.locator('[data-mode="1"]').tap()
@@ -138,6 +150,11 @@ def main():
                         context.close()
                 browser.close()
                 (EVIDENCE/'results.json').write_text(json.dumps(outcomes,indent=2)+'\n');print(outcomes)
+                # Optional log transport for reviewing CI images in restricted agents
+                # whose artifact-download surface cannot expose binary files.
+                if os.environ.get('LAPIS_WEB_REVIEW_IMAGES')=='1':
+                    for name in ('desktop-world.png','touch-world.png','touch-inventory.png','touch-portrait-gate.png'):
+                        print('LAPISCUBE_SCREENSHOT '+name+' '+base64.b64encode((EVIDENCE/name).read_bytes()).decode(),flush=True)
         finally:
             server.terminate();server.wait(5)
 

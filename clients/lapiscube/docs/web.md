@@ -88,3 +88,28 @@ client; footsteps load the local CC0 replacement WAVs.
 
 See the web transport and browser acceptance tests in `tests/`. Browser emulation
 is a regression check, not certification of every physical phone/browser.
+
+The first web acceptance run passed on Chromium with software WebGL in CI:
+real server login/world rendering, desktop keyboard controls, simultaneous touch
+movement/jump, server inventory click requests, hotbar selection, chat, teleport
+synchronization, portrait blocking and actual fullscreen exit/resume. Both clients
+had no JavaScript exceptions and requested only same-origin resources. The run
+also passed 4,022 host bounds/malformed-frame checks under ASan/UBSan and the
+existing 10,733 client protocol/gameplay assertions. The byte-bridge integration
+test separately passed mining, pickup, dropping and placement over WebSocket.
+Physical Android/iOS devices, Safari, Firefox, sound listening and a full human
+survival playthrough have not yet been validated.
+
+To repeat the gates after building both the default binary at `lapis-obsidian`
+and optional binary at `clients/lapiscube/build/web-server`:
+
+```sh
+make -C clients/lapiscube test web-test
+python3 -m pip install playwright==1.51.0
+python3 -m playwright install --with-deps chromium
+python3 clients/lapiscube/tests/web_browser.py
+```
+
+`LAPIS_WEB_TEST_SERVER` can select a different optional server binary;
+`LAPIS_BROWSER_EXECUTABLE` selects an installed Chromium executable. The default
+binary gate deliberately sets the runtime flag and verifies there is no listener.
