@@ -20,7 +20,7 @@ or assets were used.
 | Lapis skins | Lapis skin request path disabled; final visual run produced no skin HTTP request |
 | Native terminal and Classic regression | Passed: decoded native world/loaded transition and original 131-byte Classic login |
 | Linux package | Created 1.5 MiB ZIP; hashes and ZIP CRCs verified; packaged binary loaded the actual world and inventory in a fresh server visual smoke |
-| Windows | Cross-build workflow supplied; no Windows runtime session yet |
+| Windows | MinGW cross-build and package passed in GitHub CI; no Windows runtime session yet |
 
 The sanitizer configuration retains address and undefined-behavior checks. Core
 parser/model code is instrumented; the complete engine and existing BearSSL
@@ -58,6 +58,16 @@ Mesa software rendering emitted the engine's performance/driver warnings. The
 initial GUI/art is rough and needs further visual polish. Audio was muted in this
 run; no listening acceptance is claimed. Local raw logs/screenshots are under
 `build/` and are not packaged as game resources.
+
+## GitHub CI record
+
+Commit `babb558d321b5ee8d1b72eb66e9bea626e7268a4` passed both Linux and Windows
+jobs in [LapisCube native client run 37977514794](https://github.com/aksulightning/lapisobsidian/actions/runs/37977514794).
+Linux ran the unit/sanitizer/real-server/native-Classic checks and built a windowed
+package. Windows cross-compiled with MinGW and packaged successfully. Both
+`LapisCube-linux` and `LapisCube-windows` artifacts were uploaded. The CI sanitizer
+command used normal leak detection, without the local sandbox exception.
+This is build/test evidence; Windows runtime gameplay remains untested.
 
 ## Remaining acceptance gates
 
