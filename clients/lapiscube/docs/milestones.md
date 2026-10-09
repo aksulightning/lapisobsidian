@@ -16,3 +16,19 @@ Priorities next: test fresh-world survival progression and full-inventory close
 recovery; validate several streamed chunk boundaries, Far Lands and long sessions;
 then improve species art, particles, equipment, lighting and incremental meshing.
 Do not treat the seeded acceptance scenario as completion of these gates.
+
+## Extension milestones, starting at 7
+
+These extend the original roadmap; they do not mark unfinished M2–M6 work complete.
+
+| Milestone | Scope and acceptance | Status |
+| --- | --- | --- |
+| 7: fresh-world survival progression | Begin empty, harvest natural resources, craft/place a workbench, craft/use a pickaxe, retain earned inventory on reconnect; improve inventory controls and close/reopen consistency | Started: executable real-server progression test, server-backed crafting refresh, hotbar swaps and slot drops. Full survival progression and full-inventory edge cases remain open. |
+| 8: travel and world-streaming performance | Cross positive/negative cache boundaries and Far Lands; incremental map/mesh updates; record CPU, frame-time and memory behavior | Planned; build on the existing bounded cache and server-position synchronization |
+| 9: entity and combat presentation | Distinguish all eight requested species, show equipment/damage/attack effects, render required particles and validate projectile targeting | Planned; build on current shared models and verified server combat/death |
+| 10: usability and release acceptance | Resize/accessibility/settings work, clean installs, Windows runtime play, sound listening tests and final code/asset provenance review | Planned; existing Linux/Windows packages remain development builds |
+
+M7's initial gate is wood-to-tools, not a complete human-played survival session.
+The new `make progression` run uses no save fixture, supplied items, administrator
+commands or server modifications. See [the starter guide](survival-guide.md) and
+[validation](validation.md) for the implemented path and its limits.

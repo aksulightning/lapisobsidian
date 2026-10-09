@@ -20,7 +20,7 @@ static int signLine,signDirty[4];
 static struct FontDesc font;
 static int fontReady, hover=-1, cell=44, left, top;
 static int slotX[64],slotY[64];
-static struct { struct Texture tex; char value[192]; } labels[96];
+static struct { struct Texture tex; char value[192]; } labels[99];
 static void Empty(void* s) { (void)s; }
 static void Update(void* s,float dt) { (void)s;(void)dt; }
 static void Text(int index,const char* value,int x,int y) {
@@ -36,7 +36,7 @@ static void Text(int index,const char* value,int x,int y) {
 }
 void LapisGui_ContextLost(void) {
     int i;
-    for(i=0;i<96;i++)Gfx_DeleteTexture(&labels[i].tex.ID);
+    for(i=0;i<99;i++)Gfx_DeleteTexture(&labels[i].tex.ID);
     if(fontReady)Font_Free(&font);fontReady=0;
 }
 static void Icon(int item,int x,int y,int size) {
@@ -82,14 +82,21 @@ static void Layout(void* s) {
 static void Render(void* s,float dt) {
     struct LapisGameplay* g=LapisBackend_Gameplay();char buffer[192];int i,n=Slots();
     (void)s;(void)dt;
-    Gfx_Draw2DFlat(left-12,top-32,cell*9+22,cell*7+82,PackedCol_Make(15,26,37,240));
+    Gfx_Draw2DFlat(left-12,top-32,cell*9+22,cell*7+132,PackedCol_Make(15,26,37,255));
     Text(64,g->window?g->title:"Inventory / crafting / armour",left,top-26);
-    for(i=0;i<n;i++)Slot(i,g->slots[g->window][i],slotX[i],slotY[i],cell,i==hover);
-    if(hover>=0 && hover<n) {
+    for(i=0;i<n;i++) {
+        if(g->window==0 && i<=4 && (g->refreshMask&(1u<<i)))
+            Gfx_Draw2DFlat(slotX[i],slotY[i],cell-2,cell-2,PackedCol_Make(31,49,62,235));
+        else Slot(i,g->slots[g->window][i],slotX[i],slotY[i],cell,i==hover);
+    }
+    if(hover>=0 && hover<n && !(g->window==0 && g->refreshMask && hover<=4)) {
         sprintf(buffer,"Slot %d: %.28s",hover,LapisBlocks_ItemName(g->slots[g->window][hover].item));
         Text(65,buffer,left,top+cell*7+2);
     }
-    Text(66,"Left: stack   Right: one   Shift: transfer",left,top+cell*7+24);
+    Text(66,"Click: stack   Right: one",left,top+cell*7+24);
+    Text(96,"Shift-click: transfer   1-9: hotbar",left,top+cell*7+46);
+    Text(97,"Drop: one   Shift+Drop: stack",left,top+cell*7+68);
+    if(g->refreshMask && !g->window)Text(98,"Updating crafting slots...",left,top+cell*7+2);
     if(g->cursor.count)Slot(67,g->cursor,Pointers[0].x+12,Pointers[0].y+12,cell,1);
 }
 static int PointerMove(void* s,int id,int x,int y) {
@@ -98,6 +105,8 @@ static int PointerMove(void* s,int id,int x,int y) {
     return true;
 }
 static void Click(int right) {
+    struct LapisGameplay* g=LapisBackend_Gameplay();
+    if(!g->window && g->refreshMask && hover>=0 && hover<=4)return;
     if(hover>=0 && hover<Slots())
         LapisGameplay_Click(LapisBackend_Gameplay(),LapisBackend_Protocol(),hover,right,Input_IsShiftPressed());
 }
@@ -105,7 +114,11 @@ static int PointerDown(void* s,int id,int x,int y) {
     PointerMove(s,id,x,y);Click(0);return true;
 }
 static int KeyDown(void* s,int key,struct InputDevice* device) {
-    (void)s;
+    struct LapisGameplay* g=LapisBackend_Gameplay();struct LapisProtocol* p=LapisBackend_Protocol();(void)s;
+    if(hover>=0 && hover<Slots() && !(g->window==0 && g->refreshMask && hover<=4)) {
+        if(key>=CCKEY_1 && key<=CCKEY_9) { LapisGameplay_Swap(g,p,hover,key-CCKEY_1);return true; }
+        if(InputBind_Claims(BIND_DROP_BLOCK,key,device)) { LapisGameplay_DropSlot(g,p,hover,Input_IsShiftPressed());return true; }
+    }
     if(key==CCMOUSE_R) { Click(1);return true; }
     if(InputBind_Claims(BIND_INVENTORY,key,device) || key==CCKEY_ESCAPE) { LapisGui_Close();return true; }
     return true;
@@ -123,6 +136,7 @@ static const struct ScreenVTABLE table={
 void LapisGui_ShowInventory(void) {
     if(!LapisBackend_Protocol() || !LapisBackend_Protocol()->loaded)return;
     if(Gui_GetScreen(GUI_PRIORITY_INVENTORY)==&inventoryScreen) { Layout(&inventoryScreen);return; }
+    if(!LapisBackend_Gameplay()->window)LapisGameplay_Refresh(LapisBackend_Gameplay(),LapisBackend_Protocol());
     inventoryScreen.VTABLE=&table;inventoryScreen.grabsInput=true;inventoryScreen.closable=true;
     hover=-1;Gui_Add(&inventoryScreen,GUI_PRIORITY_INVENTORY);
 }
@@ -133,6 +147,7 @@ void LapisGui_Close(void) {
 void LapisGui_RenderHUD(void) {
     struct LapisGameplay* g=LapisBackend_Gameplay();char buffer[160];int i,x,y,size=40;
     if(!g || !LapisBackend_Protocol()->loaded || Game_HideGui)return;
+    if(Gui_GetScreen(GUI_PRIORITY_INVENTORY)==&inventoryScreen)return;
     x=(Window_Main.Width-9*size)/2;y=Window_Main.Height-size-6;
     Gfx_Draw2DFlat(Window_Main.Width/2-5,Window_Main.Height/2,11,1,PackedCol_Make(245,245,230,255));
     Gfx_Draw2DFlat(Window_Main.Width/2,Window_Main.Height/2-5,1,11,PackedCol_Make(245,245,230,255));

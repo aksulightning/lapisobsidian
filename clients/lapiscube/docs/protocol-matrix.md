@@ -140,7 +140,7 @@ Authoritative dispatch: `src/main.c:handlePacket`.
 | 3F | `cs_useItemOn`, `sign_packets.c` | Hand, position, face, three cursor floats, two booleans, sequence | Native cursor/face/position action; placement real-server tested |
 | 40 | `cs_useItem`, `sign_packets.c` | Hand, sequence, yaw/pitch; finite angles, pitch ±90; food/bucket use | One request per native press, release action 5; held food verified in real-server scenario and native window; buckets unverified |
 | 34 | `cs_setHeldItem` | u16 slot, exactly 2 bytes | Native hotbar selection; real interaction test |
-| 11 | `cs_clickContainer`, `inventory_packets.c` | Window/state, clicked i16 slot, button/mode, bounded changed slots, cursor stack | Zero predictions, absent cursor HashedSlot; server-owned results; real inventory transfer tested |
+| 11 | `cs_clickContainer`, `inventory_packets.c` | Window/state, clicked i16 slot, button/mode, bounded changed slots, cursor stack | Ordinary clicks/swaps/drops: zero predictions, absent cursor HashedSlot. Refresh: no-op self-swap plus four cached-cell reports; server-owned results; real fresh-world progression tested |
 | 12 | `cs_closeContainer` | One window byte | Sent on UI close; real inventory test |
 | 37 | `cs_creativeSlot`, `command_packets.c` | Slot + stack; gated by living/loaded/creative mode | Deferred M4; never sent for survival item creation |
 | 19 | `cs_interact`, `mob_packets.c` | Entity VarInt, action, optional hit position/hand, sneaking | Attack action + native ray targeting; two actual clients verified lethal sword damage and respawn |

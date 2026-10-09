@@ -3,12 +3,14 @@
 An experimental native C survival client for Lapis Obsidian, using ClassiCube's
 renderer, input, windowing, audio, collision and UI infrastructure.
 
-**Milestones 2–6 have started; they are not complete.** The native client now
+**Milestones 2–6 remain in progress. Milestone 7 now starts fresh-world survival progression.** The native client now
 renders a server world, moves and jumps, displays health/hunger and authoritative
 item stacks, and has mining/placement and inventory controls. Real-server tests
 pass mining, pickup/drop, placement, crafting, chest/furnace use, food, signs,
 combat, death and respawn; advanced survival tests use an isolated seeded save. This is
-an early playable development slice, not a finished survival release.
+an early playable development slice, not a finished survival release. A separate
+fresh-world test starts empty and reaches a crafted pickaxe and mined cobblestone,
+then verifies the earned inventory on reconnect.
 
 The client uses an independent CC0 atlas, geometric models/UI and synthesized
 sounds. It requires no Java, game JAR, Microsoft account or proprietary assets.
@@ -24,7 +26,7 @@ arbitrary vanilla servers.
 
 See [milestone status](docs/milestones.md), [packet matrix](docs/protocol-matrix.md),
 [architecture](docs/architecture.md), [validation](docs/validation.md),
-[assets](docs/assets.md) and [notices](NOTICE.md).
+[assets](docs/assets.md), [first-tools guide](docs/survival-guide.md) and [notices](NOTICE.md).
 
 ## Build, install and connect
 
@@ -73,6 +75,8 @@ these desktop-oriented modules.
 | Select hotbar | 1–9 or wheel |
 | Inventory / crafting | B; Escape or B closes |
 | Inventory operation | Left: stack, right: one, Shift: transfer |
+| Equip from inventory | Hover an item and press 1–9 to swap with a hotbar slot |
+| Drop from inventory | Hover and press Drop (G); Shift drops the stack |
 | Drop one selected item | G |
 | Sneak / sprint | Left Ctrl / Left Shift |
 | Chat / command | T; type `/command` in chat |
@@ -98,13 +102,18 @@ make test
 make sanitize
 make integration
 make survival
+make progression
 make native-smoke
 ```
 
 `integration` starts the unchanged server in a temporary save with seed 42; its
 headless probe shares the product decoders. `survival` generates a clearly
 labelled saved-game fixture with supplies and workstations, then exercises two
-clients against the unchanged server. It is not fresh-world progression evidence. `native-smoke` builds the existing
+clients against the unchanged server. It is not fresh-world progression evidence. `progression` instead begins in a
+new seed-42 world with an empty inventory and no administrator token, harvests
+natural logs, crafts/places a workbench, crafts/uses a pickaxe, and reconnects to
+check the earned inventory. Its movement is a test input driver over received
+terrain; it does not prove native collision or long-distance travel. `native-smoke` builds the existing
 terminal/software renderer and checks actual engine world loading plus the
 original Classic login. Rebuild `make native` before packaging a windowed client.
 On restricted runners without `/proc`, use
@@ -119,7 +128,7 @@ may hitch; efficient incremental remeshing remains work. Lighting is an engine
 approximation of the server's placeholder light arrays. Special shapes, water
 levels, mob distinctions/metadata and item/projectile rendering need refinement.
 Particles and several entity effects are omitted. Creative/adventure/spectator
-handling is partial. Full fresh-world progression, inventory-full crafting-close
+handling is partial. Progression beyond the first tools, inventory-full crafting-close
 recovery, armour, Far Lands and long-distance sessions remain unverified. Sky and
 terrain shading follow server time; per-voxel modern lighting remains approximate.
 The pinned server can broadcast Play packets to another connection that is still

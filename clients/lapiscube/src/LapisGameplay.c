@@ -51,6 +51,7 @@ int LapisGameplay_Packet(struct LapisGameplay* g, struct LapisProtocol* p, int i
         slot = (int)LapisReader_Big(&r, 2);
         if (slot >= 64 || !Stack(&r, &stack) || !LapisReader_Done(&r)) return 0;
         g->slots[w][slot] = stack; g->stateId[w] = state;
+        if(w==0 && slot<=4)g->refreshMask&=~(1u<<slot);
         /* Container views alias the same server-owned player inventory. */
         if(w==2 && slot>=27 && slot<63)g->slots[0][slot-18]=stack;
         if(w==12 && slot>=10 && slot<46)g->slots[0][slot-1]=stack;
@@ -144,17 +145,50 @@ int LapisGameplay_Select(struct LapisProtocol* p, int slot) {
     if (slot < 0 || slot > 8) return 0;
     Big(&w, (cc_uint64)slot, 2); return Send(p, 0x34, &w);
 }
-int LapisGameplay_Click(struct LapisGameplay* g, struct LapisProtocol* p, int slot, int right, int shift) {
+static int ValidSlot(int window,int slot) {
+    if(window!=0 && window!=2 && window!=12 && window!=14)return 0;
+    return slot>=0 && slot<(window==2?63:window==14?39:46);
+}
+static int ClickMode(struct LapisGameplay* g,struct LapisProtocol* p,int slot,int button,int mode) {
     struct Writer w; w.n = 0;
-    if (slot < -999 || slot >= 64 || (slot < 0 && slot != -999)) return 0;
+    if (!ValidSlot(g->window,slot) && slot!=-999) return 0;
+    if(g->window!=0 && g->window!=2 && g->window!=12 && g->window!=14)return 0;
     Var(&w, (cc_uint32)g->window); Var(&w, (cc_uint32)g->stateId[g->window]);
-    Big(&w, (cc_uint16)slot, 2); Big(&w, right ? 1 : 0, 1); Var(&w, shift ? 1 : 0);
+    Big(&w, (cc_uint16)slot, 2); Big(&w, (cc_uint64)button, 1); Var(&w, (cc_uint32)mode);
     /* Zero predictions and an absent HashedSlot. Lapis computes all mutations. */
     Var(&w, 0); Big(&w, 0, 1); return Send(p, 0x11, &w);
 }
+int LapisGameplay_Click(struct LapisGameplay* g,struct LapisProtocol* p,int slot,int right,int shift) {
+    return ClickMode(g,p,slot,right?1:0,shift?1:0);
+}
+int LapisGameplay_Swap(struct LapisGameplay* g,struct LapisProtocol* p,int slot,int hotbar) {
+    if(!ValidSlot(g->window,slot) || hotbar<0 || hotbar>8)return 0;
+    return ClickMode(g,p,slot,hotbar,2);
+}
+int LapisGameplay_DropSlot(struct LapisGameplay* g,struct LapisProtocol* p,int slot,int entireStack) {
+    if(!ValidSlot(g->window,slot))return 0;
+    return ClickMode(g,p,slot,entireStack?1:0,4);
+}
+int LapisGameplay_Refresh(struct LapisGameplay* g,struct LapisProtocol* p) {
+    struct Writer w;struct LapisStack stack;int i;w.n=0;
+    if(g->window!=0 || g->health<=0 || p->gamemode==3)return 0;
+    /* inventory_packets.c: a hotbar slot swapped with itself does nothing.
+       Listed cached cells are untrusted snapshots; sync_window sends their
+       actual contents. Only the four visible player-grid cells are requested;
+       no assumption is made about successful return of all 3x3 ingredients. */
+    Var(&w,0);Var(&w,(cc_uint32)g->stateId[0]);Big(&w,36,2);Big(&w,0,1);Var(&w,2);Var(&w,4);
+    for(i=1;i<=4;i++) {
+        stack=g->slots[0][i];Big(&w,(cc_uint64)i,2);Big(&w,stack.count?1:0,1);
+        if(stack.count) { Var(&w,(cc_uint32)stack.item);Var(&w,(cc_uint32)stack.count);Var(&w,0);Var(&w,0); }
+    }
+    Big(&w,0,1);
+    if(!Send(p,0x11,&w))return 0;
+    g->refreshMask=31;return 1;
+}
 int LapisGameplay_Close(struct LapisGameplay* g, struct LapisProtocol* p) {
     struct Writer w; int ok; w.n = 0;
-    Big(&w, (cc_uint64)g->window, 1); ok = Send(p, 0x12, &w); g->window = 0; return ok;
+    Big(&w, (cc_uint64)g->window, 1); ok = Send(p, 0x12, &w);
+    if(ok) { g->window=0;g->refreshMask=0; }return ok;
 }
 int LapisGameplay_Chat(struct LapisProtocol* p, const char* text, int length) {
     struct Writer w; int command; w.n = 0;

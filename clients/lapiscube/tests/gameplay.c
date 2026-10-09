@@ -203,7 +203,42 @@ static void TimeTests(void) {
     n=0;Big(123460,8);Big(24000,8);Byte(1);
     CHECK(!LapisWorld_Time(&world,data,n));CHECK(world.dayTicks==23000);
 }
+static void InventoryControlsTests(void) {
+    struct LapisReader r;int i,size;
+    LapisProtocol_Init(&protocol,NULL,NULL);LapisGameplay_Init(&game);
+    protocol.state=LAPIS_PLAY;protocol.loaded=1;
+    SlotPacket(0,1,134,4);CHECK(LapisGameplay_Packet(&game,&protocol,0x14,data,n));game.stateId[0]=7;
+    CHECK(LapisGameplay_Refresh(&game,&protocol));CHECK(game.refreshMask==31 && game.slots[0][1].count==4);
+    LapisReader_Init(&r,protocol.output,protocol.outputSize);LapisReader_VarInt(&r);
+    CHECK(LapisReader_VarInt(&r)==0x11 && LapisReader_VarInt(&r)==0 && LapisReader_VarInt(&r)==7);
+    CHECK(LapisReader_Big(&r,2)==36 && LapisReader_Byte(&r)==0 && LapisReader_VarInt(&r)==2);
+    CHECK(LapisReader_VarInt(&r)==4);
+    for(i=1;i<=4;i++) {
+        CHECK(LapisReader_Big(&r,2)==(cc_uint64)i);CHECK(LapisReader_Byte(&r)==(i==1));
+        if(i==1) { CHECK(LapisReader_VarInt(&r)==134 && LapisReader_VarInt(&r)==4);CHECK(!LapisReader_VarInt(&r) && !LapisReader_VarInt(&r)); }
+    }
+    CHECK(!LapisReader_Byte(&r) && LapisReader_Done(&r));
+    SlotPacket(0,1,0,0);CHECK(!LapisGameplay_Packet(&game,&protocol,0x14,data,n-1));CHECK(game.refreshMask==31);
+    for(i=0;i<=4;i++) { SlotPacket(0,i,0,0);CHECK(LapisGameplay_Packet(&game,&protocol,0x14,data,n)); }
+    CHECK(!game.refreshMask && !game.slots[0][1].count);
+    protocol.outputSize=0;game.window=12;
+    CHECK(!LapisGameplay_Refresh(&game,&protocol));
+    CHECK(LapisGameplay_Swap(&game,&protocol,10,7));
+    LapisReader_Init(&r,protocol.output,protocol.outputSize);LapisReader_VarInt(&r);CHECK(LapisReader_VarInt(&r)==0x11);
+    CHECK(LapisReader_VarInt(&r)==12 && !LapisReader_VarInt(&r) && LapisReader_Big(&r,2)==10);
+    CHECK(LapisReader_Byte(&r)==7 && LapisReader_VarInt(&r)==2 && !LapisReader_VarInt(&r) && !LapisReader_Byte(&r) && LapisReader_Done(&r));
+    size=protocol.outputSize;
+    CHECK(!LapisGameplay_Swap(&game,&protocol,46,0));CHECK(!LapisGameplay_Swap(&game,&protocol,1,9));CHECK(protocol.outputSize==size);
+    protocol.outputSize=0;game.window=14;
+    CHECK(!LapisGameplay_Click(&game,&protocol,39,0,0));CHECK(!LapisGameplay_DropSlot(&game,&protocol,-999,1));
+    CHECK(LapisGameplay_DropSlot(&game,&protocol,38,1));
+    LapisReader_Init(&r,protocol.output,protocol.outputSize);LapisReader_VarInt(&r);CHECK(LapisReader_VarInt(&r)==0x11);
+    CHECK(LapisReader_VarInt(&r)==14 && !LapisReader_VarInt(&r) && LapisReader_Big(&r,2)==38);
+    CHECK(LapisReader_Byte(&r)==1 && LapisReader_VarInt(&r)==4 && !LapisReader_VarInt(&r) && !LapisReader_Byte(&r) && LapisReader_Done(&r));
+    game.window=15;CHECK(!LapisGameplay_Click(&game,&protocol,-999,0,0));
+    game.window=2;protocol.state=LAPIS_FAILED;CHECK(!LapisGameplay_Close(&game,&protocol));CHECK(game.window==2);
+}
 int main(void) {
-    WorldTests();GameplayTests();EntityTests();SignTests();ContainerTests();MiningTests();TimeTests();
+    WorldTests();GameplayTests();EntityTests();SignTests();ContainerTests();MiningTests();TimeTests();InventoryControlsTests();
     printf("world/gameplay: %u assertions passed (palettes, height, boundaries, truncation, inventory authority, actions, entities, sounds)\n",checks);return 0;
 }

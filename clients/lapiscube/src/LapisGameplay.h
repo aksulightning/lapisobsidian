@@ -9,6 +9,7 @@ struct LapisGameplay {
     float health, saturation;
     cc_uint32 sequence, acknowledged;
     unsigned revision;
+    unsigned refreshMask;
     char title[128], message[2048];
 };
 void LapisGameplay_Init(struct LapisGameplay* g);
@@ -20,6 +21,10 @@ int LapisGameplay_UseOn(struct LapisGameplay* g, struct LapisProtocol* p, int x,
 int LapisGameplay_Use(struct LapisGameplay* g, struct LapisProtocol* p, float yaw, float pitch);
 int LapisGameplay_Select(struct LapisProtocol* p, int slot);
 int LapisGameplay_Click(struct LapisGameplay* g, struct LapisProtocol* p, int slot, int right, int shift);
+int LapisGameplay_Swap(struct LapisGameplay* g, struct LapisProtocol* p, int slot, int hotbar);
+int LapisGameplay_DropSlot(struct LapisGameplay* g, struct LapisProtocol* p, int slot, int entireStack);
+/* Request fresh crafting cells using a no-op hotbar self-swap. No local changes. */
+int LapisGameplay_Refresh(struct LapisGameplay* g, struct LapisProtocol* p);
 int LapisGameplay_Close(struct LapisGameplay* g, struct LapisProtocol* p);
 int LapisGameplay_Chat(struct LapisProtocol* p, const char* text, int length);
 int LapisGameplay_Attack(struct LapisProtocol* p, int entity);

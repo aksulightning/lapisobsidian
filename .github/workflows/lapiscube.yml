@@ -18,7 +18,7 @@ jobs:
           persist-credentials: false
       - run: sudo apt-get update && sudo apt-get install -y libx11-dev libxi-dev libgl-dev
       - run: ./build.sh
-      - run: make -C clients/lapiscube test sanitize integration survival native-smoke
+      - run: make -C clients/lapiscube test sanitize integration survival progression native-smoke
       - run: make -C clients/lapiscube native package
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:

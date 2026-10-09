@@ -94,3 +94,23 @@ Clock packet 6A carries world age, day ticks modulo 24000 and a ticking boolean.
 Sixteen brightness steps tint engine sky/fog/sun/shadow colours only when their
 values change. Time is not advanced independently and terrain is never generated
 locally. This shading does not replace a full block-light implementation.
+
+## Milestone 7 inventory synchronization
+
+The pinned server's Close Container returns ingredients and sends cursor/player
+slot updates, but does not resend the old crafting cells. Opening the player
+inventory now queues a **hotbar self-swap** (window 0, slot 36, button 0, mode 2),
+which the server explicitly treats as a no-op. Its cached-slot reports list the
+four last-known 2×2 ingredients; `inventory_packets.c:sync_window` sends their
+actual contents, plus the output and cursor. The client waits for those slot
+updates, hides pending cells and never changes their item counts itself.
+
+These reports are snapshots, not proposed items or client-computed crafting
+results. Ordinary clicks/swaps/drops still send zero changed-slot reports.
+Refresh uses no new server packet, relaxed validation or modified server code.
+Inputs retained outside the visible 2×2 area after a full 3×3 close still require
+separate acceptance; this mechanism makes no claim to solve that server edge case.
+
+Number keys over a native inventory cell send mode-2 swaps. The configured Drop
+key sends mode 4, with Shift selecting the entire stack. Window-specific bounds
+are checked before encoding; only server slot/cursor packets update the display.

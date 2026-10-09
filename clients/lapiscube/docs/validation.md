@@ -11,7 +11,7 @@ or assets were used.
 | Check | Actual result |
 | --- | --- |
 | Unchanged server build | Passed |
-| `make test` | 2,396 protocol assertions + 8,111 world/gameplay assertions passed under strict C89 warnings |
+| `make test` | 2,396 protocol assertions + 8,153 world/gameplay assertions passed under strict C89 warnings |
 | ASan/UBSan (`SANITIZER_FLAGS=-DLAPIS_SANDBOX_SANITIZERS`) | Both suites passed; leak scanning disabled because `/proc` is unavailable in this runner |
 | `make integration` | Actual status/pong, configuration, Play, decoded chunks, keepalive, same-identity reconnect and interaction sequence passed |
 | Core C++ build | Pure modules compiled with C++11 and warnings as errors |
@@ -19,6 +19,8 @@ or assets were used.
 | Windowed visual/input smoke | Actual native world rendered under Xvfb/Mesa; world, look, movement/jump and inventory screenshots inspected |
 | `make survival` | Two real clients passed 2×2 and 3×3 crafting, chest deposit/reopen/withdraw, furnace recipe checks/output, eating, Unicode sign editing, command teleport, lethal sword damage and respawn |
 | Native survival visual/input smoke | Held food consumed once; sign editor/saved reading overlay, mining progress/cancellation and server-command day/night shading inspected |
+| `make progression` | Passed from an empty inventory/new world: natural logs → planks → placed workbench → wooden pickaxe → mined cobblestone; earned inventory retained on same-identity reconnect |
+| M7 native inventory check | Fresh-world earned stacks displayed; number-key swap, drop-one and crafting close/reopen inspected in the X11 client |
 | Lapis skins | Lapis skin request path disabled; final visual run produced no skin HTTP request |
 | Native terminal and Classic regression | Passed: decoded native world/loaded transition and original 131-byte Classic login |
 | Linux package | Created 1.5 MiB ZIP; hashes and ZIP CRCs verified; packaged binary loaded the actual world and inventory in a fresh server visual smoke |
@@ -121,10 +123,52 @@ joins clients sequentially; strict client state validation remains intact. This
 limitation is recorded in the packet matrix, not hidden by accepting wrong-state
 packets. Repeated sequential reconnects remain covered by `make integration`.
 
+## Milestone 7: fresh-world progression
+
+Unlike the earlier seeded survival fixture, `tests/progression.py` creates a new
+server directory containing only `server.txt`, selects seed 42/survival, and starts
+without an administrator token. The client asserts that all 46 inventory cells
+are empty. A bounded test-only walker searches the received terrain for a route
+to a natural tree and sends small position steps. No terrain or inventory is
+created by the client, and no server command grants supplies or movement.
+
+The real run passed these steps:
+
+1. Walk from spawn (8,68,8) to the natural tree at (9,69,2).
+2. Mine and pick up four logs, using the product's mining delays.
+3. Put logs into crafting, close without crafting, then refresh; require returned
+   logs and authoritative empty input/result cells.
+4. Craft sixteen planks, a workbench and four sticks. Use the new hotbar swap,
+   place the workbench and require its block update and item consumption.
+5. Open the placed workbench and craft a wooden pickaxe through ordinary clicks.
+6. Drop and recover the remaining plank stack using the new slot-drop request.
+7. Dig through natural soil, then use the pickaxe to mine/collect cobblestone.
+8. Reconnect with the same identity; require seven planks, two sticks and one
+   cobblestone. Tool survival is not assumed: this server uses random tool wear.
+
+Both probe runs reached `progression_stage=30` and `result=PASS`. This verifies
+first-tool progression and same-running-server reconnect, not disk persistence
+across restart or a complete survival session. The test walker does not exercise
+the native collision/jump implementation; longer native travel remains M8 work.
+
+The native visual session first ran that fresh-world sequence, then connected the
+windowed client as the same player. Inventory keyboard swapping, dropping one
+plank, returning the stack, placing planks into crafting, closing and reopening
+were inspected. The returned stack appeared in the inventory and stale crafting
+cells cleared. A follow-up layout fix keeps shortcut text inside the panel and
+hides the overlapping gameplay HUD while inventory is open. Audio was muted.
+
+New strict-C89/sanitizer tests validate the no-op refresh wire format and cached
+reports, no local slot mutation, truncated-response behavior, hotbar/drop packet
+fields, per-window outgoing slot bounds and rejected closes. The earlier protocol,
+seeded survival, status/reconnect/interaction and native Classic checks remain
+separate regression gates. Linux CI now also runs `make progression`.
+
 ## Remaining acceptance gates
 
 - Long-distance/chunk-boundary walking, Far Lands, cache hitches and long sessions.
-- Fresh-world progression, full-inventory crafting-close recovery, buckets,
+- Progression beyond the first tools, server-restart persistence, full-inventory
+  crafting-close recovery, buckets,
   armour/equipment and complete mode-specific gameplay sessions.
 - Mining pace balancing and animation; server owns drops/durability but does not
   provide a timed hardness table. Current non-instant timings are client choices.
