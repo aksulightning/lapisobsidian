@@ -1,0 +1,69 @@
+--- a/src/Server.c
++++ b/src/Server.c
+@@ -1,4 +1,5 @@
+ #include "Server.h"
++#include "LapisBackend.h"
+ #include "String_.h"
+ #include "BlockPhysics.h"
+ #include "Game.h"
+@@ -541,6 +542,9 @@
+ 
+ 	if (!Server.Address.length) {
+ 		SPConnection_Init();
++	} else if (LapisBackend_Enabled) {
++		Server_ResetState();
++		LapisBackend_Init();
+ 	} else {
+ 		MPConnection_Init();
+ 	}
+@@ -571,6 +575,7 @@
+ }
+ 
+ static void OnClose(void) {
++	if (LapisBackend_Enabled) { LapisBackend_Close(); return; }
+ 	if (Server.IsSinglePlayer) {
+ 		Physics_Free();
+ 	} else {
+--- a/src/main_impl.h
++++ b/src/main_impl.h
+@@ -17,6 +17,7 @@
+ #include "Utils.h"
+ #include "Launcher.h"
+ #include "Server.h"
++#include "LapisBackend.h"
+ #include "Options.h"
+ #include "main.h"
+ 
+@@ -85,14 +86,9 @@
+ }
+ 
+ static void RunLauncher(void) {
+-#ifndef CC_BUILD_WEB
+-	Launcher_Setup();
+-	/* NOTE: Make sure to keep delay same as hardcoded delay in Launcher_Tick */
+-	while (Launcher_Tick()) { Thread_Sleep(10); }
+-
+-	Launcher_Finish();
+-	Window_Destroy();
+-#endif
++	static const cc_string usage = String_FromConst("Milestone 1: run LapisCube --lapis USER HOST PORT. World rendering is pending. Classic direct-connect arguments remain supported.");
++	Logger_DialogTitle = "LapisCube";
++	Logger_DialogWarn(&usage);
+ }
+ 
+ /* Shows a warning dialog due to an invalid command line argument */
+@@ -178,6 +174,14 @@
+ 	//cc_string rawArgs = String_FromConst("UnknownShadow200"); 
+ 	//argsCount = String_UNSAFE_Split(&rawArgs, ' ', args, 4);
+ #endif
++
++	LapisBackend_Enabled = false;
++	if (argsCount == 4 && String_CaselessEqualsConst(&args[0], "--lapis")) {
++		LapisBackend_Enabled = true;
++		if (!ParseMPArgs(&args[1], &String_Empty, &args[2], &args[3]))
++			return ARG_RESULT_INVALID_ARGS;
++		return ARG_RESULT_RUN_GAME;
++	}
+ 
+ 	if (argsCount == 0)
+ 		return ARG_RESULT_RUN_LAUNCHER;

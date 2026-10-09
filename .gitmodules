@@ -1,0 +1,3 @@
+[submodule "clients/lapiscube/engine"]
+	path = clients/lapiscube/engine
+	url = https://github.com/ClassiCube/ClassiCube.git

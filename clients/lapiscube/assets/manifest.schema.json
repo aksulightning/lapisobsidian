@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "project", "default_asset_license", "assets"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "project": {"const": "LapisCube"},
+    "default_asset_license": {"const": "CC0-1.0"},
+    "status": {"type": "string"},
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source_url", "author", "license", "license_url", "modifications", "destination_filename", "sha256", "attribution", "redistribution_notes"],
+        "properties": {
+          "source_url": {"type": "string", "minLength": 1},
+          "author": {"type": "string", "minLength": 1},
+          "license": {"type": "string", "minLength": 1},
+          "license_url": {"type": "string", "minLength": 1},
+          "modifications": {"type": "string"},
+          "destination_filename": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "attribution": {"type": "string"},
+          "redistribution_notes": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
