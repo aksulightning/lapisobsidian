@@ -57,6 +57,10 @@ document.getElementById('resume').addEventListener('click',async()=>{
 function action(id,down){if(ready && !blocked)Module._LapisWeb_Action(id,down?1:0);}
 // Count presses per action so two fingers never release one another's keys.
 function hold(id,down){const n=held.get(id)||0;held.set(id,Math.max(0,n+(down?1:-1)));if(down && !n)action(id,true);if(!down && n===1)action(id,false);}
+function coordinates(event){
+  const r=canvas.getBoundingClientRect();
+  return {x:(event.clientX-r.left)*canvas.width/r.width,y:(event.clientY-r.top)*canvas.height/r.height};
+}
 for(const button of document.querySelectorAll('[data-action]')){
   button.addEventListener('pointerdown',event=>{
     event.preventDefault();event.stopPropagation();if(blocked)return;
@@ -75,8 +79,10 @@ for(const button of document.querySelectorAll('[data-mode]'))button.addEventList
 canvas.addEventListener('pointerdown',event=>{
   if(event.pointerType!=='touch')return;
   event.preventDefault();if(!ready || blocked)return;resumeAudio();canvas.setPointerCapture(event.pointerId);
-  const p={x:event.offsetX,y:event.offsetY,gui:menu};pointers.set(event.pointerId,p);
-  if(menu)Module._LapisWeb_Pointer(p.x,p.y,1);
+  // The C screen can change between shell updates (for example, Close then a
+  // quick hotbar tap). Route against its current state, never the cached layout.
+  const p={...coordinates(event),gui:!!(Module._LapisWeb_State()&2)};pointers.set(event.pointerId,p);
+  if(p.gui)Module._LapisWeb_Pointer(p.x,p.y,1);
   else {
     const size=Math.min(40,Math.floor((canvas.width-16)/9)),left=(canvas.width-9*size)/2;
     if(p.y>=canvas.height-size-6 && p.x>=left && p.x<left+size*9){action(20+Math.floor((p.x-left)/size),true);p.hotbar=true;}
@@ -84,9 +90,10 @@ canvas.addEventListener('pointerdown',event=>{
 });
 canvas.addEventListener('pointermove',event=>{
   const p=pointers.get(event.pointerId);if(!p || blocked)return;
-  if(p.gui)Module._LapisWeb_Pointer(event.offsetX,event.offsetY,1);
-  else if(!p.hotbar)Module._LapisWeb_Look(event.offsetX-p.x,event.offsetY-p.y);
-  p.x=event.offsetX;p.y=event.offsetY;
+  const at=coordinates(event);
+  if(p.gui)Module._LapisWeb_Pointer(at.x,at.y,1);
+  else if(!p.hotbar)Module._LapisWeb_Look(at.x-p.x,at.y-p.y);
+  p.x=at.x;p.y=at.y;
 });
 for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(name,event=>{
   const p=pointers.get(event.pointerId);if(!p)return;pointers.delete(event.pointerId);

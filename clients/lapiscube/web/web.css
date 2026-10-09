@@ -13,7 +13,7 @@ button:active,button[aria-pressed=true]{background:#426d72;border-color:#cfdf99}
 #walk{position:absolute;left:max(10px,env(safe-area-inset-left));bottom:max(58px,env(safe-area-inset-bottom));width:156px;display:grid;grid-template-columns:repeat(3,48px);gap:5px}
 #walk button:first-child{grid-column:2}#walk button:nth-child(2){grid-column:1}
 #actions{position:absolute;right:max(10px,env(safe-area-inset-right));bottom:max(58px,env(safe-area-inset-bottom));width:166px;display:grid;grid-template-columns:1fr 1fr;gap:5px}
-#inventory-tools{position:absolute;left:max(6px,env(safe-area-inset-left));top:max(6px,env(safe-area-inset-top));display:flex;gap:4px}
+#inventory-tools{position:absolute;left:max(6px,env(safe-area-inset-left));top:max(54px,env(safe-area-inset-top));display:flex;flex-direction:column;width:96px;gap:4px}
 #touch.menu #toolbar{display:none}#touch.menu .world-controls{display:none}
 #canvas_wrapper textarea{z-index:15;max-height:70px;touch-action:auto}
 @media(max-height:460px){.card{padding:14px 20px}h1{font-size:28px;margin:2px 0}p{margin:6px 0}details{margin:8px 0}.brand{font-size:9px}#actions{grid-template-columns:repeat(2,76px);width:157px}#touch button{padding:6px;min-height:40px}}

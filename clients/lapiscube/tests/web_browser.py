@@ -146,6 +146,8 @@ def main():
                         assert outbound.count(0x11)>0,'Inventory must send server click requests'
                         if mobile:
                             page.touchscreen.tap(442,370);page.wait_for_timeout(200)
+                            deadline=time.monotonic()+5
+                            while not outbound.count(0x34) and time.monotonic()<deadline:page.wait_for_timeout(100)
                             assert outbound.count(0x34)>0,'Hotbar selection must reach server'
                             start=point('#walk [data-action="0"]')
                             cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{**start,'id':3}]})
