@@ -234,6 +234,17 @@
       "sha256": "55dffffc5b6ce4fb75a2978148d18b3e5144d6b2e641ff76c45634ee49fe9aae",
       "attribution": "LapisCube",
       "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/assets/web-icon.svg",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "modifications": "Original code-authored geometry or PCM synthesis",
+      "destination_filename": "assets/web-icon.svg",
+      "sha256": "9608f07391a8aac27cc36deec21e7137c9a537fb0f0f8edb823cef4bb328026c",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
     }
   ]
 }

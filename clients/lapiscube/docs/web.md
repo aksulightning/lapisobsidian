@@ -80,8 +80,8 @@ before switching apps. This version does not cache the game for offline play.
 
 The browser package retains ClassiCube, bundled dependency, Emscripten and asset
 notices. `asset-sources/manifest.json` records asset provenance; `release.json`
-records source revisions and file hashes. The shell's cube icon is original SVG
-under the repository license. PCM sound synthesis is shared with the native
+records source revisions and file hashes. The shell's cube icon is original CC0 SVG
+with its source, hash and dedication recorded in the asset manifest. PCM sound synthesis is shared with the native
 client; footsteps load the local CC0 replacement WAVs.
 
 ## Validation

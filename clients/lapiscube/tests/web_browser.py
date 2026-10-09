@@ -10,6 +10,7 @@ import secrets
 import struct
 import subprocess
 import tempfile
+import time
 from playwright.sync_api import sync_playwright
 from web_transport import BUILD, port, wait_port
 from survival import identity_for
@@ -63,6 +64,11 @@ def main():
                     def socket(ws):
                         ws.on('framesent',outbound.feed);ws.on('framereceived',inbound.feed)
                     page.on('websocket',socket)
+                    def await_turn(yaw):
+                        deadline=time.monotonic()+5
+                        while abs(outbound.positions()[-1][3]-yaw)<=1 and time.monotonic()<deadline:
+                            page.wait_for_timeout(100)
+                        return abs(outbound.positions()[-1][3]-yaw)>1
                     try:
                         page.goto(f'http://127.0.0.1:{web}/')
                         if mobile:
@@ -98,19 +104,23 @@ def main():
                             }''')
                             cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[look]})
                             page.wait_for_timeout(80)
-                            cdp.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{**look,'x':455,'y':155}]})
-                            page.wait_for_timeout(120)
+                            for i in range(1,5):
+                                cdp.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{**look,'x':410+i*15,'y':140+i*5}]})
+                                page.wait_for_timeout(100)
                             cdp.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
                             page.wait_for_timeout(300)
-                            assert abs(outbound.positions()[-1][3]-yaw)>1,('Touch drag must turn the C camera',yaw,
+                            assert await_turn(yaw),('Touch drag must turn the C camera',yaw,
                                 outbound.positions()[-1],page.evaluate('({trace:lookTrace,rect:canvas.getBoundingClientRect().toJSON(),state:Module._LapisWeb_State()})'))
                             page.locator('#toolbar [data-action="9"]').tap()
                         else:
                             page.keyboard.down('w');page.keyboard.down('Space');page.wait_for_timeout(450)
                             page.keyboard.up('w');page.keyboard.up('Space');page.wait_for_timeout(700)
                             yaw=outbound.positions()[-1][3]
-                            page.mouse.click(512,320);page.mouse.move(550,330);page.wait_for_timeout(300)
-                            assert abs(outbound.positions()[-1][3]-yaw)>1,'Mouse motion must turn the C camera'
+                            page.mouse.click(512,320)
+                            page.wait_for_function('document.pointerLockElement === canvas',timeout=5000)
+                            for i in range(1,5):
+                                page.mouse.move(512+i*15,320+i*3);page.wait_for_timeout(100)
+                            assert await_turn(yaw),'Mouse motion must turn the C camera'
                             page.keyboard.press('b')
                         page.wait_for_function('(Module._LapisWeb_State() & 2) !== 0');page.wait_for_timeout(300)
                         assert len(outbound.positions())>len(before)+1
@@ -149,6 +159,8 @@ def main():
                             page.keyboard.press('t');page.keyboard.type('/tp -17 150 33');page.keyboard.press('Enter');page.wait_for_timeout(1800)
                             assert inbound.count(0x41)>=3,'Teleport position synchronization'
                             page.screenshot(path=str(EVIDENCE/'desktop-teleport.png'))
+                            # Restore grounded fixture position before the mobile reconnect.
+                            page.keyboard.press('t');page.keyboard.type('/tp 8 70 8');page.keyboard.press('Enter');page.wait_for_timeout(1800)
                         assert not errors,errors
                         assert all(url.startswith(f'http://127.0.0.1:{web}/') for url in requests),requests
                         outcomes.append({'mode':label,'sent_packets':len(outbound.packets),'received_packets':len(inbound.packets),
@@ -157,7 +169,7 @@ def main():
                         page.screenshot(path=str(EVIDENCE/f'{label}-last.png'))
                         (EVIDENCE/f'{label}.log').write_text('\n'.join(messages+errors)+'\n')
                         (EVIDENCE/f'{label}-wire.json').write_text(json.dumps({'sent':[p.hex() for p in outbound.packets],'received_ids':[p[0] for p in inbound.packets if p]},indent=2))
-                        if os.environ.get('LAPIS_WEB_REVIEW_IMAGES')=='1':
+                        if mobile and os.environ.get('LAPIS_WEB_REVIEW_IMAGES')=='1':
                             for name in (f'{label}-world.png',f'{label}-inventory.png',f'{label}-portrait-gate.png'):
                                 if (EVIDENCE/name).exists():
                                     print('LAPISCUBE_SCREENSHOT '+name+' '+base64.b64encode((EVIDENCE/name).read_bytes()).decode(),flush=True)

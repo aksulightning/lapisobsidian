@@ -133,9 +133,9 @@ def main():
         with wave.open(str(sounds/(name+'.wav')),'wb') as out:
             out.setparams((1,2,22050,0,'NONE','not compressed'));out.writeframes(struct.pack('<'+'h'*len(samples),*samples))
     entries=[]
-    for path in sorted(dest.glob('*.png'))+sorted(sounds.glob('*.wav')):
+    for path in sorted(dest.glob('*.png'))+sorted(sounds.glob('*.wav'))+[dest/'web-icon.svg']:
         kenney=path.name=='terrain.png'
-        entries.append(dict(source_url=URL if kenney else 'https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py',
+        entries.append(dict(source_url='https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/assets/web-icon.svg' if path.suffix=='.svg' else URL if kenney else 'https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py',
                             author='Kenney Vleugels' if kenney else 'LapisCube contributors',license='CC0-1.0',license_url=LICENSE,
                             modifications='Tiles resized 128 to 32, water/ice alpha adjusted, Classic cloth tinted, packed with Classic/CPE compatibility cells; see atlas.json' if kenney else 'Original code-authored geometry or PCM synthesis',
                             destination_filename=str(path.relative_to(ROOT)),sha256=hashlib.sha256(path.read_bytes()).hexdigest(),

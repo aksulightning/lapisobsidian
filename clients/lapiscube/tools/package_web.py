@@ -18,6 +18,7 @@ def main():
     output = ROOT/'build/webclient'
     shutil.rmtree(output, ignore_errors=True)
     shutil.copytree(ROOT/'web', output, ignore=shutil.ignore_patterns('build.mk'))
+    shutil.copy2(ROOT/'assets/web-icon.svg',output/'icon.svg')
     for name in ('LapisCube.js', 'LapisCube.wasm'):
         shutil.copy2(engine/name, output/name)
     package.stage(output)
