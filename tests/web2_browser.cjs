@@ -309,10 +309,18 @@ async function port() {
       app.playerController.sendChatMessage("/gamemode survival"),
     );
     await wait(() => app.lapisConnection.mode === 0);
+    // These fixtures set their aim explicitly. Under pointer lock, CDP button
+    // dispatch can deliver a mousemove after page.mouse.down() resolves, so
+    // draining the current motion alone races with the next rendered frame.
+    // Disable look sensitivity only while testing the fixed mining/entity rays;
+    // real mouse press/release handlers and held-action ticks remain active.
+    const sensitivity = await page.evaluate(() => {
+      const previous = app.settings.sensitivity;
+      app.settings.sensitivity = 0;
+      return previous;
+    });
     async function aimAtFixture() {
       await page.evaluate(([x, y, z]) => {
-      // CDP mouse button dispatch under pointer lock can enqueue motion. Apply
-      // the test's fixed aim after that dispatch, before exercising held input.
       app.window.pullMouseMotionX();
       app.window.pullMouseMotionY();
       const p = app.player,
@@ -422,6 +430,11 @@ async function port() {
     }), "cow body must be visible and targetable above surface cover");
     await capture(".tests/web-client2-entities.png");
     console.log("Survival inventory and cow model passed");
+    await page.evaluate((sensitivity) => {
+      app.window.pullMouseMotionX();
+      app.window.pullMouseMotionY();
+      app.settings.sensitivity = sensitivity;
+    }, sensitivity);
     // Measure Web Audio signal after the positional listener, even in muted CI.
     await page.evaluate(async () => {
       const sound = app.soundManager,
