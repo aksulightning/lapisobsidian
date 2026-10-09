@@ -116,11 +116,18 @@ def main():
                             page.keyboard.down('w');page.keyboard.down('Space');page.wait_for_timeout(450)
                             page.keyboard.up('w');page.keyboard.up('Space');page.wait_for_timeout(700)
                             yaw=outbound.positions()[-1][3]
-                            page.mouse.click(512,320)
-                            page.wait_for_function('document.pointerLockElement === canvas',timeout=5000)
+                            # CDP absolute mouse coordinates do not model relative
+                            # hardware motion while pointer lock is active. Check
+                            # real mouse deltas first, then pointer capture separately.
+                            page.evaluate('document.exitPointerLock()')
+                            page.wait_for_function('!document.pointerLockElement')
+                            page.evaluate('''() => {window.mouseTrace=[];
+                              canvas.addEventListener('mousemove',e=>mouseTrace.push([e.movementX,e.movementY,e.clientX,e.clientY,Module._LapisWeb_State()]));}''')
                             for i in range(1,5):
                                 page.mouse.move(512+i*15,320+i*3);page.wait_for_timeout(100)
-                            assert await_turn(yaw),'Mouse motion must turn the C camera'
+                            assert await_turn(yaw),('Mouse motion must turn the C camera',yaw,outbound.positions()[-1],page.evaluate('mouseTrace'))
+                            page.mouse.click(572,332)
+                            page.wait_for_function('document.pointerLockElement === canvas',timeout=5000)
                             page.keyboard.press('b')
                         page.wait_for_function('(Module._LapisWeb_State() & 2) !== 0');page.wait_for_timeout(300)
                         assert len(outbound.positions())>len(before)+1

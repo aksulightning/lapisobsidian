@@ -50,6 +50,8 @@ jobs:
           cp clients/lapiscube/build/web-server clients/lapiscube/build/LapisCube-web-server/lapis-obsidian
           cp -r webclient clients/lapiscube/build/LapisCube-web-server/
           cp LICENSE clients/lapiscube/build/LapisCube-web-server/LICENSE-server
+          cp NOTICE.md clients/lapiscube/build/LapisCube-web-server/NOTICE-server.md
+          printf 'Corresponding server source: https://github.com/aksulightning/lapisobsidian/tree/%s\n' "$(git rev-parse HEAD)" > clients/lapiscube/build/LapisCube-web-server/SOURCE-server.txt
           cp clients/lapiscube/docs/web.md clients/lapiscube/build/LapisCube-web-server/README.md
           tar -C clients/lapiscube/build -czf clients/lapiscube/build/LapisCube-web-server-linux.tar.gz LapisCube-web-server
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
