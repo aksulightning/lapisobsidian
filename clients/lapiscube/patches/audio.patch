@@ -53,7 +53,7 @@
 -	{ SOUND_STONE,  "dig_stone1"   }, { SOUND_STONE,  "dig_stone2"   }, { SOUND_STONE,  "dig_stone3"   }, { SOUND_STONE,  "dig_stone4"   },
 -	{ SOUND_WOOD,   "dig_wood1"    }, { SOUND_WOOD,   "dig_wood2"    }, { SOUND_WOOD,   "dig_wood3"    }, { SOUND_WOOD,   "dig_wood4"    },
 -};
-+#include "LapisMaterialSounds.h"
++#include "../LapisMaterialSounds.h"
  
  /* TODO this is a terrible solution */
  void AudioBackend_LoadSounds(void) {
