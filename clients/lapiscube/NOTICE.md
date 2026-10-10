@@ -21,8 +21,8 @@ retain their existing GPLv3 notices and terms.
 `engine/` is the unmodified ClassiCube Git submodule at
 `d41c3f7eef2038f59702b58bdb373483fb0d28f9` from
 https://github.com/ClassiCube/ClassiCube. Its `license.txt`, `credits.txt`, source
-headers and third-party licenses are retained. `patches/engine.patch` explicitly
-records integration changes to Server, input, screens, font/skin paths, branding
+headers and third-party licenses are retained. `patches/engine.patch` and `patches/audio.patch` explicitly
+record integration changes to Server, input, screens, font/skin paths, branding
 and the entrypoint; no upstream copyright header is removed. Builds apply those changes only to a staged copy.
 
 ClassiCube's principal source license is BSD-3-Clause. Source redistribution
@@ -60,8 +60,11 @@ document for upstream factual data sources. The client does not link server code
 
 ## Assets
 
-The initial asset collection uses Kenney Vleugels' verified CC0 Voxel Pack and
-original geometric UI/model designs and synthesized effects dedicated under CC0.
+The asset collection uses Kenney Vleugels' verified CC0 Voxel Pack, Kenney Impact
+Sounds, individually credited CC0 recordings from Minetest Game, and original
+geometric UI/model designs and pitched note tones dedicated under CC0.
+Minetest Game is mixed-license; only the files in `assets/audio-sources.json`
+are imported. `docs/credits.md` records the creators and upstream evidence.
 `assets/manifest.json` records hashes and per-file provenance; exact notices are
 in `assets/licenses`. Original audiovisual designs/output are CC0, independently
 of the BSD license of code that creates or renders them.

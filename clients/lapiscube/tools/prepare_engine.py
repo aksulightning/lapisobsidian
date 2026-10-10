@@ -33,6 +33,9 @@ def main():
         shutil.copy2(path, DEST / 'src' / path.name)
     subprocess.run(['patch', '-p1', '--binary', '--forward', '-i', str(ROOT / 'patches' / 'engine.patch')],
                    cwd=DEST, check=True)
+    subprocess.run(['patch', '-p1', '--binary', '--forward', '-i', str(ROOT/'patches/audio.patch')],
+                   cwd=DEST, check=True)
+    subprocess.run(['python3', str(ROOT/'tools/embed_audio.py'), str(DEST/'src')], check=True)
     if mode == 'web':
         subprocess.run(['patch', '-p1', '--binary', '--forward', '-i', str(ROOT/'patches/web.patch')],
                        cwd=DEST, check=True)
