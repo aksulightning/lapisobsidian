@@ -208,3 +208,6 @@ On `testing-cube`, `LAPIS_ENABLE_WEBCLIENT=1 ./build.sh` also builds and bundles
 the C/WebAssembly LapisCube client and enables HTTP/WebSocket hosting on port 8080.
 Desktop keyboard/mouse and landscape fullscreen touch controls are included.
 The default build contains no web host. See [build and hosting instructions](clients/lapiscube/docs/web.md).
+
+See [asset credits and license audit](docs/credits.md) for current asset sources,
+CC0 coverage, engine asset exceptions, and reviewed texture/sound alternatives.
