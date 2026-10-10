@@ -1,4 +1,5 @@
 #include "LapisBlocks.h"
+#include "LapisAudio.h"
 #include "LapisFacts.h"
 #include "Block.h"
 #include "Audio.h"
@@ -40,12 +41,8 @@ void LapisBlocks_Init(void) {
         Block_SetSide((TextureLoc)f->side,b);
         Block_Tex(b,FACE_YMAX)=(TextureLoc)f->top;Block_Tex(b,FACE_YMIN)=(TextureLoc)f->bottom;
         Blocks.Draw[b]=DRAW_OPAQUE;Blocks.Collide[b]=COLLIDE_SOLID;Blocks.BlocksLight[b]=true;
-        Blocks.StepSounds[b]=Blocks.DigSounds[b]=SOUND_STONE;
+        Blocks.StepSounds[b]=Blocks.DigSounds[b]=LapisAudio_Material(name);
         Blocks.SpeedMultiplier[b]=1;Box(b,0,0,0,1,1,1);
-        if (strstr(name,"wood") || strstr(name,"oak") || strstr(name,"chest")) Blocks.StepSounds[b]=Blocks.DigSounds[b]=SOUND_WOOD;
-        if (strstr(name,"grass") || strstr(name,"dirt") || strstr(name,"leaves")) Blocks.StepSounds[b]=Blocks.DigSounds[b]=SOUND_GRASS;
-        if (strstr(name,"sand")) Blocks.StepSounds[b]=Blocks.DigSounds[b]=SOUND_SAND;
-        if (strstr(name,"gravel")) Blocks.StepSounds[b]=Blocks.DigSounds[b]=SOUND_GRAVEL;
         if (strstr(name,"water") || strstr(name,"lava")) {
             Blocks.Draw[b]=DRAW_TRANSLUCENT;Blocks.Collide[b]=strstr(name,"water")?COLLIDE_WATER:COLLIDE_LAVA;
             Blocks.BlocksLight[b]=false;Blocks.StepSounds[b]=Blocks.DigSounds[b]=SOUND_NONE;

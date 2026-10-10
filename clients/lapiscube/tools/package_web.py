@@ -26,15 +26,16 @@ def main():
     shutil.rmtree(output/'texpacks')
     shutil.rmtree(output/'audio')
     sounds = output/'sounds'; sounds.mkdir()
-    for material in ('wood','gravel','grass','stone','metal','glass','cloth','sand','snow'):
-        for kind in ('dig','step'):
-            for variant in range(1,5):
-                shutil.copy2(ROOT/f'assets/audio/{material}.wav', sounds/f'{kind}_{material}{variant}.wav')
+    mapping = json.loads((ROOT/'assets/sound-map.json').read_text())
+    for clips in mapping['material'].values():
+        for name in clips:
+            shutil.copy2(ROOT/f'assets/audio/{name}.wav',sounds/(name+'.wav'))
     shutil.copytree(ROOT/'assets',output/'asset-sources')
     for name in ('README.md','NOTICE.md'):
         shutil.copy2(ROOT/name, output/name)
     shutil.copy2(ROOT/'LICENSE',output/'LICENSE.txt')
     shutil.copy2(ROOT/'docs/web.md',output/'web.md')
+    package.write_credits(output/'credits.md')
     licenses = output/'licenses'; licenses.mkdir()
     for path in (ROOT/'engine').rglob('*'):
         if path.is_file() and any(word in path.name.lower() for word in ('license','licence','copying','ftl.txt')):

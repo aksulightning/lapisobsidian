@@ -14,6 +14,10 @@
         "required": ["source_url", "author", "license", "license_url", "modifications", "destination_filename", "sha256", "attribution", "redistribution_notes"],
         "properties": {
           "source_url": {"type": "string", "minLength": 1},
+          "source_path": {"type": "string", "minLength": 1},
+          "source_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "original_source_url": {"type": "string", "minLength": 1},
+          "license_file": {"type": "string", "minLength": 1},
           "author": {"type": "string", "minLength": 1},
           "license": {"type": "string", "minLength": 1},
           "license_url": {"type": "string", "minLength": 1},

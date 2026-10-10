@@ -1,31 +1,167 @@
 {
+  "sample_rate": 22050,
+  "material": {
+    "step_wood": [
+      "step_wood1",
+      "step_wood2",
+      "step_wood3"
+    ],
+    "step_grass": [
+      "step_grass1",
+      "step_grass2",
+      "step_grass3"
+    ],
+    "step_stone": [
+      "step_stone1",
+      "step_stone2",
+      "step_stone3"
+    ],
+    "dig_stone": [
+      "dig_stone1",
+      "dig_stone2",
+      "dig_stone3"
+    ],
+    "step_glass": [
+      "step_glass1",
+      "step_glass2",
+      "step_glass3"
+    ],
+    "dig_glass": [
+      "dig_glass1",
+      "dig_glass2",
+      "dig_glass3"
+    ],
+    "step_cloth": [
+      "step_cloth1",
+      "step_cloth2",
+      "step_cloth3"
+    ],
+    "dig_cloth": [
+      "dig_cloth1",
+      "dig_cloth2",
+      "dig_cloth3"
+    ],
+    "dig_snow": [
+      "dig_snow1",
+      "dig_snow2",
+      "dig_snow3"
+    ],
+    "dig_wood": [
+      "dig_wood1",
+      "dig_wood2",
+      "dig_wood3"
+    ],
+    "step_gravel": [
+      "step_gravel1",
+      "step_gravel2",
+      "step_gravel3"
+    ],
+    "dig_gravel": [
+      "dig_gravel1",
+      "dig_gravel2"
+    ],
+    "dig_grass": [
+      "dig_grass1"
+    ],
+    "step_metal": [
+      "step_metal1",
+      "step_metal2",
+      "step_metal3"
+    ],
+    "dig_metal": [
+      "dig_metal1",
+      "dig_metal2"
+    ],
+    "step_sand": [
+      "step_sand1",
+      "step_sand2",
+      "step_sand3"
+    ],
+    "dig_sand": [
+      "dig_sand1",
+      "dig_sand2",
+      "dig_sand3"
+    ],
+    "step_snow": [
+      "step_snow1",
+      "step_snow2",
+      "step_snow3"
+    ]
+  },
+  "events": {
+    "hurt": [
+      "hurt1",
+      "hurt2",
+      "hurt3"
+    ],
+    "click": [
+      "click1",
+      "click2",
+      "click3"
+    ],
+    "door_close": [
+      "door_close1",
+      "door_close2",
+      "door_close3"
+    ],
+    "pickup": [
+      "pickup1",
+      "pickup2",
+      "pickup3"
+    ],
+    "impact": [
+      "impact1",
+      "impact2",
+      "impact3"
+    ],
+    "eat": [
+      "eat1",
+      "eat2",
+      "eat3"
+    ],
+    "extinguish": [
+      "extinguish1"
+    ],
+    "door_open": [
+      "door_open1"
+    ],
+    "water": [
+      "water1",
+      "water2"
+    ],
+    "lava": [
+      "lava1",
+      "lava2"
+    ],
+    "shoot": [
+      "dig_grass1"
+    ],
+    "snare": [
+      "dig_stone1",
+      "dig_stone2",
+      "dig_stone3"
+    ],
+    "hat": [
+      "step_metal1",
+      "step_metal2",
+      "step_metal3"
+    ],
+    "basedrum": [
+      "impact1",
+      "impact2",
+      "impact3"
+    ]
+  },
+  "notes": {
+    "harp": "original sine C4",
+    "bass": "original sine C3",
+    "bell": "original harmonic C4"
+  },
   "license": "CC0-1.0",
   "implementation": "src/LapisAudio.c",
-  "matching": "ordered substring families after note_block classification",
-  "protocol_772": {
-    "note_block.harp": "synth bank 0: sine C4",
-    "note_block.bass": "bank 1: sine C3",
-    "note_block.bell|note_block.chime": "bank 2: harmonic C4",
-    "note_block.snare|note_block.hat": "bank 3: noise",
-    "note_block.basedrum": "bank 4: modulated noise",
-    "hurt|death": "bank 5: low tone/noise",
-    "pickup|experience": "bank 6: 880 Hz",
-    "water|lava": "bank 7: noise",
-    "other": "bank 3: noise fallback"
-  },
-  "native_step_dig": [
-    "wood",
-    "gravel",
-    "grass",
-    "stone",
-    "metal",
-    "glass",
-    "cloth",
-    "sand",
-    "snow"
-  ],
   "limits": [
-    "Shared synthesized fallback for most mob and interaction sounds",
-    "No musicbox listening acceptance yet"
+    "Animal/monster species voices are not included; unsupported ambient events are silent",
+    "Door closing, eating, explosions and percussion use documented foley substitutes",
+    "Harp, bass and bell/chime note-block tones remain original pitched synthesis"
   ]
 }

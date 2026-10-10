@@ -4,11 +4,21 @@ import argparse
 import hashlib
 import json
 import pathlib
+import re
 import shutil
 import subprocess
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+def write_credits(destination):
+    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+    content = (ROOT.parents[1]/'docs/credits.md').read_text()
+    # Repository-relative links would break in the standalone release layout.
+    base = 'https://github.com/aksulightning/lapisobsidian/blob/' + revision + '/'
+    content = re.sub(r'\]\(\.\./([^)]*)\)', lambda match: '](' + base + match[1] + ')', content)
+    destination.write_text(content)
 
 
 def validate_binary(engine, platform):
@@ -51,9 +61,10 @@ def stage(destination):
             pack.write(path, path.name)
     (destination/'audio').mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(destination/'audio/default.zip','w',zipfile.ZIP_DEFLATED) as pack:
-        for material in ('wood','gravel','grass','stone','metal','glass','cloth','sand','snow'):
-            for kind in ('dig','step'):
-                pack.write(ROOT/f'assets/audio/{material}.wav',f'{kind}_{material}1.wav')
+        mapping = json.loads((ROOT/'assets/sound-map.json').read_text())
+        for clips in mapping['material'].values():
+            for name in clips:
+                pack.write(ROOT/f'assets/audio/{name}.wav',name+'.wav')
     return manifest
 
 
@@ -75,6 +86,7 @@ def main():
     stage(output)
     shutil.copytree(ROOT/'assets',output/'asset-sources')
     shutil.copytree(ROOT/'docs',output/'docs')
+    write_credits(output/'docs/credits.md')
     for name in ('README.md','LICENSE','NOTICE.md'):
         shutil.copy2(ROOT/name,output/name)
     licenses = output/'licenses';licenses.mkdir()

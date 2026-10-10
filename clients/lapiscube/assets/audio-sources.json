@@ -1,0 +1,993 @@
+{
+  "schema_version": 1,
+  "sample_rate": 22050,
+  "sources": {
+    "kenney": {
+      "url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "sha256": "029d734af1582474edf3a694d1b0cebc97c1c152f2f39fa34d4c2bafc5de77f8",
+      "license_file": "assets/licenses/Kenney-Impact-Sounds.txt"
+    },
+    "minetest": {
+      "url": "https://github.com/luanti-org/minetest_game",
+      "revision": "c42e4d0c0ff9d27ff7b9b308c3cfc14098dd3a0f",
+      "license_files": [
+        "assets/licenses/Minetest-default-README.md",
+        "assets/licenses/Minetest-env-sounds-README.md",
+        "assets/licenses/Minetest-doors-README.md"
+      ]
+    }
+  },
+  "clips": [
+    {
+      "name": "step_wood1",
+      "source": "kenney",
+      "path": "Audio/footstep_wood_000.ogg",
+      "source_sha256": "5f1c252942a220d658121bd9417448cd19649ded9fff2ff15f6e50899373ce8e",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.45,
+      "peak": 0.65
+    },
+    {
+      "name": "step_wood2",
+      "source": "kenney",
+      "path": "Audio/footstep_wood_001.ogg",
+      "source_sha256": "e4f68e1c9fd55b4dc8ca89ed2bbab6f200171bc54bdc18aa96b80d8e7336f462",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.45,
+      "peak": 0.65
+    },
+    {
+      "name": "step_wood3",
+      "source": "kenney",
+      "path": "Audio/footstep_wood_002.ogg",
+      "source_sha256": "9ff095b05cee5eec40b081defe3f0eef7232bb16d4865ce03b9f6dbab875cfdd",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.45,
+      "peak": 0.65
+    },
+    {
+      "name": "step_grass1",
+      "source": "kenney",
+      "path": "Audio/footstep_grass_000.ogg",
+      "source_sha256": "9d49497777405d78d7cf7f2888e28277f3a23192300cfd1d79d54876b20f479f",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.45,
+      "peak": 0.65
+    },
+    {
+      "name": "step_grass2",
+      "source": "kenney",
+      "path": "Audio/footstep_grass_001.ogg",
+      "source_sha256": "fb28781bd22b2eefdc14077f1adf5c94d7fe9c3a130194633b55f3e0d39d9f04",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.45,
+      "peak": 0.65
+    },
+    {
+      "name": "step_grass3",
+      "source": "kenney",
+      "path": "Audio/footstep_grass_002.ogg",
+      "source_sha256": "73a520139f5be716a403bfe9c80e0e94d1e61d8e9de04a354b336392164b53dc",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.45,
+      "peak": 0.65
+    },
+    {
+      "name": "step_stone1",
+      "source": "kenney",
+      "path": "Audio/footstep_concrete_000.ogg",
+      "source_sha256": "d7267e183067757c92c169de2a379abea592cfca6b39bb2e8feea15221ad79fe",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.65
+    },
+    {
+      "name": "step_stone2",
+      "source": "kenney",
+      "path": "Audio/footstep_concrete_001.ogg",
+      "source_sha256": "507a75eb19b897087855a3be3cf11a12d7fa37d143ad535eeebe0b8031c7325d",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.65
+    },
+    {
+      "name": "step_stone3",
+      "source": "kenney",
+      "path": "Audio/footstep_concrete_002.ogg",
+      "source_sha256": "b21fa546d74941196b25da8a20b7010abd8c05c4fcf93545d1f344e66a664e13",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_stone1",
+      "source": "kenney",
+      "path": "Audio/impactMining_000.ogg",
+      "source_sha256": "36b4ea107222d073c67ca64dde26944975609202d5090b2f2021213c1a7e35cd",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_stone2",
+      "source": "kenney",
+      "path": "Audio/impactMining_001.ogg",
+      "source_sha256": "61235a18de3f3d92118235398222dbf51d448f1be70b1c8bc962b10b86f2d9c6",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_stone3",
+      "source": "kenney",
+      "path": "Audio/impactMining_002.ogg",
+      "source_sha256": "059558ec751115ca6b1441e00f0adc837c1a3eeb0a066b109e0fd879fc5d0b0c",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "step_glass1",
+      "source": "kenney",
+      "path": "Audio/impactGlass_light_000.ogg",
+      "source_sha256": "d750cf88097d0c3e69920e6e14496e1444e1a9da01aa4cca8f5ec8cb44c57b4f",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.65
+    },
+    {
+      "name": "step_glass2",
+      "source": "kenney",
+      "path": "Audio/impactGlass_light_001.ogg",
+      "source_sha256": "05e513fbd42829060eb37855f8c3866722ec5c39a8937c9bfde518cc609effa2",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.65
+    },
+    {
+      "name": "step_glass3",
+      "source": "kenney",
+      "path": "Audio/impactGlass_light_002.ogg",
+      "source_sha256": "710db7451bb7857b9140dfe6afe4621ea2188ad65eda3919c569d1bb285b933d",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_glass1",
+      "source": "kenney",
+      "path": "Audio/impactGlass_heavy_000.ogg",
+      "source_sha256": "b44b39a940e8948e74b9bd3776bff980df43cf220abdaf0d467dc4c43c0244a5",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_glass2",
+      "source": "kenney",
+      "path": "Audio/impactGlass_heavy_001.ogg",
+      "source_sha256": "58686e0e562612cc566791844a10e269f8d1921f4766c14ba43976fd0a429f4e",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_glass3",
+      "source": "kenney",
+      "path": "Audio/impactGlass_heavy_002.ogg",
+      "source_sha256": "4978654ac840ad519692d5d5ba48a8101cabce13b9a577be73ad589185e5e9ed",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "step_cloth1",
+      "source": "kenney",
+      "path": "Audio/footstep_carpet_000.ogg",
+      "source_sha256": "b9524658b52a99a20590f8feefc103088637fd13ea8ec35811aee785e1f2f330",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.65
+    },
+    {
+      "name": "step_cloth2",
+      "source": "kenney",
+      "path": "Audio/footstep_carpet_001.ogg",
+      "source_sha256": "9af3c3f76705107339e72036e4053bdca3eaa50ad31c8c929f42ce8d40e5d781",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.65
+    },
+    {
+      "name": "step_cloth3",
+      "source": "kenney",
+      "path": "Audio/footstep_carpet_003.ogg",
+      "source_sha256": "4ae7454338d57c7d102145919ae653c7d010eb542797c4f25a1c7470be3a7e4c",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_cloth1",
+      "source": "kenney",
+      "path": "Audio/impactSoft_medium_000.ogg",
+      "source_sha256": "7d3ba0bb5e60a11b5d3e558c141303dcf494256675fbf753c0d252d2cf0481e3",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_cloth2",
+      "source": "kenney",
+      "path": "Audio/impactSoft_medium_001.ogg",
+      "source_sha256": "7642a4fd43e547afe4f7adfadb3dabb681c0ff512f52c1674bae30a726841faf",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_cloth3",
+      "source": "kenney",
+      "path": "Audio/impactSoft_medium_002.ogg",
+      "source_sha256": "5069e3571a77d7f7aae9ef71d0364aa245fb7d64a7c8cc9956f221d03088c089",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_snow1",
+      "source": "kenney",
+      "path": "Audio/footstep_snow_000.ogg",
+      "source_sha256": "c05fa4a9dc9a7aabc04996466fb589537e49af76de9998d8f9e6270ec92dcef7",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.65,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_snow2",
+      "source": "kenney",
+      "path": "Audio/footstep_snow_001.ogg",
+      "source_sha256": "980fb9a1c9227aed7995067b0357f373053337f2416316db8ea0438418542fb4",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.65,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_snow3",
+      "source": "kenney",
+      "path": "Audio/footstep_snow_002.ogg",
+      "source_sha256": "db52bafdc66304f3b999f2c29227826c65993916e630ac2ffbca17d07b263178",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.65,
+      "peak": 0.65
+    },
+    {
+      "name": "hurt1",
+      "source": "kenney",
+      "path": "Audio/impactPunch_medium_000.ogg",
+      "source_sha256": "486988aa2d6440ffc4c62a0e8ccf3c23673ba84424bd4723378d451b7255eb5c",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.5,
+      "peak": 0.65
+    },
+    {
+      "name": "hurt2",
+      "source": "kenney",
+      "path": "Audio/impactPunch_medium_001.ogg",
+      "source_sha256": "e71d23abcc3f10d9d6bc9615b2a431fff70b12333a5fcdd9964457564ace4349",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.5,
+      "peak": 0.65
+    },
+    {
+      "name": "hurt3",
+      "source": "kenney",
+      "path": "Audio/impactPunch_medium_002.ogg",
+      "source_sha256": "6492f9ccbc8d24dcef607bb1b48790b7870961474561f7fe5601e1c73a3018ef",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.5,
+      "peak": 0.65
+    },
+    {
+      "name": "click1",
+      "source": "kenney",
+      "path": "Audio/impactGeneric_light_000.ogg",
+      "source_sha256": "f0e982611e97512fee5f777986b67e8b435434b601f94992ec044f7e89fb5acb",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.25,
+      "peak": 0.45
+    },
+    {
+      "name": "click2",
+      "source": "kenney",
+      "path": "Audio/impactGeneric_light_001.ogg",
+      "source_sha256": "c3cd1c073d186ae8fa35788ba94de581f1826e7427a7bb26490b2695fac18efa",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.25,
+      "peak": 0.45
+    },
+    {
+      "name": "click3",
+      "source": "kenney",
+      "path": "Audio/impactGeneric_light_002.ogg",
+      "source_sha256": "d0bf60905b59ff630ffe01eb0edeeacd2504eaa8fb6523aeef7d2458b78264d3",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.25,
+      "peak": 0.45
+    },
+    {
+      "name": "door_close1",
+      "source": "kenney",
+      "path": "Audio/impactWood_heavy_000.ogg",
+      "source_sha256": "15ff82332f342c30e469215539e1cc57e11b221aa2cf7e11e811d313a9927f3d",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.65,
+      "peak": 0.65
+    },
+    {
+      "name": "door_close2",
+      "source": "kenney",
+      "path": "Audio/impactWood_heavy_001.ogg",
+      "source_sha256": "f1b07a53ac10c615fff9ba470511fdeb722b5902e1a8520759fc20ad6f546015",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.65,
+      "peak": 0.65
+    },
+    {
+      "name": "door_close3",
+      "source": "kenney",
+      "path": "Audio/impactWood_heavy_002.ogg",
+      "source_sha256": "ce1e06f2a05f2634c645cb72f6a1623e64bc2d92be34917430a61031fb6597d4",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.65,
+      "peak": 0.65
+    },
+    {
+      "name": "pickup1",
+      "source": "kenney",
+      "path": "Audio/impactBell_heavy_000.ogg",
+      "source_sha256": "94b8bb5f2d43ab65e4bcc32b28562416e9bc2c51d9fd4be1e333660ee52f977f",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.9,
+      "peak": 0.45
+    },
+    {
+      "name": "pickup2",
+      "source": "kenney",
+      "path": "Audio/impactBell_heavy_001.ogg",
+      "source_sha256": "9df61e3ae9a83dc65e5a1fd3ed19d480876f3b22b963a1b9ef6fa293592dcec4",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.9,
+      "peak": 0.45
+    },
+    {
+      "name": "pickup3",
+      "source": "kenney",
+      "path": "Audio/impactBell_heavy_002.ogg",
+      "source_sha256": "a4171ed1a4a17fb858a38de1c59b5b42e50d8f046c525706c0e3ac8671f189f5",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.9,
+      "peak": 0.45
+    },
+    {
+      "name": "impact1",
+      "source": "kenney",
+      "path": "Audio/impactSoft_heavy_000.ogg",
+      "source_sha256": "49e7ca88743fca974bb8676ea138b751cfd8f9033b5e7af8736c2a215d6edbc1",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.75,
+      "peak": 0.65
+    },
+    {
+      "name": "impact2",
+      "source": "kenney",
+      "path": "Audio/impactSoft_heavy_001.ogg",
+      "source_sha256": "4d0096364ba9e46119d2ff6df493fdc101bd2e1efae061da5e5f77a53b3fdcb6",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.75,
+      "peak": 0.65
+    },
+    {
+      "name": "impact3",
+      "source": "kenney",
+      "path": "Audio/impactSoft_heavy_002.ogg",
+      "source_sha256": "d130ae541951243d3f6ed963d0057450a445ffe117fbf9a084d34eb1635cb563",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.75,
+      "peak": 0.65
+    },
+    {
+      "name": "eat1",
+      "source": "kenney",
+      "path": "Audio/footstep_snow_000.ogg",
+      "source_sha256": "c05fa4a9dc9a7aabc04996466fb589537e49af76de9998d8f9e6270ec92dcef7",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.45
+    },
+    {
+      "name": "eat2",
+      "source": "kenney",
+      "path": "Audio/footstep_snow_001.ogg",
+      "source_sha256": "980fb9a1c9227aed7995067b0357f373053337f2416316db8ea0438418542fb4",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.45
+    },
+    {
+      "name": "eat3",
+      "source": "kenney",
+      "path": "Audio/footstep_snow_002.ogg",
+      "source_sha256": "db52bafdc66304f3b999f2c29227826c65993916e630ac2ffbca17d07b263178",
+      "author": "Kenney",
+      "original_url": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.45
+    },
+    {
+      "name": "dig_wood1",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_dig_choppy.1.ogg",
+      "source_sha256": "04fbc08a6a1f1c292975022512c70382ba50361b1484142718042aa5b0110c5d",
+      "author": "Sheyvan",
+      "original_url": "https://freesound.org/people/Sheyvan/sounds/476113/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_wood2",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_dig_choppy.2.ogg",
+      "source_sha256": "33353ac9bde8eca97960baa250e59c8f482f03999b363a9c4dd2baa6fbc7e202",
+      "author": "Sheyvan",
+      "original_url": "https://freesound.org/people/Sheyvan/sounds/476113/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_wood3",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_dig_choppy.3.ogg",
+      "source_sha256": "0375363e545b8f6b7a1bde99f9d43987ed4178d53500037d577b541c9b634019",
+      "author": "Sheyvan",
+      "original_url": "https://freesound.org/people/Sheyvan/sounds/476113/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "step_gravel1",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_gravel_dug.1.ogg",
+      "source_sha256": "d50b10a339d57d0572855c23ea2bac417d8ebf4203da3a3052064461e791a0d6",
+      "author": "lolamadeus",
+      "original_url": "https://freesound.org/people/lolamadeus/sounds/179341/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.65
+    },
+    {
+      "name": "step_gravel2",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_gravel_dug.2.ogg",
+      "source_sha256": "871c2efd0ccf8d8a946c32f673fda987d331acb5ae66929d4faec1101738d094",
+      "author": "lolamadeus",
+      "original_url": "https://freesound.org/people/lolamadeus/sounds/179341/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.65
+    },
+    {
+      "name": "step_gravel3",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_gravel_dug.3.ogg",
+      "source_sha256": "b21fa707dfebf1efe09975993e69c1131c5e44e2791e70e024ca5a546d6b3368",
+      "author": "lolamadeus",
+      "original_url": "https://freesound.org/people/lolamadeus/sounds/179341/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_gravel1",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_gravel_dig.1.ogg",
+      "source_sha256": "ef54dc139516e498524c219b946184a343a32bc3aef63b105cf78dc705f4f9fd",
+      "author": "lolamadeus",
+      "original_url": "https://freesound.org/people/lolamadeus/sounds/179341/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_gravel2",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_gravel_dig.2.ogg",
+      "source_sha256": "7a8640e615bd9714ff58d708b8be9d5a5fe805a352f0cc5d46890b6db66aa193",
+      "author": "lolamadeus",
+      "original_url": "https://freesound.org/people/lolamadeus/sounds/179341/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_grass1",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_dig_snappy.ogg",
+      "source_sha256": "19c852aabc87cf59a1cba9714d9ad7412baa4af2a01f44ddbc926d5e99c59e48",
+      "author": "blukotek",
+      "original_url": "https://freesound.org/people/blukotek/sounds/251660/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "step_metal1",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_metal_footstep.1.ogg",
+      "source_sha256": "8c563113b1248ee78f7b92321c57bba4918abbe9760a772100bf99e67d20b7bc",
+      "author": "mypantsfelldown",
+      "original_url": "https://freesound.org/people/mypantsfelldown/sounds/398937/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.45,
+      "peak": 0.65
+    },
+    {
+      "name": "step_metal2",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_metal_footstep.2.ogg",
+      "source_sha256": "ce270a9d3602b3fadcd8ce1c6ff0e07cca673a38a74c50633d81745c643c9c80",
+      "author": "mypantsfelldown",
+      "original_url": "https://freesound.org/people/mypantsfelldown/sounds/398937/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.45,
+      "peak": 0.65
+    },
+    {
+      "name": "step_metal3",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_metal_footstep.3.ogg",
+      "source_sha256": "a4dbffa37489916d4f36b74c18fbe1e7aa8b7c05f028a2b402b9ab84c282f8bf",
+      "author": "mypantsfelldown",
+      "original_url": "https://freesound.org/people/mypantsfelldown/sounds/398937/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.45,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_metal1",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_dug_metal.1.ogg",
+      "source_sha256": "9aad3353607fb874bb8c187d03717786f011d34bf9dac80bd23f7237ae78d37d",
+      "author": "Iwan Gabovitch (qubodup)",
+      "original_url": "https://opengameart.org/users/qubodup",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_metal2",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_dug_metal.2.ogg",
+      "source_sha256": "014b4c58be2673ddb68f355fb4b6cb80964ad14f28720b9c3dc89ce00d856b9f",
+      "author": "Iwan Gabovitch (qubodup)",
+      "original_url": "https://opengameart.org/users/qubodup",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.65
+    },
+    {
+      "name": "step_sand1",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_sand_footstep.1.ogg",
+      "source_sha256": "175ee186d26ccfef5e69645f02fab12e8e04daf68f86d0bfba4c5bcb5cf8f6a8",
+      "author": "worthahep88",
+      "original_url": "https://freesound.org/people/worthahep88/sounds/319224/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.65
+    },
+    {
+      "name": "step_sand2",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_sand_footstep.2.ogg",
+      "source_sha256": "ad7a89ee5b9950e731d4f13815c1053a336a392eebcaef9ec16ea0e31fc52746",
+      "author": "worthahep88",
+      "original_url": "https://freesound.org/people/worthahep88/sounds/319224/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.65
+    },
+    {
+      "name": "step_sand3",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_sand_footstep.3.ogg",
+      "source_sha256": "02bd63ae8bea844d58f18514b35dd7a0fa9da8317e1ad177fdda5a0fd000a4c4",
+      "author": "worthahep88",
+      "original_url": "https://freesound.org/people/worthahep88/sounds/319224/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.4,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_sand1",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_sand_footstep.1.ogg",
+      "source_sha256": "175ee186d26ccfef5e69645f02fab12e8e04daf68f86d0bfba4c5bcb5cf8f6a8",
+      "author": "worthahep88",
+      "original_url": "https://freesound.org/people/worthahep88/sounds/319224/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.6,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_sand2",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_sand_footstep.2.ogg",
+      "source_sha256": "ad7a89ee5b9950e731d4f13815c1053a336a392eebcaef9ec16ea0e31fc52746",
+      "author": "worthahep88",
+      "original_url": "https://freesound.org/people/worthahep88/sounds/319224/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.6,
+      "peak": 0.65
+    },
+    {
+      "name": "dig_sand3",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_sand_footstep.3.ogg",
+      "source_sha256": "02bd63ae8bea844d58f18514b35dd7a0fa9da8317e1ad177fdda5a0fd000a4c4",
+      "author": "worthahep88",
+      "original_url": "https://freesound.org/people/worthahep88/sounds/319224/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.6,
+      "peak": 0.65
+    },
+    {
+      "name": "step_snow1",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_snow_footstep.1.ogg",
+      "source_sha256": "db0e8d254c09b99a72f6f23951a179bcb0e120f3693c0832d3cdd237fd1ba8b5",
+      "author": "Ryding",
+      "original_url": "https://freesound.org/people/Ryding/sounds/94337/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.45,
+      "peak": 0.65
+    },
+    {
+      "name": "step_snow2",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_snow_footstep.2.ogg",
+      "source_sha256": "e522df1e1108b9ce4d26e48211eac73575d23c386d96f1d2a7c6bdf1052ad086",
+      "author": "Ryding",
+      "original_url": "https://freesound.org/people/Ryding/sounds/94337/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.45,
+      "peak": 0.65
+    },
+    {
+      "name": "step_snow3",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_snow_footstep.3.ogg",
+      "source_sha256": "a5f95310d6a27549a2ec98bbb40f916cdcdbbd7f9836556aeffed3bf498cd206",
+      "author": "Ryding",
+      "original_url": "https://freesound.org/people/Ryding/sounds/94337/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.45,
+      "peak": 0.65
+    },
+    {
+      "name": "extinguish1",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_item_smoke.ogg",
+      "source_sha256": "82fd96b0393da7ba1760a7d2f80eeb35806fffe124ed584817a33b42da8b8936",
+      "author": "Ferk, based on bart",
+      "original_url": "https://opengameart.org/users/bart",
+      "license": "CC0-1.0",
+      "max_seconds": 0.7,
+      "peak": 0.5
+    },
+    {
+      "name": "door_open1",
+      "source": "minetest",
+      "path": "mods/doors/sounds/doors_fencegate_open.ogg",
+      "source_sha256": "68334be94edec603b3e7c6f40fb3169d4a25a854452d8b879fd92ccdbd9ac650",
+      "author": "mhtaylor67",
+      "original_url": "https://freesound.org/people/mhtaylor67/sounds/126041/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.9,
+      "peak": 0.65
+    },
+    {
+      "name": "water1",
+      "source": "minetest",
+      "path": "mods/env_sounds/sounds/env_sounds_water.1.ogg",
+      "source_sha256": "d9cb23c31187446dd64222f602283a32176e9ed2a1561ac26c164437446bf39f",
+      "author": "Yuval",
+      "original_url": "https://freesound.org/people/Yuval/sounds/197023/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.8,
+      "peak": 0.5
+    },
+    {
+      "name": "water2",
+      "source": "minetest",
+      "path": "mods/env_sounds/sounds/env_sounds_water.2.ogg",
+      "source_sha256": "66c4b3dee8afcc8bcac194d0428f249aa30cc6d39d94c00fd8cc24231df43dd7",
+      "author": "Yuval",
+      "original_url": "https://freesound.org/people/Yuval/sounds/197023/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.8,
+      "peak": 0.5
+    },
+    {
+      "name": "lava1",
+      "source": "minetest",
+      "path": "mods/env_sounds/sounds/env_sounds_lava.1.ogg",
+      "source_sha256": "8b0e1e9fd228ee08fa0399d362f704acfbaee0f6f6bb873bfc64eb0ad4182967",
+      "author": "Halion",
+      "original_url": "https://freesound.org/people/Halion/sounds/17785/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.8,
+      "peak": 0.5
+    },
+    {
+      "name": "lava2",
+      "source": "minetest",
+      "path": "mods/env_sounds/sounds/env_sounds_lava.2.ogg",
+      "source_sha256": "c83be3a71d96bc4ca8daa55908d19385c29279903bcc4177f45a4f37be937fb9",
+      "author": "Halion",
+      "original_url": "https://freesound.org/people/Halion/sounds/17785/",
+      "license": "CC0-1.0",
+      "max_seconds": 0.8,
+      "peak": 0.5
+    }
+  ],
+  "material": {
+    "step_wood": [
+      "step_wood1",
+      "step_wood2",
+      "step_wood3"
+    ],
+    "step_grass": [
+      "step_grass1",
+      "step_grass2",
+      "step_grass3"
+    ],
+    "step_stone": [
+      "step_stone1",
+      "step_stone2",
+      "step_stone3"
+    ],
+    "dig_stone": [
+      "dig_stone1",
+      "dig_stone2",
+      "dig_stone3"
+    ],
+    "step_glass": [
+      "step_glass1",
+      "step_glass2",
+      "step_glass3"
+    ],
+    "dig_glass": [
+      "dig_glass1",
+      "dig_glass2",
+      "dig_glass3"
+    ],
+    "step_cloth": [
+      "step_cloth1",
+      "step_cloth2",
+      "step_cloth3"
+    ],
+    "dig_cloth": [
+      "dig_cloth1",
+      "dig_cloth2",
+      "dig_cloth3"
+    ],
+    "dig_snow": [
+      "dig_snow1",
+      "dig_snow2",
+      "dig_snow3"
+    ],
+    "dig_wood": [
+      "dig_wood1",
+      "dig_wood2",
+      "dig_wood3"
+    ],
+    "step_gravel": [
+      "step_gravel1",
+      "step_gravel2",
+      "step_gravel3"
+    ],
+    "dig_gravel": [
+      "dig_gravel1",
+      "dig_gravel2"
+    ],
+    "dig_grass": [
+      "dig_grass1"
+    ],
+    "step_metal": [
+      "step_metal1",
+      "step_metal2",
+      "step_metal3"
+    ],
+    "dig_metal": [
+      "dig_metal1",
+      "dig_metal2"
+    ],
+    "step_sand": [
+      "step_sand1",
+      "step_sand2",
+      "step_sand3"
+    ],
+    "dig_sand": [
+      "dig_sand1",
+      "dig_sand2",
+      "dig_sand3"
+    ],
+    "step_snow": [
+      "step_snow1",
+      "step_snow2",
+      "step_snow3"
+    ]
+  },
+  "events": {
+    "hurt": [
+      "hurt1",
+      "hurt2",
+      "hurt3"
+    ],
+    "click": [
+      "click1",
+      "click2",
+      "click3"
+    ],
+    "door_close": [
+      "door_close1",
+      "door_close2",
+      "door_close3"
+    ],
+    "pickup": [
+      "pickup1",
+      "pickup2",
+      "pickup3"
+    ],
+    "impact": [
+      "impact1",
+      "impact2",
+      "impact3"
+    ],
+    "eat": [
+      "eat1",
+      "eat2",
+      "eat3"
+    ],
+    "extinguish": [
+      "extinguish1"
+    ],
+    "door_open": [
+      "door_open1"
+    ],
+    "water": [
+      "water1",
+      "water2"
+    ],
+    "lava": [
+      "lava1",
+      "lava2"
+    ],
+    "shoot": [
+      "dig_grass1"
+    ],
+    "snare": [
+      "dig_stone1",
+      "dig_stone2",
+      "dig_stone3"
+    ],
+    "hat": [
+      "step_metal1",
+      "step_metal2",
+      "step_metal3"
+    ],
+    "basedrum": [
+      "impact1",
+      "impact2",
+      "impact3"
+    ]
+  },
+  "notes": {
+    "harp": "original sine C4",
+    "bass": "original sine C3",
+    "bell": "original harmonic C4"
+  }
+}
