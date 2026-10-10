@@ -18,10 +18,17 @@ build/protocol-test: tests/protocol.c $(CORE) $(IDENTITY) src/*.h | build
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARN) tests/protocol.c $(CORE) $(IDENTITY) -o $@
 build/gameplay-test: tests/gameplay.c $(CORE) src/*.h | build
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARN) tests/gameplay.c $(CORE) -o $@
-test: build/protocol-test build/gameplay-test
+build/LapisSoundData.h: tools/embed_audio.py assets/sound-map.json assets/manifest.json $(wildcard assets/audio/*.wav) | build
+	$(PYTHON) tools/embed_audio.py build
+build/audio-test: tests/audio.c src/LapisAudio.c src/LapisAudio.h build/LapisSoundData.h | build
+	$(CC) $(CPPFLAGS) -Ibuild $(CFLAGS) $(WARN) tests/audio.c src/LapisAudio.c -lm -o $@
+test: build/protocol-test build/gameplay-test build/audio-test
 	./build/protocol-test
 	./build/gameplay-test
+	./build/audio-test
 	$(PYTHON) tests/package.py
+	$(PYTHON) tests/audio_assets.py
+	node tests/audio_web.js
 sanitize: build/md5.o build/dec32le.o build/enc32le.o | build
 	$(CC) $(CPPFLAGS) $(SANITIZER_FLAGS) -O1 -g $(WARN) -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie tests/protocol.c $(CORE) $(IDENTITY) -o build/protocol-sanitize
 	./build/protocol-sanitize

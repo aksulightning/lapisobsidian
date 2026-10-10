@@ -1,0 +1,59 @@
+--- a/src/Audio.c
++++ b/src/Audio.c
+@@ -160,7 +160,7 @@
+ 	int idx;
+ 
+ 	if (type == SOUND_NONE || type >= SOUND_COUNT) return NULL;
+-	if (type == SOUND_METAL) type = SOUND_STONE;
++	if (type == SOUND_METAL && !board->groups[SOUND_METAL].count) type = SOUND_STONE;
+ 
+ 	group = &board->groups[type];
+ 	if (!group->count) return NULL;
+@@ -191,15 +191,8 @@
+ 	data.rate       = 100;
+ 	data.volume     = Audio_SoundsVolume;
+ 
+-	/* https://minecraft.wiki/w/Block_of_Gold#Sounds */
+-	/* https://minecraft.wiki/w/Grass#Sounds */
+-	if (board == &digBoard) {
+-		if (type == SOUND_METAL) data.rate = 120;
+-		else data.rate = 80;
+-	} else {
+-		data.volume /= 2;
+-		if (type == SOUND_METAL) data.rate = 140;
+-	}
++	/* Recorded material timbres already have their intended pitch. */
++	if (board == &stepBoard) data.volume /= 2;
+ 	
+ 	res = AudioPool_Play(&data);
+ 	if (res) Sounds_Fail(res);
+--- a/src/webclient/Audio_Web.c
++++ b/src/webclient/Audio_Web.c
+@@ -101,26 +101,7 @@
+ /*########################################################################################################################*
+ *----------------------------------------------------------Sounds---------------------------------------------------------*
+ *#########################################################################################################################*/
+-static const struct SoundID { int group; const char* name; } sounds_list[] =
+-{
+-	{ SOUND_CLOTH,  "step_cloth1"  }, { SOUND_CLOTH,  "step_cloth2"  }, { SOUND_CLOTH,  "step_cloth3"  }, { SOUND_CLOTH,  "step_cloth4"  },
+-	{ SOUND_GRASS,  "step_grass1"  }, { SOUND_GRASS,  "step_grass2"  }, { SOUND_GRASS,  "step_grass3"  }, { SOUND_GRASS,  "step_grass4"  },
+-	{ SOUND_GRAVEL, "step_gravel1" }, { SOUND_GRAVEL, "step_gravel2" }, { SOUND_GRAVEL, "step_gravel3" }, { SOUND_GRAVEL, "step_gravel4" },
+-	{ SOUND_SAND,   "step_sand1"   }, { SOUND_SAND,   "step_sand2"   }, { SOUND_SAND,   "step_sand3"   }, { SOUND_SAND,   "step_sand4"   },
+-	{ SOUND_SNOW,   "step_snow1"   }, { SOUND_SNOW,   "step_snow2"   }, { SOUND_SNOW,   "step_snow3"   }, { SOUND_SNOW,   "step_snow4"   },
+-	{ SOUND_STONE,  "step_stone1"  }, { SOUND_STONE,  "step_stone2"  }, { SOUND_STONE,  "step_stone3"  }, { SOUND_STONE,  "step_stone4"  },
+-	{ SOUND_WOOD,   "step_wood1"   }, { SOUND_WOOD,   "step_wood2"   }, { SOUND_WOOD,   "step_wood3"   }, { SOUND_WOOD,   "step_wood4"   },
+-	{ SOUND_NONE, NULL },
+-
+-	{ SOUND_CLOTH,  "dig_cloth1"   }, { SOUND_CLOTH,  "dig_cloth2"   }, { SOUND_CLOTH,  "dig_cloth3"   }, { SOUND_CLOTH,  "dig_cloth4"   },
+-	{ SOUND_GRASS,  "dig_grass1"   }, { SOUND_GRASS,  "dig_grass2"   }, { SOUND_GRASS,  "dig_grass3"   }, { SOUND_GRASS,  "dig_grass4"   },
+-	{ SOUND_GLASS,  "dig_glass1"   }, { SOUND_GLASS,  "dig_glass2"   }, { SOUND_GLASS,  "dig_glass3"   },
+-	{ SOUND_GRAVEL, "dig_gravel1"  }, { SOUND_GRAVEL, "dig_gravel2"  }, { SOUND_GRAVEL, "dig_gravel3"  }, { SOUND_GRAVEL, "dig_gravel4"  },
+-	{ SOUND_SAND,   "dig_sand1"    }, { SOUND_SAND,   "dig_sand2"    }, { SOUND_SAND,   "dig_sand3"    }, { SOUND_SAND,   "dig_sand4"    },
+-	{ SOUND_SNOW,   "dig_snow1"    }, { SOUND_SNOW,   "dig_snow2"    }, { SOUND_SNOW,   "dig_snow3"    }, { SOUND_SNOW,   "dig_snow4"    },
+-	{ SOUND_STONE,  "dig_stone1"   }, { SOUND_STONE,  "dig_stone2"   }, { SOUND_STONE,  "dig_stone3"   }, { SOUND_STONE,  "dig_stone4"   },
+-	{ SOUND_WOOD,   "dig_wood1"    }, { SOUND_WOOD,   "dig_wood2"    }, { SOUND_WOOD,   "dig_wood3"    }, { SOUND_WOOD,   "dig_wood4"    },
+-};
++#include "../LapisMaterialSounds.h"
+ 
+ /* TODO this is a terrible solution */
+ void AudioBackend_LoadSounds(void) {

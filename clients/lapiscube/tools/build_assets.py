@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
-"""Pack verified Kenney CC0 tiles, original geometric UI and synthesized audio.
+"""Pack verified Kenney CC0 tiles, original geometric UI. Recorded audio is built separately.
 Requires Pillow only at build time. Never downloads Minecraft resources.
 """
 import hashlib
 import io
 import json
-import math
 import pathlib
-import random
 import re
-import struct
-import wave
 import zipfile
 from PIL import Image, ImageDraw
 
@@ -119,28 +115,18 @@ def main():
     h += ['};',f'#define LAPIS_ITEM_FACT_COUNT {len(facts["items"])}',f'#define LAPIS_TILE_WHEAT {tile["wheat_stage1"]}',
           'static const int Lapis_WheatTiles[4] = {'+','.join(str(tile[f'wheat_stage{i}']) for i in range(1,5))+'};','#endif']
     (ROOT/'src/LapisFacts.h').write_text('\n'.join(h)+'\n')
-    # Original deterministic PCM synthesis: short noise impacts and pitched events.
-    sounds = dest/'audio'; sounds.mkdir(exist_ok=True)
-    rng=random.Random(772)
-    for name,freq,seconds,noise in [('stone',180,.12,.9),('wood',120,.14,.6),('grass',300,.12,.9),('gravel',500,.17,.95),
-                                  ('sand',420,.13,.95),('cloth',90,.08,.8),('glass',1800,.18,.35),('metal',850,.2,.2),
-                                  ('snow',200,.12,.95),('pickup',880,.12,.0),('hurt',90,.2,.5),('eat',220,.13,.7),
-                                  ('door',170,.25,.5),('water',500,.3,.8),('lava',80,.3,.8),('note',262,.5,0)]:
-        samples=[]
-        for i in range(int(22050*seconds)):
-            t=i/22050; envelope=(1-t/seconds)**2
-            samples.append(int(9000*envelope*((1-noise)*math.sin(2*math.pi*freq*t)+noise*rng.uniform(-1,1))))
-        with wave.open(str(sounds/(name+'.wav')),'wb') as out:
-            out.setparams((1,2,22050,0,'NONE','not compressed'));out.writeframes(struct.pack('<'+'h'*len(samples),*samples))
+    # Keep recording provenance intact; use build_audio.py to regenerate WAVs.
+    old_manifest = json.loads((dest/'manifest.json').read_text())
     entries=[]
-    for path in sorted(dest.glob('*.png'))+sorted(sounds.glob('*.wav'))+[dest/'web-icon.svg']:
+    for path in sorted(dest.glob('*.png'))+[dest/'web-icon.svg']:
         kenney=path.name=='terrain.png'
         entries.append(dict(source_url='https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/assets/web-icon.svg' if path.suffix=='.svg' else URL if kenney else 'https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py',
                             author='Kenney Vleugels' if kenney else 'LapisCube contributors',license='CC0-1.0',license_url=LICENSE,
                             modifications='Tiles resized 128 to 32, water/ice alpha adjusted, Classic cloth tinted, packed with Classic/CPE compatibility cells; see atlas.json' if kenney else 'Original code-authored geometry or PCM synthesis',
                             destination_filename=str(path.relative_to(ROOT)),sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
                             attribution='Kenney (kenney.nl)' if kenney else 'LapisCube',redistribution_notes='CC0; attribution appreciated, not required'))
-    (dest/'manifest.json').write_text(json.dumps(dict(schema_version=1,project='LapisCube',default_asset_license='CC0-1.0',status='Initial independent atlas, geometric UI and synthesized sound bank; see docs/assets.md for coverage limits',assets=entries),indent=2)+'\n')
+    entries += [a for a in old_manifest['assets'] if a['destination_filename'].startswith('assets/audio/')]
+    (dest/'manifest.json').write_text(json.dumps(dict(schema_version=1,project='LapisCube',default_asset_license='CC0-1.0',status=old_manifest['status'],assets=entries),indent=2)+'\n')
     (dest/'source.json').write_text(json.dumps(dict(url=URL,sha256=hashlib.sha256(source.read_bytes()).hexdigest(),license_file='licenses/Kenney-Voxel.txt'),indent=2)+'\n')
     pack=ROOT/'build/engine/texpacks';pack.mkdir(parents=True,exist_ok=True)
     with zipfile.ZipFile(pack/'default.zip','w',zipfile.ZIP_DEFLATED) as out:
