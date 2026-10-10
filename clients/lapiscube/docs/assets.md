@@ -3,8 +3,10 @@
 The committed bundle contains a verified Kenney CC0 atlas and original geometric
 UI/models and synthesized sounds. No official Minecraft files are bundled or
 fetched by the Lapis path. The launcher asset downloader is not an entrypoint;
-Lapis entity skin downloads are disabled. Fonts come from the host's installed
-system fonts and are not bundled.
+Lapis entity skin downloads are disabled. Host/browser font files are not bundled,
+but the engine includes a bitmap fallback font and native icon artwork outside
+the asset manifest. See the repository [asset credits and license audit](../../../docs/credits.md)
+for those exceptions, current credits, and reviewed CC0 replacement candidates.
 
 ## Admitted sources
 
