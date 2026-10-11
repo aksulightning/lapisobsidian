@@ -8,6 +8,12 @@ on the server. No Minecraft runtime, textures, audio or external CDN is required
 
 ## Build
 
+On Alpine Linux 3.23, `./build_client.sh --install-deps` builds **only** the browser
+package, using pinned Emscripten 4.0.10 sources and Alpine-native LLVM 21/Binaryen
+123. For a normal user build, install packages as root with `--deps-only` first.
+See the [Alpine web client guide](alpine.md) for options, offline rebuilds and
+output checksums. This script does not build or start the server.
+
 Initialize the pinned ClassiCube submodule, install Emscripten (tested with
 emsdk 4.0.23), and activate its environment so `emcc` is on PATH. Python 3 and make
 are also required. From the repository root:
