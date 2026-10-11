@@ -1,6 +1,6 @@
 # Alpine Linux builds
 
-For the **LapisCube native client**, use the separate `build_client.sh` and
+For the **LapisCube web client**, use the separate `build_client.sh` and
 [client guide](../clients/lapiscube/docs/alpine.md). The instructions below build
 the server.
 

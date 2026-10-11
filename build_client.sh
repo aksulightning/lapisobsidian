@@ -1,31 +1,40 @@
 #!/bin/sh
-# Build and package the native LapisCube client on Alpine Linux.
+# Build and package only the LapisCube browser client on Alpine Linux.
 set -eu
 LC_ALL=C
 export LC_ALL
+
+# Alpine 3.23 supplies LLVM 21 and Binaryen 123. Use matching Emscripten
+# sources; emsdk's prebuilt Linux toolchain requires glibc, not Alpine musl.
+emscripten_version=4.0.10
+emscripten_revision=b7dc6e5747465580df5984e723b9d1f10d8e804b
 
 usage() {
   cat <<'HELP'
 Usage: ./build_client.sh [OPTIONS]
 
-Build the native X11/OpenGL client and its complete asset/license package.
-Run on Alpine Linux with the matching main and community repositories enabled.
+Build only the WebAssembly browser client, assets and license package on Alpine
+Linux 3.23. Enable main and community for the same Alpine release.
 
-  --install-deps   Install build/runtime packages with apk, then build (root)
-  --deps-only      Install packages and exit (root; build as your normal user)
-  --test           Run the client C, Python and JavaScript regression tests
+  --install-deps   Install Alpine toolchain packages, then build (root)
+  --deps-only      Install Alpine packages and exit (root)
+  --test           Run client C, Python and JavaScript regression tests
   --jobs N, -j N   Compiler jobs (default: ENGINE_JOBS or 2)
-  --arch ARCH     Require x86_64 (x64/amd64), aarch64 (arm64), or riscv64
-  --no-fetch      Do not initialize a missing engine submodule; build offline
+  --arch ARCH     Check the build host: x86_64 (x64/amd64), aarch64 (arm64), riscv64
+  --no-fetch      Require cached engine, Emscripten sources and npm dependencies
   --help, -h      Show this help
 
-Without an install option, no system packages are changed. A missing engine
-submodule is downloaded at the repository's pinned revision unless --no-fetch
-is supplied. An existing checkout is never reset or updated by this script.
-CC selects one compiler executable or wrapper (default: cc).
-This is a native, dynamically linked musl build, not a cross/static build.
-Outputs: clients/lapiscube/build/LapisCube-alpine-<arch>.zip, .buildinfo.txt,
-         .sha256 and the runnable LapisCube-linux/ directory.
+Without an install option, no system packages are changed. The first build
+downloads the pinned engine and Emscripten sources plus locked npm dependencies.
+Toolchain sources, configuration and cache live in clients/lapiscube/build/.
+Existing source checkouts are verified, never reset. --no-fetch prevents Git/npm
+downloads; combine it with a normal build after an initial successful build.
+CC selects the host compiler for --test only (default: cc).
+
+Outputs: clients/lapiscube/build/LapisCube-web.zip, .buildinfo.txt, .sha256,
+         and the ready-to-host webclient/ directory.
+The output targets browsers on any host architecture. No desktop client or
+server is built or started. See clients/lapiscube/docs/web.md for hosting.
 HELP
 }
 
@@ -64,95 +73,138 @@ while [ "$#" -gt 0 ]; do
 done
 case "$jobs" in ''|*[!0-9]*|0*) fail "--jobs/ENGINE_JOBS must be a positive integer without leading zeros" ;; esac
 [ -f /etc/alpine-release ] && command -v apk >/dev/null 2>&1 ||
-  fail "Run this script on Alpine Linux; other Linux systems can use make -C clients/lapiscube native package"
-host=$(normalize "$(apk --print-arch)") || fail "Unsupported Alpine architecture"
+  fail "Run this script on Alpine Linux; elsewhere use make -C clients/lapiscube web with Emscripten on PATH"
+host=$(normalize "$(apk --print-arch)") || fail "Unsupported Alpine build host architecture"
 [ -n "$arch" ] || arch=$host
-[ "$arch" = "$host" ] || fail "Requested $arch, but this Alpine system is $host; cross compilation is not supported"
+[ "$arch" = "$host" ] || fail "Requested host $arch, but this Alpine system is $host; the output always targets WebAssembly"
 
 if [ "$install_deps" = 1 ]; then
   [ "$(id -u)" = 0 ] || fail "Package installation needs root. Run doas ./build_client.sh --deps-only, then build as your normal user"
-  # OpenAL loads audio backends at runtime; they are not linker dependencies.
-  set -- build-base binutils git ca-certificates python3 patch libx11-dev libxi-dev \
-    mesa-dev mesa-dri-gallium openal-soft-libs alsa-lib libpulse
-  [ "$run_tests" = 0 ] || set -- "$@" nodejs
-  apk add --no-cache "$@" || fail "apk failed; enable main and community for your Alpine release in /etc/apk/repositories"
+  set -- git ca-certificates make python3 patch nodejs npm clang21 llvm21 lld21 binaryen
+  [ "$run_tests" = 0 ] || set -- "$@" build-base
+  apk add --no-cache "$@" || fail "apk failed; Alpine 3.23 main/community must provide LLVM 21 and Binaryen 123"
 fi
 [ "$deps_only" = 0 ] || exit 0
 
-for tool in git make python3 patch readelf sha256sum; do
+for tool in git make python3 patch node npm wasm-opt sha256sum; do
   command -v "$tool" >/dev/null 2>&1 || fail "Missing $tool; see --install-deps/--deps-only"
 done
+for tool in clang clang++ llvm-ar llvm-nm wasm-ld; do
+  [ -x "/usr/lib/llvm21/bin/$tool" ] || fail "Missing LLVM 21 $tool; see --deps-only"
+done
+case "$(wasm-opt --version)" in
+  'wasm-opt version 123'*) ;;
+  *) fail "This pinned Emscripten toolchain requires Alpine's Binaryen 123" ;;
+esac
+compiler=
 if [ "$run_tests" = 1 ]; then
-  command -v node >/dev/null 2>&1 || fail "--test needs nodejs; install with --deps-only --test"
+  compiler=$(command -v "${CC:-cc}") || fail "--test needs a host C compiler; install with --deps-only --test"
+  case "$compiler" in /*) ;; *) compiler=$PWD/$compiler ;; esac
+  case "$compiler" in *[[:space:]]*) fail "CC must name a compiler/wrapper path without whitespace" ;; esac
 fi
-compiler=$(command -v "${CC:-cc}") || fail "C compiler missing; install build-base"
-case "$compiler" in /*) ;; *) compiler=$PWD/$compiler ;; esac
-# GNU Make and the upstream recipes cannot quote a compiler path containing spaces.
-case "$compiler" in *[[:space:]]*) fail "CC must name a compiler/wrapper path without whitespace" ;; esac
 cd "$(dirname "$0")"
 project=$(pwd -P)
+# The upstream make recipes do not support whitespace in build paths.
+case "$project" in *[[:space:]]*) fail "Clone the repository into a path without whitespace" ;; esac
 client=$project/clients/lapiscube
 [ -f "$client/Makefile" ] || fail "Cannot find the LapisCube source next to this script"
 git rev-parse --show-toplevel >/dev/null 2>&1 || fail "Use a Git clone, including the pinned engine submodule"
-python3 -c 'import sys; assert sys.version_info >= (3, 8), "Python 3.8+ is required"'
-triple=$("$compiler" -dumpmachine)
-target=$(normalize "${triple%%-*}") || fail "Unsupported compiler target: $triple"
-[ "$target" = "$arch" ] || fail "CC targets $target, but the native Alpine architecture is $arch"
+python3 -c 'import sys; assert sys.version_info >= (3, 9), "Python 3.9+ is required"'
 
-mkdir -p "$client/build"
-work=$(mktemp -d "$client/build/.alpine-client.XXXXXX")
+mkdir -p "$client/build/toolchains"
+work=$(mktemp -d "$client/build/.alpine-web.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
-cat > "$work/probe.c" <<'C'
-#include <X11/Xlib.h>
-#include <X11/extensions/XInput2.h>
-#include <GL/gl.h>
-_Static_assert(sizeof(void *) == 8, "A 64-bit compiler ABI is required");
-int main(void) { return 0; }
-C
-"$compiler" "$work/probe.c" -o "$work/probe" -lX11 -lXi -lGL -lpthread -ldl -lm ||
-  fail "Compiler/X11/OpenGL probe failed; install the development packages with --deps-only"
-check_musl() {
-  readelf -l "$1" > "$work/elf.txt"
-  grep -F "[Requesting program interpreter: /lib/ld-musl-$arch.so.1]" "$work/elf.txt" >/dev/null ||
-    fail "Expected the native Alpine /lib/ld-musl-$arch.so.1 interpreter: $1"
-}
-check_musl "$work/probe"
-python3 -c 'import ctypes; [ctypes.CDLL(n) for n in ("libX11.so.6", "libXi.so.6", "libGL.so.1", "libopenal.so.1")]' ||
-  fail "Runtime libraries missing; install the packages with --deps-only"
+emscripten=$client/build/toolchains/emscripten-$emscripten_version
+if [ ! -e "$emscripten" ]; then
+  [ "$fetch" = 1 ] || fail "Emscripten sources missing and --no-fetch was requested; run once without --no-fetch"
+  git init -q "$work/emscripten"
+  git -C "$work/emscripten" fetch --depth 1 https://github.com/emscripten-core/emscripten.git "$emscripten_revision"
+  git -C "$work/emscripten" checkout -q --detach FETCH_HEAD
+  mv "$work/emscripten" "$emscripten"
+fi
+[ "$(git -C "$emscripten" rev-parse HEAD)" = "$emscripten_revision" ] || fail "Unexpected Emscripten revision: $emscripten"
+[ -z "$(git -C "$emscripten" status --porcelain)" ] || fail "Emscripten sources have local changes: $emscripten"
+npm_stamp=$client/build/toolchains/emscripten-$emscripten_version.npm-ready
+if [ ! -f "$npm_stamp" ] || [ "$(cat "$npm_stamp")" != "$emscripten_revision" ] ||
+   [ ! -d "$emscripten/node_modules/acorn" ]; then
+  [ "$fetch" = 1 ] || fail "Emscripten npm dependencies missing and --no-fetch was requested; run once without --no-fetch"
+  (cd "$emscripten" && npm ci --omit=dev --ignore-scripts --no-audit --no-fund)
+  printf '%s\n' "$emscripten_revision" > "$npm_stamp"
+fi
+
+# Isolate this build from emsdk environments and ~/.emscripten. The system
+# compiler/Binaryen executables are Alpine-native; generated code is wasm32.
+EM_CONFIG=$client/build/toolchains/emscripten-$emscripten_version.config
+EM_CACHE=$client/build/toolchains/cache-$emscripten_version
+EM_LLVM_ROOT=/usr/lib/llvm21/bin
+EM_BINARYEN_ROOT=/usr
+EM_NODE_JS=$(command -v node)
+EMCC_CORES=$jobs
+BINARYEN_CORES=$jobs
+export EM_CONFIG EM_CACHE EM_LLVM_ROOT EM_BINARYEN_ROOT EM_NODE_JS EMCC_CORES BINARYEN_CORES
+printf '%s\n' '# Configuration supplied by build_client.sh via EM_* variables.' > "$EM_CONFIG"
+PATH=$emscripten:$PATH
+export PATH
+emcc --check
+printf 'int main(void) { return 0; }\n' > "$work/probe.c"
+emcc -O2 "$work/probe.c" -sENVIRONMENT=web -o "$work/probe.js" ||
+  fail "WebAssembly compiler/linker probe failed; check the Alpine toolchain packages"
 
 if [ ! -e "$client/engine/.git" ]; then
   [ "$fetch" = 1 ] || fail "Engine submodule missing and --no-fetch was requested; run git submodule update --init --recursive"
   git submodule update --init --recursive -- clients/lapiscube/engine
 fi
-# prepare_engine.py verifies both the exact pin and a pristine engine checkout.
-# Force rebuilding: objects left by glibc, a different compiler or architecture
-# must never leak into an Alpine package. The source checkout stays untouched.
-printf 'Building LapisCube for Alpine %s (%s), %s compiler jobs\n' "$arch" "$triple" "$jobs"
+# prepare_engine.py verifies the engine pin and pristine checkout. Force a
+# rebuild so objects from another compiler or build mode cannot be reused.
+printf 'Building LapisCube web client on Alpine %s, %s compiler jobs\n' "$host" "$jobs"
 if [ "$run_tests" = 1 ]; then
   make -B -C "$client" test CC="$compiler"
 fi
-make -B -C "$client" native CC="$compiler" ENGINE_JOBS="$jobs" \
-  NATIVE_ARGS="BUILD_DIR=build/lapiscube-alpine-$arch"
-check_musl "$client/build/engine/LapisCube"
-make -C "$client" package
+make -B -C "$client" web ENGINE_JOBS="$jobs"
+# Validate the deployable directory with the same checks used by the server's
+# prebuilt-bundle installer, without compiling, installing or starting a server.
+python3 "$client/tools/install_web.py" "$client/build/webclient" "$client/build/webclient"
+python3 - "$client/build/LapisCube-web.zip" "$work/unpacked" "$client/tools" <<'PY'
+import pathlib
+import sys
+import zipfile
+sys.path.insert(0, sys.argv[3])
+from install_web import install
 
-name=LapisCube-alpine-$arch
-cp "$client/build/LapisCube-linux.zip" "$work/$name.zip"
+with zipfile.ZipFile(sys.argv[1]) as archive:
+    names = archive.namelist()
+    if len(names) != len(set(names)):
+        raise SystemExit('Duplicate web archive paths')
+    for name in names:
+        path = pathlib.PurePosixPath(name)
+        if path.is_absolute() or '..' in path.parts or '\\' in name or path.parts[0] != 'webclient':
+            raise SystemExit('Unsafe web archive path: ' + name)
+    archive.extractall(sys.argv[2])
+bundle = pathlib.Path(sys.argv[2]) / 'webclient'
+install(bundle, bundle)
+print('Web archive: file set, hashes, WebAssembly and required licenses verified')
+PY
+
+name=LapisCube-web
 {
-  printf 'Project: LapisCube\nArchitecture: %s\nLinkage: dynamic musl, X11/OpenGL\n' "$arch"
+  printf 'Project: LapisCube web client\nTarget: wasm32, WebGL 1\nBuild host: %s\n' "$host"
   printf 'Alpine release: '; cat /etc/alpine-release
   printf 'Client revision: '; git rev-parse HEAD
   printf 'Engine revision: '; git -C "$client/engine" rev-parse HEAD
-  printf 'Compiler: '; "$compiler" --version | sed -n '1p'
-  printf 'Compiler target: %s\nClient regression tests requested: %s\n' "$triple" "$run_tests"
+  printf 'Emscripten revision: %s\n' "$emscripten_revision"
+  emcc --version | sed -n '1p'
+  /usr/lib/llvm21/bin/clang --version | sed -n '1p'
+  wasm-opt --version
+  printf 'Node: '; node --version
+  printf 'Client regression tests requested: %s\n' "$run_tests"
   printf '\nWorking tree changes (empty means clean):\n'; git status --porcelain
   printf '\nInstalled Alpine packages:\n'; apk info -v | sort
 } > "$work/$name.buildinfo.txt"
-(cd "$work" && sha256sum "$name.zip" "$name.buildinfo.txt" > "$name.sha256")
-for suffix in zip buildinfo.txt sha256; do
-  mv -f "$work/$name.$suffix" "$client/build/$name.$suffix"
-done
+mv -f "$work/$name.buildinfo.txt" "$client/build/$name.buildinfo.txt"
+(cd "$client/build" && sha256sum "$name.zip" "$name.buildinfo.txt") > "$work/$name.sha256"
+mv -f "$work/$name.sha256" "$client/build/$name.sha256"
 printf '\nPackage: %s/build/%s.zip\nChecksums: %s/build/%s.sha256\n' "$client" "$name" "$client" "$name"
-printf 'Connect from your desktop session:\n  "%s/build/LapisCube-linux/connect.sh" MyName HOST 25565\n' "$client"
+printf 'Ready-to-host directory: %s/build/webclient/\n' "$client"
+printf 'Hosting instructions: %s/docs/web.md (requires a WebSocket-enabled game server)\n' "$client"

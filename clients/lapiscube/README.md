@@ -36,9 +36,9 @@ Linux needs Git, GCC/Clang, Make, Python 3.8+, `patch`, and X11/Xi/OpenGL develo
 libraries (`libx11-dev libxi-dev libgl-dev` on Debian/Ubuntu). Pillow is needed
 only to regenerate assets, not to build or run from the committed bundle.
 
-**Alpine Linux:** use `./build_client.sh` from the repository root. It supports
-dependency installation, pinned engine setup, native musl compilation, optional
-tests and a complete redistributable package. See the [Alpine client guide](docs/alpine.md).
+**Alpine Linux web client:** use `./build_client.sh` from the repository root. It
+supports dependency installation, pinned Emscripten/engine setup, WebAssembly
+compilation, optional client tests and a complete browser package. See the [Alpine client guide](docs/alpine.md).
 
 ```sh
 git clone --branch testing-cube --recurse-submodules https://github.com/aksulightning/lapisobsidian.git
