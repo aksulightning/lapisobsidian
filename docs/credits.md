@@ -41,7 +41,7 @@ Sources were obtained from Kenney Impact Sounds 1.0 and Minetest Game commit
 
 | Creator | Imported recordings / output groups | License evidence |
 | --- | --- | --- |
-| **Kenney** | Footsteps on wood, grass, concrete, carpet and snow; glass, mining, soft, punch, wood, generic and bell impacts. 42 outputs: `step_wood*`, `step_grass*`, `step_stone*`, `step_glass*`, `step_cloth*`, `dig_stone*`, `dig_glass*`, `dig_cloth*`, `dig_snow*`, `hurt*`, `click*`, `pickup*`, `impact*`, `eat*`. | [Original archive notice](../clients/lapiscube/assets/licenses/Kenney-Impact-Sounds.txt), [author page](https://kenney.nl/assets/impact-sounds). |
+| **Kenney** | Footsteps on wood, grass, concrete, carpet and snow; glass, mining, soft, punch, generic and bell impacts. 42 outputs: `step_wood*`, `step_grass*`, `step_stone*`, `step_glass*`, `step_cloth*`, `dig_stone*`, `dig_glass*`, `dig_cloth*`, `dig_snow*`, `hurt*`, `click*`, `pickup*`, `impact*`, `eat*`. | [Original archive notice](../clients/lapiscube/assets/licenses/Kenney-Impact-Sounds.txt), [author page](https://kenney.nl/assets/impact-sounds). |
 | **Sheyvan** | `default_dig_choppy.1–3.ogg` → `dig_wood1–3.wav` | [Default mod credits](../clients/lapiscube/assets/licenses/Minetest-default-README.md#sounds), [original](https://freesound.org/people/Sheyvan/sounds/476113/). |
 | **lolamadeus** | `default_gravel_dig.1–2.ogg` → `dig_gravel1–2.wav`; `default_gravel_dug.1–3.ogg` → `step_gravel1–3.wav` | [Default mod credits](../clients/lapiscube/assets/licenses/Minetest-default-README.md#sounds), [original](https://freesound.org/people/lolamadeus/sounds/179341/). |
 | **blukotek** | `default_dig_snappy.ogg` → `dig_grass1.wav`, also used for projectile release | [Default mod credits](../clients/lapiscube/assets/licenses/Minetest-default-README.md#sounds), [original](https://freesound.org/people/blukotek/sounds/251660/). |
@@ -56,10 +56,11 @@ Sources were obtained from Kenney Impact Sounds 1.0 and Minetest Game commit
 | **Halion** | `env_sounds_lava.1–2.ogg` → `lava1–2.wav` | [Environment sound credits](../clients/lapiscube/assets/licenses/Minetest-env-sounds-README.md), [original](https://freesound.org/people/Halion/sounds/17785/). |
 
 The 75 output clips use 69 distinct source files. Some recordings support more
-than one event or cut. Doors now use matching CC0 glass-door recordings, and fence-gate opening keeps
-its own CC0 gate recording. Other door materials, chest/gate closing, eating,
-explosions and percussion still share documented foley substitutes. Species-specific voices are not included; unsupported
-ambient calls are silent, while hurt/death events use shared impact recordings.
+than one event or cut. Doors now use matching CC0 glass-door recordings, and
+fence-gate opening keeps its own CC0 gate recording. Other door materials, chest/gate closing, eating,
+explosions and percussion still share documented foley substitutes. Species-specific
+voices are not included; unsupported ambient calls are silent, while hurt/death
+events use shared impact recordings.
 Water/lava clips are short one-shot effects, not looping ambience.
 
 The exact existing notices are [Kenney-Voxel.txt](../clients/lapiscube/assets/licenses/Kenney-Voxel.txt)
@@ -74,14 +75,16 @@ code licenses do not replace the separate asset notices.
 ### Source and integrity evidence
 
 - [manifest.json](../clients/lapiscube/assets/manifest.json) covers every shipped
-  PNG, SVG, WAV and embedded icon/font resources with author, source, license, modifications and output hash.
+  PNG, SVG, WAV and embedded icon/font resources with author, source, license,
+  modifications and output hash.
   Imported audio also records original filenames, source hashes, original-source
   URLs and the exact retained license-evidence file.
 - The [pinned Voxel Pack archive](https://kenney.nl/media/pages/assets/voxel-pack/a3a73d0ff7-1677662501/kenney_voxel-pack.zip)
   has SHA-256 `667c05e3f6d95718aaef888c7fc06f7137ba5dede95f4574deb17d4436257958`,
   matching [source.json](../clients/lapiscube/assets/source.json). Its included
-  license matches the retained notice. The original five PNGs reproduced byte-for-byte during the initial audit;
-  terrain and hotbar sheets now incorporate the pinned AFCMS supplement.
+  license matches the retained notice. The original five PNGs reproduced
+  byte-for-byte during the initial audit; terrain and hotbar sheets now
+  incorporate the pinned AFCMS supplement.
 - [audio-sources.json](../clients/lapiscube/assets/audio-sources.json) pins the
   Impact Sounds archive hash, Minetest Game revision and all selected source
   hashes. The importer verifies these and the retained notices before conversion.
@@ -197,7 +200,7 @@ has SHA-256 `029d734af1582474edf3a694d1b0cebc97c1c152f2f39fa34d4c2bafc5de77f8`.
 The imported selection includes `Audio/footstep_grass_000.ogg`, `footstep_wood_000.ogg`,
 `footstep_concrete_000.ogg`, `footstep_carpet_000.ogg`, `footstep_snow_000.ogg`,
 `impactGlass_light_000.ogg`, `impactMining_000.ogg`,
-and `impactWood_light_000.ogg`, all under `Audio/`, with numbered variants.
+and `impactPunch_medium_000.ogg`, all under `Audio/`, with numbered variants.
 This offers CC0 alternatives to several of Minetest's attribution/share-alike
 sound families. Exact selected variants and output mappings are in the manifest;
 this is not a claim of complete event coverage.
