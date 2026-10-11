@@ -29,7 +29,8 @@ class AudioAssets(unittest.TestCase):
         expected = {n for section in ('material', 'events') for clips in mapping[section].values() for n in clips}
         actual = {p.stem for p in (ROOT/'assets/audio').glob('*.wav')}
         self.assertEqual(actual, expected)
-        self.assertEqual(set(entries), {str(p.relative_to(ROOT)) for p in (ROOT/'assets').rglob('*') if p.suffix in ('.wav', '.png', '.svg')})
+        self.assertEqual(set(entries), {str(p.relative_to(ROOT)) for p in (ROOT/'assets').rglob('*')
+            if p.is_file() and (p.suffix in ('.wav', '.png', '.svg') or p.parent.name == 'native')})
         for name in expected:
             path = ROOT/f'assets/audio/{name}.wav'
             entry = entries[str(path.relative_to(ROOT))]

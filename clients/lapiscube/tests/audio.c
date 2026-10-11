@@ -43,6 +43,8 @@ int main(void) {
         {"minecraft:entity.generic.eat",LAPIS_SOUND_EAT},
         {"minecraft:block.wooden_door.open",LAPIS_SOUND_DOOR_OPEN},
         {"minecraft:block.wooden_door.close",LAPIS_SOUND_DOOR_CLOSE},
+        {"minecraft:block.fence_gate.open",LAPIS_SOUND_GATE_OPEN},
+        {"minecraft:block.iron_door.close",LAPIS_SOUND_DOOR_CLOSE},
         {"minecraft:block.lever.click",LAPIS_SOUND_CLICK},
         {"minecraft:item.bucket.fill",LAPIS_SOUND_WATER},
         {"minecraft:item.bucket.empty_lava",LAPIS_SOUND_LAVA},

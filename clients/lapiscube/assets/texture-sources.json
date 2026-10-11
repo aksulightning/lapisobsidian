@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "url": "https://github.com/AFCMS/mc-like-textures",
+  "revision": "45f167320f99632549be0672416b9caf52b83180",
+  "license": "CC0-1.0",
+  "notices": {
+    "LICENSE.txt": "assets/licenses/AFCMS-CC0.txt",
+    "README.md": "assets/licenses/AFCMS-README.md"
+  },
+  "textures": [
+    {
+      "name": "wooden_sword",
+      "path": "TOOLS/default_tool_woodsword.png",
+      "sha256": "cec31fc0d068a1cd0c25c492da3d9aa7f2f0b492d4f77585b134051eabe75c73",
+      "author": "AFCMS",
+      "target": "terrain",
+      "item": "wooden_sword"
+    },
+    {
+      "name": "stone_sword",
+      "path": "TOOLS/default_tool_stonesword.png",
+      "sha256": "83ac3bd11baefeba319c1b0d64ef1e757ec1c432f54dd297cc9459ceea2f1774",
+      "author": "AFCMS",
+      "target": "terrain",
+      "item": "stone_sword"
+    },
+    {
+      "name": "iron_sword",
+      "path": "TOOLS/default_tool_steelsword.png",
+      "sha256": "342163703c37403c184ac11a4956263bce33a67c1350a2ba1ec78da229089026",
+      "author": "AFCMS",
+      "target": "terrain",
+      "item": "iron_sword"
+    },
+    {
+      "name": "golden_sword",
+      "path": "TOOLS/default_tool_goldsword.png",
+      "sha256": "42824aee7f4a29c3036474fe0ec87be9c11ea726734b7907f93ea6852cc5b0e7",
+      "author": "AFCMS",
+      "target": "terrain",
+      "item": "golden_sword"
+    },
+    {
+      "name": "diamond_sword",
+      "path": "TOOLS/default_tool_diamondsword.png",
+      "sha256": "c26367c4586c3d2cfc683e64fd9498ec7b62ed444ca97509f60d47e22e1fe217",
+      "author": "AFCMS",
+      "target": "terrain",
+      "item": "diamond_sword"
+    },
+    {
+      "name": "netherite_sword",
+      "path": "TOOLS/default_tool_netheritesword.png",
+      "sha256": "485c41d4dc94435aab2dd68cf91a6e90841dc0693227a82e8b53bb7738aeb3de",
+      "author": "AFCMS",
+      "target": "terrain",
+      "item": "netherite_sword"
+    },
+    {
+      "name": "diamond",
+      "path": "ITEMS/default_diamond.png",
+      "sha256": "f1cc959e8be4001bdaad860f613fd2f702f6b7a725acf5a8f188cf38968e4382",
+      "author": "TechDudie",
+      "target": "terrain",
+      "item": "diamond"
+    },
+    {
+      "name": "stick",
+      "path": "ITEMS/default_stick.png",
+      "sha256": "3c0fb57b6fd3477b00e55c68025182ad2f78f21b722f2dbc4b9d81aa65862d83",
+      "author": "AFCMS",
+      "target": "terrain",
+      "item": "stick"
+    },
+    {
+      "name": "tnt_side",
+      "path": "NODES/default_tnt_side.png",
+      "sha256": "449ef75688510e3c224e5a09ebef87852e6f2b5129646b6997cad2d15886c1e4",
+      "author": "AFCMS",
+      "target": "terrain",
+      "tile": "tnt_side"
+    },
+    {
+      "name": "tnt_top",
+      "path": "NODES/default_tnt_top.png",
+      "sha256": "6d615e6aae86e726516f47e99f2d515e1d1b768751b07941aa7b82ae57cedae0",
+      "author": "AFCMS",
+      "target": "terrain",
+      "tile": "tnt_top"
+    },
+    {
+      "name": "tnt_bottom",
+      "path": "NODES/default_tnt_bottom.png",
+      "sha256": "500a5a3b12f83cfcf8b7eb0632b835da50f309a8725566f3a80b1f0877bb4836",
+      "author": "AFCMS",
+      "target": "terrain",
+      "tile": "tnt_bottom"
+    },
+    {
+      "name": "enchanting_table_top",
+      "path": "ITEMS/mcl_enchanting_table_top.png",
+      "sha256": "a162993e1da5aed12acd4f8482d2cfd3e50b6773e2f5d5be8bf0fd5b8f7f1568",
+      "author": "AFCMS",
+      "target": "terrain",
+      "tile": "enchanting_table_top",
+      "item": "enchanting_table"
+    },
+    {
+      "name": "hotbar",
+      "path": "default/mcl_inventory_hotbar.png",
+      "sha256": "4685ffe1741e3a13dc6fa61747fe38bbe98d187ebe511788bff1441bd34a9f4c",
+      "author": "AFCMS",
+      "target": "gui"
+    },
+    {
+      "name": "hotbar_selected",
+      "path": "default/mcl_inventory_hotbar_selected.png",
+      "sha256": "52cacf20c37d577ba993c4572b610799fcbe40781ff20c12e654f35bbb9cfcda",
+      "author": "AFCMS",
+      "target": "gui"
+    }
+  ]
+}

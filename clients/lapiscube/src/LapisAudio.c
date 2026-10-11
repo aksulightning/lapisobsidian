@@ -95,6 +95,7 @@ static int GroupFor(const char* name) {
     if(strstr(name,".hurt") || strstr(name,".death"))return LAPIS_SOUND_HURT;
     if(strstr(name,".pickup") || strstr(name,"experience"))return LAPIS_SOUND_PICKUP;
     if(strstr(name,".eat") || strstr(name,".burp"))return LAPIS_SOUND_EAT;
+    if(strstr(name,"fence_gate") && strstr(name,"open"))return LAPIS_SOUND_GATE_OPEN;
     if(strstr(name,"door") || strstr(name,"chest") || strstr(name,"fence_gate"))
         return strstr(name,"close")?LAPIS_SOUND_DOOR_CLOSE:LAPIS_SOUND_DOOR_OPEN;
     if(strstr(name,"button") || strstr(name,"lever") || strstr(name,"pressure_plate"))return LAPIS_SOUND_CLICK;

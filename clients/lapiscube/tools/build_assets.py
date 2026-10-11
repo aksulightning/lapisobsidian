@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pack verified Kenney CC0 tiles, original geometric UI. Recorded audio is built separately.
+"""Pack verified Kenney/AFCMS CC0 textures. Recorded audio is built separately.
 Requires Pillow only at build time. Never downloads Minecraft resources.
 """
 import hashlib
@@ -8,6 +8,8 @@ import json
 import pathlib
 import re
 import zipfile
+import argparse
+import subprocess
 from PIL import Image, ImageDraw
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -16,7 +18,27 @@ URL = 'https://kenney.nl/media/pages/assets/voxel-pack/a3a73d0ff7-1677662501/ken
 LICENSE = 'https://creativecommons.org/publicdomain/zero/1.0/'
 
 
+def load_supplement(checkout):
+    plan = json.loads((ROOT / 'assets/texture-sources.json').read_text())
+    revision = subprocess.check_output(['git', '-C', str(checkout), 'rev-parse', 'HEAD'], text=True).strip()
+    if revision != plan['revision']:
+        raise ValueError('Unexpected AFCMS revision')
+    for source, retained in plan['notices'].items():
+        if (checkout/source).read_bytes() != (ROOT/retained).read_bytes():
+            raise ValueError('AFCMS license evidence differs from pinned source')
+    images = {}
+    for asset in plan['textures']:
+        data = (checkout/asset['path']).read_bytes()
+        if hashlib.sha256(data).hexdigest() != asset['sha256']:
+            raise ValueError('AFCMS texture hash mismatch: ' + asset['path'])
+        images[asset['name']] = Image.open(io.BytesIO(data)).convert('RGBA')
+    return plan, images
+
+
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--afcms', type=pathlib.Path, required=True, help='Pinned mc-like-textures checkout')
+    plan, supplements = load_supplement(parser.parse_args().afcms)
     source = ROOT / 'build/kenney-voxel.zip'
     if not source.exists():
         raise SystemExit(f'Download {URL} to {source} first')
@@ -60,13 +82,34 @@ def main():
             from PIL import ImageChops
             im=ImageChops.multiply(images[tile['cotton_tan']],Image.new('RGBA',(32,32),colors[i-64]))
         atlas.paste(im,(i%16*32,i//16*32))
+    imported = {}
+    for asset in plan['textures']:
+        if asset['target'] != 'terrain':
+            continue
+        slot = 256 + len(paths) + len(imported)
+        if slot >= 512:
+            raise ValueError('Terrain atlas capacity exceeded')
+        imported[asset['path']] = slot
+        im = supplements[asset['name']].resize((32, 32), Image.Resampling.NEAREST)
+        atlas.paste(im, (slot % 16 * 32, slot // 16 * 32))
+        if 'item' in asset:
+            item[asset['item']] = slot
+        if 'tile' in asset:
+            tile[asset['tile']] = slot
+    # Classic TNT cells also get the three distinct faces.
+    for slot, name in ((8, 'tnt_side'), (9, 'tnt_top'), (10, 'tnt_bottom')):
+        atlas.paste(supplements[name].resize((32, 32), Image.Resampling.NEAREST),
+                    (slot % 16 * 32, slot // 16 * 32))
+        classic[slot] = name
     atlas.save(dest / 'terrain.png')
     (dest / 'atlas.json').write_text(json.dumps({'tile_size':32, 'columns':16, 'classic_slots':classic,
-        'tiles':dict(zip(paths,range(256,256+len(paths))))}, indent=2)+'\n')
+        'tiles':dict(zip(paths,range(256,256+len(paths)))), 'afcms_tiles': imported}, indent=2)+'\n')
     # Exact simple geometry, authored in code; deliberately independent UI.
     gui = Image.new('RGBA', (256,256)); d = ImageDraw.Draw(gui)
     d.rectangle((0,0,181,21), fill='#182738', outline='#617d8c', width=1)
     d.rectangle((0,22,23,45), outline='#f5d281', width=2)
+    gui.paste(supplements['hotbar'], (0, 0))
+    gui.paste(supplements['hotbar_selected'].resize((24, 24), Image.Resampling.NEAREST), (0, 22))
     gui.save(dest/'gui.png'); gui.save(dest/'gui_classic.png')
     icons = Image.new('RGBA',(256,256)); d=ImageDraw.Draw(icons)
     d.line((7,3,7,11),fill='white'); d.line((3,7,11,7),fill='white')
@@ -79,7 +122,7 @@ def main():
     states = [int(x) for x in re.search(r'block_palette\[\] = \{([^}]+)', (SERVER/'src/registries.c').read_text())[1].split(',')]
     names = {int(v):k for k,v in re.findall(r'#define B_(\w+) (\d+)',(SERVER/'include/registries.h').read_text())}
     def texture(name):
-        exact = {'grass_block':'dirt_grass','snowy_grass_block':'dirt_snow','dirt':'dirt','coarse_dirt':'gravel_dirt',
+        exact = {'tnt':'tnt_side','grass_block':'dirt_grass','snowy_grass_block':'dirt_snow','dirt':'dirt','coarse_dirt':'gravel_dirt',
                  'bedrock':'greystone','cobblestone':'rock','mossy_cobblestone':'rock_moss','oak_planks':'wood',
                  'oak_log':'trunk_side','oak_leaves':'leaves_transparent','glass':'glass','furnace':'oven',
                  'crafting_table':'table','note_block':'wood_red','jukebox':'wood_red','water':'water','lava':'lava',
@@ -103,13 +146,15 @@ def main():
         if name=='snowy_grass_block':top='snow';bottom='dirt'
         if name=='oak_log':top=bottom='trunk_top'
         if name=='cactus':top='cactus_top';bottom='cactus_inside'
+        if name=='tnt':top='tnt_top';bottom='tnt_bottom'
+        if name=='enchanting_table':top='enchanting_table_top'
         h.append(f'    {{{state}, {facts["items"].get(name,0)}, {tile[tex]}, {tile[top]}, {tile[bottom]}, "{name}"}},')
     h += ['};','struct LapisItemFact { int id, icon; const char* name; };','static const struct LapisItemFact Lapis_ItemFacts[] = {']
     for name,id in facts['items'].items():
         icon=item.get(name,-1)
         for material, substitute in [('wooden','bronze'),('stone','silver'),('golden','gold'),('iron','iron'),('diamond','diamond'),('netherite','diamond')]:
             for tool, asset in [('sword','sword'),('shovel','shovel'),('pickaxe','pick'),('axe','axe'),('hoe','hoe')]:
-                if name==material+'_'+tool:icon=item[asset+'_'+substitute]
+                if name==material+'_'+tool and name not in item:icon=item[asset+'_'+substitute]
         if icon<0:icon=tile[texture(name)]
         h.append(f'    {{{id}, {icon}, "{name}"}},')
     h += ['};',f'#define LAPIS_ITEM_FACT_COUNT {len(facts["items"])}',f'#define LAPIS_TILE_WHEAT {tile["wheat_stage1"]}',
@@ -122,16 +167,32 @@ def main():
         kenney=path.name=='terrain.png'
         entries.append(dict(source_url='https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/assets/web-icon.svg' if path.suffix=='.svg' else URL if kenney else 'https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py',
                             author='Kenney Vleugels' if kenney else 'LapisCube contributors',license='CC0-1.0',license_url=LICENSE,
-                            modifications='Tiles resized 128 to 32, water/ice alpha adjusted, Classic cloth tinted, packed with Classic/CPE compatibility cells; see atlas.json' if kenney else 'Original code-authored geometry or PCM synthesis',
+                            modifications='Tiles resized 128 to 32, water/ice alpha adjusted, Classic cloth tinted, packed with Classic/CPE compatibility cells; see atlas.json' if kenney else 'Original code-authored geometry',
                             destination_filename=str(path.relative_to(ROOT)),sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
                             attribution='Kenney (kenney.nl)' if kenney else 'LapisCube',redistribution_notes='CC0; attribution appreciated, not required'))
-    entries += [a for a in old_manifest['assets'] if a['destination_filename'].startswith('assets/audio/')]
+    for entry in entries:
+        filename = pathlib.Path(entry['destination_filename']).name
+        if filename in ('terrain.png', 'gui.png', 'gui_classic.png'):
+            entry['author'] = 'Kenney Vleugels; AFCMS; TechDudie' if filename == 'terrain.png' else 'AFCMS'
+            entry['source_url'] = plan['url'] + '/tree/' + plan['revision']
+            entry['license_file'] = plan['notices']['LICENSE.txt']
+            entry['attribution'] = entry['author']
+            entry['modifications'] = ('Kenney base plus nearest-neighbor AFCMS sprites; explicit item and block-face mappings; see atlas.json and texture-sources.json'
+                                      if filename == 'terrain.png' else 'AFCMS hotbar copied; selected-slot border resized 22 to 24 pixels using nearest-neighbor')
+            entry['sources'] = [dict(source_url=plan['url']+'/blob/'+plan['revision']+'/'+a['path'],
+                                    source_path=a['path'], source_sha256=a['sha256'], author=a['author'],
+                                    license='CC0-1.0', license_file=plan['notices']['LICENSE.txt'])
+                                for a in plan['textures'] if a['target'] == ('terrain' if filename == 'terrain.png' else 'gui')]
+            if filename == 'terrain.png':
+                entry['sources'].insert(0, dict(source_url=URL, source_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
+                    author='Kenney Vleugels', license='CC0-1.0', license_file='assets/licenses/Kenney-Voxel.txt'))
+    entries += [a for a in old_manifest['assets'] if a['destination_filename'].startswith(('assets/audio/', 'assets/native/'))]
     (dest/'manifest.json').write_text(json.dumps(dict(schema_version=1,project='LapisCube',default_asset_license='CC0-1.0',status=old_manifest['status'],assets=entries),indent=2)+'\n')
-    (dest/'source.json').write_text(json.dumps(dict(url=URL,sha256=hashlib.sha256(source.read_bytes()).hexdigest(),license_file='licenses/Kenney-Voxel.txt'),indent=2)+'\n')
+    (dest/'source.json').write_text(json.dumps(dict(url=URL,sha256=hashlib.sha256(source.read_bytes()).hexdigest(),license_file='licenses/Kenney-Voxel.txt',supplement='texture-sources.json'),indent=2)+'\n')
     pack=ROOT/'build/engine/texpacks';pack.mkdir(parents=True,exist_ok=True)
     with zipfile.ZipFile(pack/'default.zip','w',zipfile.ZIP_DEFLATED) as out:
         for path in sorted(dest.glob('*.png')):out.write(path,path.name)
-    print(f'Packed {len(paths)} CC0 tiles; wrote compatibility facts and {len(entries)} manifest entries')
+    print(f'Packed {len(paths)} Kenney and {len(imported)} AFCMS CC0 tiles; wrote compatibility facts and {len(entries)} manifest entries')
 
 
 if __name__=='__main__':main()
