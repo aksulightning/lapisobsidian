@@ -2,15 +2,15 @@ name: LapisCube web client
 on:
   push:
     branches: [testing-cube]
-    paths: ['clients/lapiscube/**', 'src/**', 'include/**', 'build.sh', 'build_client.sh', '.github/workflows/lapiscube-web.yml']
+    paths: ['clients/lapiscube/**', 'src/**', 'include/**', 'build.sh', 'build_client.sh', 'build_clientsrv.sh', 'build-alpine.sh', '.github/workflows/lapiscube-web.yml']
   pull_request:
-    paths: ['clients/lapiscube/**', 'src/**', 'include/**', 'build.sh', 'build_client.sh', '.github/workflows/lapiscube-web.yml']
+    paths: ['clients/lapiscube/**', 'src/**', 'include/**', 'build.sh', 'build_client.sh', 'build_clientsrv.sh', 'build-alpine.sh', '.github/workflows/lapiscube-web.yml']
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   alpine:
-    name: Alpine web client (${{ matrix.arch }} host)
+    name: Alpine web client/server (${{ matrix.arch }} host)
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     strategy:
@@ -48,14 +48,25 @@ jobs:
               apk add --no-cache git
               git config --global --add safe.directory /work
               git config --global --add safe.directory /work/clients/lapiscube/engine
-              ./build_client.sh --install-deps --test --arch "$TARGET_ARCH"
+              ./build_clientsrv.sh --install-deps --test --arch "$TARGET_ARCH"
               # Reuse the pinned source/npm cache with fetching disabled.
               ./build_client.sh --no-fetch --arch "$TARGET_ARCH"
               test ! -e lapis-obsidian
               test ! -e clients/lapiscube/build/engine/LapisCube
               test ! -e clients/lapiscube/build/LapisCube-linux.zip
+              # Reusing a validated bundle needs no browser rebuild or downloads.
+              ./build_clientsrv.sh --prebuilt clients/lapiscube/build/webclient \
+                --static --test --no-fetch --arch "$TARGET_ARCH"
               cd clients/lapiscube/build
               sha256sum -c LapisCube-web.sha256
+              sha256sum -c "LapisCube-web-server-alpine-$TARGET_ARCH.sha256"
+              # Validate the final archive, including executable permissions.
+              tar -xzf "LapisCube-web-server-alpine-$TARGET_ARCH.tar.gz"
+              test -x "LapisCube-web-server-alpine-$TARGET_ARCH/start.sh"
+              test -x "LapisCube-web-server-alpine-$TARGET_ARCH/lapis-obsidian"
+              python3 ../tools/install_web.py \
+                "LapisCube-web-server-alpine-$TARGET_ARCH/webclient" \
+                "LapisCube-web-server-alpine-$TARGET_ARCH/webclient"
             '
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -64,6 +75,14 @@ jobs:
             clients/lapiscube/build/LapisCube-web.zip
             clients/lapiscube/build/LapisCube-web.buildinfo.txt
             clients/lapiscube/build/LapisCube-web.sha256
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: LapisCube-web-server-alpine-${{ matrix.arch }}
+          path: |
+            clients/lapiscube/build/LapisCube-web-server-alpine-${{ matrix.arch }}.tar.gz
+            clients/lapiscube/build/LapisCube-web-server-alpine-${{ matrix.arch }}.buildinfo.txt
+            clients/lapiscube/build/LapisCube-web-server-alpine-${{ matrix.arch }}.sha256
           if-no-files-found: error
   web:
     runs-on: ubuntu-24.04

@@ -5,6 +5,9 @@ WebAssembly, JavaScript, HTML/CSS, committed textures/sounds and license notices
 It does not build or launch a desktop client or server. Alpine's `/bin/sh` is
 sufficient; no Bash, X11, OpenGL, OpenAL, Java, Pillow or FFmpeg is required.
 
+For the optional server that hosts this browser client, use
+[`build_clientsrv.sh`](alpine-server.md). The client-only script remains separate.
+
 ## Quick start
 
 Use Alpine **3.23**, with `main` and `community` for that release enabled in
@@ -108,9 +111,10 @@ server and builds only the test executables in addition to the browser client.
 
 The web workflow's Alpine jobs build on x86-64, ARM64 and emulated RISC-V using
 Alpine 3.23.6. They exercise dependency installation, the client tests, a cached
-`--no-fetch` rebuild and checksums, and assert that neither the native game client
-nor a server binary was produced. Each host uploads a separately named artifact
-containing the same browser-targeted package filenames.
+`--no-fetch` rebuild and checksums, and also test the separate optional
+[server package](alpine-server.md). They check that the native game client and
+repository's default server executable are not produced. Each host uploads a
+separately named artifact containing the same browser-targeted package filenames.
 
 References: Alpine's [LLVM 21 compiler](https://pkgs.alpinelinux.org/package/v3.23/main/x86_64/clang21),
 [Binaryen 123](https://pkgs.alpinelinux.org/package/v3.23/community/x86_64/binaryen),

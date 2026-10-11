@@ -52,6 +52,11 @@ It installs Alpine build dependencies on request, sets up the pinned toolchain
 and engine, and packages only the browser client with its assets and notices. See the
 [Alpine client build guide](clients/lapiscube/docs/alpine.md).
 
+To also build the server with **optional HTTP/WebSocket hosting**, use
+`./build_clientsrv.sh`. It packages the server and browser assets together;
+normal server builds stay TCP-only. See the
+[Alpine client/server guide](clients/lapiscube/docs/alpine-server.md).
+
 ## Tests
 
 ```sh

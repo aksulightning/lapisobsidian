@@ -14,6 +14,11 @@ package, using pinned Emscripten 4.0.10 sources and Alpine-native LLVM 21/Binary
 See the [Alpine web client guide](alpine.md) for options, offline rebuilds and
 output checksums. This script does not build or start the server.
 
+For an Alpine server **with** its browser bundle, run `./build_clientsrv.sh`.
+This separate opt-in build packages the HTTP/WebSocket-enabled server and client;
+`--prebuilt DIR` accepts an existing validated browser package without Emscripten.
+See the [Alpine client/server guide](alpine-server.md) for installation and launch.
+
 Initialize the pinned ClassiCube submodule, install Emscripten (tested with
 emsdk 4.0.23), and activate its environment so `emcc` is on PATH. Python 3 and make
 are also required. From the repository root:
