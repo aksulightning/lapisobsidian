@@ -2,7 +2,9 @@
 
 For the **LapisCube web client**, use the separate `build_client.sh` and
 [client guide](../clients/lapiscube/docs/alpine.md). The instructions below build
-the server.
+the TCP-only server. For an opt-in server with browser hosting and bundled
+assets, use `./build_clientsrv.sh`; see the
+[client/server guide](../clients/lapiscube/docs/alpine-server.md).
 
 `build-alpine.sh` builds Lapis Obsidian using Alpine's default `/bin/sh`, a C
 compiler and binutils. It supports 64-bit RISC-V (`riscv64`), ARM64 (`aarch64`)
@@ -55,6 +57,12 @@ the script. Output directories are created after compilation. A failed compiler
 or libc check leaves the previous output intact. `CC` is one compiler executable
 or wrapper path, not a string of compiler options; `READELF` may select an
 alternative ELF inspection executable.
+
+The low-level `--webclient` switch compiles HTTP/WebSocket hosting into the
+server only. It does not build or copy browser assets; use `build_clientsrv.sh`
+for a complete package, or supply a validated bundle via `LAPIS_WEB_ROOT` when
+starting that binary. The normal build has no HTTP listener, even if
+`LAPIS_ENABLE_WEBCLIENT=1` is set at runtime.
 
 ## Cross compilation
 
