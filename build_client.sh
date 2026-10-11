@@ -134,12 +134,22 @@ if [ ! -e "$emscripten" ]; then
 fi
 [ "$(git -C "$emscripten" rev-parse HEAD)" = "$emscripten_revision" ] || fail "Unexpected Emscripten revision: $emscripten"
 [ -z "$(git -C "$emscripten" status --porcelain)" ] || fail "Emscripten sources have local changes: $emscripten"
-npm_stamp=$client/build/toolchains/emscripten-$emscripten_version.npm-ready
-if [ ! -f "$npm_stamp" ] || [ "$(cat "$npm_stamp")" != "$emscripten_revision" ] ||
-   [ ! -d "$emscripten/node_modules/acorn" ]; then
-  [ "$fetch" = 1 ] || fail "Emscripten npm dependencies missing and --no-fetch was requested; run once without --no-fetch"
-  (cd "$emscripten" && npm ci --omit=dev --ignore-scripts --no-audit --no-fund)
-  printf '%s\n' "$emscripten_revision" > "$npm_stamp"
+if [ "$fetch" = 1 ]; then
+  # Use upstream's bootstrap so its entry points, submodules and dependency
+  # stamps stay consistent. Only production npm dependencies are needed.
+  if [ ! -d "$emscripten/node_modules/acorn" ]; then
+    rm -f "$emscripten/out/npm_packages.stamp"
+  fi
+  (cd "$emscripten" && npm_config_omit=dev npm_config_ignore_scripts=true \
+    npm_config_audit=false npm_config_fund=false python3 bootstrap.py)
+else
+  [ -d "$emscripten/node_modules/acorn" ] || fail "Emscripten npm dependencies missing; run once without --no-fetch"
+  python3 - "$emscripten" <<'PY'
+import sys
+sys.path.insert(0, sys.argv[1])
+import bootstrap
+bootstrap.check()
+PY
 fi
 
 # Isolate this build from emsdk environments and ~/.emscripten. The system
