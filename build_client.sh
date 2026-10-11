@@ -61,7 +61,9 @@ while [ "$#" -gt 0 ]; do
     --test) run_tests=1; shift ;;
     --no-fetch) fetch=0; shift ;;
     --arch|--jobs|-j)
-      [ "$#" -ge 2 ] && [ -n "$2" ] || fail "$1 requires a value"
+      if [ "$#" -lt 2 ] || [ -z "$2" ]; then
+        fail "$1 requires a value"
+      fi
       case "$1" in
         --arch) arch=$(normalize "$2") || fail "Unsupported architecture: $2" ;;
         *) jobs=$2 ;;
@@ -72,8 +74,9 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 case "$jobs" in ''|*[!0-9]*|0*) fail "--jobs/ENGINE_JOBS must be a positive integer without leading zeros" ;; esac
-[ -f /etc/alpine-release ] && command -v apk >/dev/null 2>&1 ||
+if [ ! -f /etc/alpine-release ] || ! command -v apk >/dev/null 2>&1; then
   fail "Run this script on Alpine Linux; elsewhere use make -C clients/lapiscube web with Emscripten on PATH"
+fi
 host=$(normalize "$(apk --print-arch)") || fail "Unsupported Alpine build host architecture"
 [ -n "$arch" ] || arch=$host
 [ "$arch" = "$host" ] || fail "Requested host $arch, but this Alpine system is $host; the output always targets WebAssembly"
@@ -89,9 +92,14 @@ fi
 for tool in git make python3 patch node npm wasm-opt sha256sum; do
   command -v "$tool" >/dev/null 2>&1 || fail "Missing $tool; see --install-deps/--deps-only"
 done
-for tool in clang clang++ llvm-ar llvm-nm wasm-ld; do
+for tool in clang clang++ llvm-ar llvm-nm; do
   [ -x "/usr/lib/llvm21/bin/$tool" ] || fail "Missing LLVM 21 $tool; see --deps-only"
 done
+[ -x /usr/bin/wasm-ld ] || fail "Missing wasm-ld; install lld21 with --deps-only"
+case "$(/usr/bin/wasm-ld --version)" in
+  'LLD 21.'*) ;;
+  *) fail "The WebAssembly linker must be LLVM 21; install lld21 with --deps-only" ;;
+esac
 case "$(wasm-opt --version)" in
   'wasm-opt version 123'*) ;;
   *) fail "This pinned Emscripten toolchain requires Alpine's Binaryen 123" ;;
@@ -138,7 +146,14 @@ fi
 # compiler/Binaryen executables are Alpine-native; generated code is wasm32.
 EM_CONFIG=$client/build/toolchains/emscripten-$emscripten_version.config
 EM_CACHE=$client/build/toolchains/cache-$emscripten_version
-EM_LLVM_ROOT=/usr/lib/llvm21/bin
+# Alpine installs lld's drivers in /usr/bin, separately from LLVM's tools.
+# Emscripten expects one directory; assemble it without touching /usr.
+EM_LLVM_ROOT=$client/build/toolchains/llvm21/bin
+mkdir -p "$EM_LLVM_ROOT"
+for tool in /usr/lib/llvm21/bin/*; do
+  ln -sf "$tool" "$EM_LLVM_ROOT/${tool##*/}"
+done
+ln -sf /usr/bin/wasm-ld "$EM_LLVM_ROOT/wasm-ld"
 EM_BINARYEN_ROOT=/usr
 EM_NODE_JS=$(command -v node)
 EMCC_CORES=$jobs
