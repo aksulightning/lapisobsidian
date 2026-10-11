@@ -47,6 +47,11 @@ Nightly static binaries for all three targets are configured in
 [GitHub Actions](https://github.com/aksulightning/lapisobsidian/actions/workflows/nightly.yml),
 with tests, source archives and checksums; see the guide for download details.
 
+For the experimental **LapisCube native client**, use `./build_client.sh`.
+It can install Alpine dependencies, initialize the pinned engine, build and
+package the client with all assets and notices. See the
+[Alpine client build guide](clients/lapiscube/docs/alpine.md).
+
 ## Tests
 
 ```sh

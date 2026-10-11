@@ -1,5 +1,9 @@
 # Alpine Linux builds
 
+For the **LapisCube native client**, use the separate `build_client.sh` and
+[client guide](../clients/lapiscube/docs/alpine.md). The instructions below build
+the server.
+
 `build-alpine.sh` builds Lapis Obsidian using Alpine's default `/bin/sh`, a C
 compiler and binutils. It supports 64-bit RISC-V (`riscv64`), ARM64 (`aarch64`)
 and x86-64 (`x86_64`). No Bash, Java, vanilla server JAR, Node, Docker, registry
