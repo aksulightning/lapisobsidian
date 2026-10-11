@@ -85,12 +85,12 @@ def build(kenney_path, minetest_path):
     for path in set(previous) - outputs.keys():
         (ROOT / path).unlink(missing_ok=True)
     manifest['assets'] = [a for a in manifest['assets'] if not a['destination_filename'].startswith('assets/audio/')] + entries
-    manifest['status'] = 'CC0 Kenney atlas, original UI/models and recorded gameplay audio; original pitched note synthesis'
+    manifest['status'] = 'CC0 Kenney/AFCMS textures, original models/icons and recorded gameplay audio; public-domain fallback font; original pitched note synthesis'
     manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
     sound_map = {k: plan[k] for k in ('sample_rate', 'material', 'events', 'notes')}
     sound_map.update(license='CC0-1.0', implementation='src/LapisAudio.c',
         limits=['Animal/monster species voices are not included; unsupported ambient events are silent',
-                'Door closing, eating, explosions and percussion use documented foley substitutes',
+                'Doors use CC0 glass-door recordings; gates/chests share door close foley; eating, explosions and percussion use substitutes',
                 'Harp, bass and bell/chime note-block tones remain original pitched synthesis'])
     (ROOT / 'assets/sound-map.json').write_text(json.dumps(sound_map, indent=2) + '\n')
     print(f'Converted {len(outputs)} verified CC0 recordings; updated manifest and sound map')

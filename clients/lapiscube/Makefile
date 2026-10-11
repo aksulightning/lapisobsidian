@@ -28,6 +28,7 @@ test: build/protocol-test build/gameplay-test build/audio-test
 	./build/audio-test
 	$(PYTHON) tests/package.py
 	$(PYTHON) tests/audio_assets.py
+	$(PYTHON) tests/visual_assets.py
 	node tests/audio_web.js
 sanitize: build/md5.o build/dec32le.o build/enc32le.o | build
 	$(CC) $(CPPFLAGS) $(SANITIZER_FLAGS) -O1 -g $(WARN) -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie tests/protocol.c $(CORE) $(IDENTITY) -o build/protocol-sanitize

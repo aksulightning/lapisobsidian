@@ -2,36 +2,74 @@
   "schema_version": 1,
   "project": "LapisCube",
   "default_asset_license": "CC0-1.0",
-  "status": "CC0 Kenney atlas, original UI/models and recorded gameplay audio; original pitched note synthesis",
+  "status": "CC0 Kenney/AFCMS textures, original models/icons and recorded gameplay audio; public-domain fallback font; original pitched note synthesis",
   "assets": [
     {
-      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
-      "author": "LapisCube contributors",
+      "source_url": "https://github.com/AFCMS/mc-like-textures/tree/45f167320f99632549be0672416b9caf52b83180",
+      "author": "AFCMS",
       "license": "CC0-1.0",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "modifications": "Original code-authored geometry or PCM synthesis",
+      "modifications": "AFCMS hotbar copied; selected-slot border resized 22 to 24 pixels using nearest-neighbor",
       "destination_filename": "assets/gui.png",
-      "sha256": "60f6db6136f9362d1765a9219f6b7c34213f455b1c4a3edfa068d0fe81bf816b",
-      "attribution": "LapisCube",
-      "redistribution_notes": "CC0; attribution appreciated, not required"
+      "sha256": "a2e4491afa1f762d43b61f027f9aa9a896463cf88fdf336829eb82e0e9370a04",
+      "attribution": "AFCMS",
+      "redistribution_notes": "CC0; attribution appreciated, not required",
+      "license_file": "assets/licenses/AFCMS-CC0.txt",
+      "sources": [
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/default/mcl_inventory_hotbar.png",
+          "source_path": "default/mcl_inventory_hotbar.png",
+          "source_sha256": "4685ffe1741e3a13dc6fa61747fe38bbe98d187ebe511788bff1441bd34a9f4c",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/default/mcl_inventory_hotbar_selected.png",
+          "source_path": "default/mcl_inventory_hotbar_selected.png",
+          "source_sha256": "52cacf20c37d577ba993c4572b610799fcbe40781ff20c12e654f35bbb9cfcda",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        }
+      ]
     },
     {
-      "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
-      "author": "LapisCube contributors",
+      "source_url": "https://github.com/AFCMS/mc-like-textures/tree/45f167320f99632549be0672416b9caf52b83180",
+      "author": "AFCMS",
       "license": "CC0-1.0",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "modifications": "Original code-authored geometry or PCM synthesis",
+      "modifications": "AFCMS hotbar copied; selected-slot border resized 22 to 24 pixels using nearest-neighbor",
       "destination_filename": "assets/gui_classic.png",
-      "sha256": "60f6db6136f9362d1765a9219f6b7c34213f455b1c4a3edfa068d0fe81bf816b",
-      "attribution": "LapisCube",
-      "redistribution_notes": "CC0; attribution appreciated, not required"
+      "sha256": "a2e4491afa1f762d43b61f027f9aa9a896463cf88fdf336829eb82e0e9370a04",
+      "attribution": "AFCMS",
+      "redistribution_notes": "CC0; attribution appreciated, not required",
+      "license_file": "assets/licenses/AFCMS-CC0.txt",
+      "sources": [
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/default/mcl_inventory_hotbar.png",
+          "source_path": "default/mcl_inventory_hotbar.png",
+          "source_sha256": "4685ffe1741e3a13dc6fa61747fe38bbe98d187ebe511788bff1441bd34a9f4c",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/default/mcl_inventory_hotbar_selected.png",
+          "source_path": "default/mcl_inventory_hotbar_selected.png",
+          "source_sha256": "52cacf20c37d577ba993c4572b610799fcbe40781ff20c12e654f35bbb9cfcda",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        }
+      ]
     },
     {
       "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/tools/build_assets.py",
       "author": "LapisCube contributors",
       "license": "CC0-1.0",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "modifications": "Original code-authored geometry or PCM synthesis",
+      "modifications": "Original code-authored geometry",
       "destination_filename": "assets/icons.png",
       "sha256": "19d50dc4bfb71288bd86da750422a344410c27e6f18ff2d6f39ed0e6571d5ca7",
       "attribution": "LapisCube",
@@ -42,29 +80,135 @@
       "author": "LapisCube contributors",
       "license": "CC0-1.0",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "modifications": "Original code-authored geometry or PCM synthesis",
+      "modifications": "Original code-authored geometry",
       "destination_filename": "assets/lapis-entities.png",
       "sha256": "636f9dacce1c22607c2da5b464978643a6ac0a73e724f8eb1be4baf5be779085",
       "attribution": "LapisCube",
       "redistribution_notes": "CC0; attribution appreciated, not required"
     },
     {
-      "source_url": "https://kenney.nl/media/pages/assets/voxel-pack/a3a73d0ff7-1677662501/kenney_voxel-pack.zip",
-      "author": "Kenney Vleugels",
+      "source_url": "https://github.com/AFCMS/mc-like-textures/tree/45f167320f99632549be0672416b9caf52b83180",
+      "author": "Kenney Vleugels; AFCMS; TechDudie",
       "license": "CC0-1.0",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "modifications": "Tiles resized 128 to 32, water/ice alpha adjusted, Classic cloth tinted, packed with Classic/CPE compatibility cells; see atlas.json",
+      "modifications": "Kenney base plus nearest-neighbor AFCMS sprites; explicit item and block-face mappings; see atlas.json and texture-sources.json",
       "destination_filename": "assets/terrain.png",
-      "sha256": "a0edfc7bc6dd725741b15478658f0e1a114ead8b8c1095923f71b1b703ef5e28",
-      "attribution": "Kenney (kenney.nl)",
-      "redistribution_notes": "CC0; attribution appreciated, not required"
+      "sha256": "f9e95a8da2475f29bd5ef9ee6da7184bc1b0ebaebdd312df80ecf5e5a90f27b9",
+      "attribution": "Kenney Vleugels; AFCMS; TechDudie",
+      "redistribution_notes": "CC0; attribution appreciated, not required",
+      "license_file": "assets/licenses/AFCMS-CC0.txt",
+      "sources": [
+        {
+          "source_url": "https://kenney.nl/media/pages/assets/voxel-pack/a3a73d0ff7-1677662501/kenney_voxel-pack.zip",
+          "source_sha256": "667c05e3f6d95718aaef888c7fc06f7137ba5dede95f4574deb17d4436257958",
+          "author": "Kenney Vleugels",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/Kenney-Voxel.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/TOOLS/default_tool_woodsword.png",
+          "source_path": "TOOLS/default_tool_woodsword.png",
+          "source_sha256": "cec31fc0d068a1cd0c25c492da3d9aa7f2f0b492d4f77585b134051eabe75c73",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/TOOLS/default_tool_stonesword.png",
+          "source_path": "TOOLS/default_tool_stonesword.png",
+          "source_sha256": "83ac3bd11baefeba319c1b0d64ef1e757ec1c432f54dd297cc9459ceea2f1774",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/TOOLS/default_tool_steelsword.png",
+          "source_path": "TOOLS/default_tool_steelsword.png",
+          "source_sha256": "342163703c37403c184ac11a4956263bce33a67c1350a2ba1ec78da229089026",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/TOOLS/default_tool_goldsword.png",
+          "source_path": "TOOLS/default_tool_goldsword.png",
+          "source_sha256": "42824aee7f4a29c3036474fe0ec87be9c11ea726734b7907f93ea6852cc5b0e7",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/TOOLS/default_tool_diamondsword.png",
+          "source_path": "TOOLS/default_tool_diamondsword.png",
+          "source_sha256": "c26367c4586c3d2cfc683e64fd9498ec7b62ed444ca97509f60d47e22e1fe217",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/TOOLS/default_tool_netheritesword.png",
+          "source_path": "TOOLS/default_tool_netheritesword.png",
+          "source_sha256": "485c41d4dc94435aab2dd68cf91a6e90841dc0693227a82e8b53bb7738aeb3de",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/ITEMS/default_diamond.png",
+          "source_path": "ITEMS/default_diamond.png",
+          "source_sha256": "f1cc959e8be4001bdaad860f613fd2f702f6b7a725acf5a8f188cf38968e4382",
+          "author": "TechDudie",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/ITEMS/default_stick.png",
+          "source_path": "ITEMS/default_stick.png",
+          "source_sha256": "3c0fb57b6fd3477b00e55c68025182ad2f78f21b722f2dbc4b9d81aa65862d83",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/NODES/default_tnt_side.png",
+          "source_path": "NODES/default_tnt_side.png",
+          "source_sha256": "449ef75688510e3c224e5a09ebef87852e6f2b5129646b6997cad2d15886c1e4",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/NODES/default_tnt_top.png",
+          "source_path": "NODES/default_tnt_top.png",
+          "source_sha256": "6d615e6aae86e726516f47e99f2d515e1d1b768751b07941aa7b82ae57cedae0",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/NODES/default_tnt_bottom.png",
+          "source_path": "NODES/default_tnt_bottom.png",
+          "source_sha256": "500a5a3b12f83cfcf8b7eb0632b835da50f309a8725566f3a80b1f0877bb4836",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/ITEMS/mcl_enchanting_table_top.png",
+          "source_path": "ITEMS/mcl_enchanting_table_top.png",
+          "source_sha256": "a162993e1da5aed12acd4f8482d2cfd3e50b6773e2f5d5be8bf0fd5b8f7f1568",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        }
+      ]
     },
     {
       "source_url": "https://github.com/aksulightning/lapisobsidian/tree/testing-cube/clients/lapiscube/assets/web-icon.svg",
       "author": "LapisCube contributors",
       "license": "CC0-1.0",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "modifications": "Original code-authored geometry or PCM synthesis",
+      "modifications": "Original code-authored geometry",
       "destination_filename": "assets/web-icon.svg",
       "sha256": "9608f07391a8aac27cc36deec21e7137c9a537fb0f0f8edb823cef4bb328026c",
       "attribution": "LapisCube",
@@ -562,51 +706,6 @@
       "modifications": "Decoded to mono 16-bit PCM at 22050 Hz; silence trimmed; limited to 0.25 s; peak ceiling 0.45, gain boost at most 6 dB; 5 ms attack/25 ms release fades",
       "destination_filename": "assets/audio/click3.wav",
       "sha256": "ddb810d600fd2994e272e67e08d5c2b4475bf09886d562d18d47d0cc4ddc6d33",
-      "attribution": "Kenney",
-      "redistribution_notes": "CC0; attribution appreciated, not required"
-    },
-    {
-      "source_url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
-      "source_path": "Audio/impactWood_heavy_000.ogg",
-      "source_sha256": "15ff82332f342c30e469215539e1cc57e11b221aa2cf7e11e811d313a9927f3d",
-      "original_source_url": "https://kenney.nl/assets/impact-sounds",
-      "author": "Kenney",
-      "license": "CC0-1.0",
-      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "license_file": "assets/licenses/Kenney-Impact-Sounds.txt",
-      "modifications": "Decoded to mono 16-bit PCM at 22050 Hz; silence trimmed; limited to 0.65 s; peak ceiling 0.65, gain boost at most 6 dB; 5 ms attack/25 ms release fades",
-      "destination_filename": "assets/audio/door_close1.wav",
-      "sha256": "0ba88e2b90d8ee8f6fb840f55ee980f2c811899eb28e3da484369bb4c9d4b293",
-      "attribution": "Kenney",
-      "redistribution_notes": "CC0; attribution appreciated, not required"
-    },
-    {
-      "source_url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
-      "source_path": "Audio/impactWood_heavy_001.ogg",
-      "source_sha256": "f1b07a53ac10c615fff9ba470511fdeb722b5902e1a8520759fc20ad6f546015",
-      "original_source_url": "https://kenney.nl/assets/impact-sounds",
-      "author": "Kenney",
-      "license": "CC0-1.0",
-      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "license_file": "assets/licenses/Kenney-Impact-Sounds.txt",
-      "modifications": "Decoded to mono 16-bit PCM at 22050 Hz; silence trimmed; limited to 0.65 s; peak ceiling 0.65, gain boost at most 6 dB; 5 ms attack/25 ms release fades",
-      "destination_filename": "assets/audio/door_close2.wav",
-      "sha256": "ca65d00227f0ee8cfebb94324da1306cc1d8f2931d0f816c02b760d2a83f75ae",
-      "attribution": "Kenney",
-      "redistribution_notes": "CC0; attribution appreciated, not required"
-    },
-    {
-      "source_url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
-      "source_path": "Audio/impactWood_heavy_002.ogg",
-      "source_sha256": "ce1e06f2a05f2634c645cb72f6a1623e64bc2d92be34917430a61031fb6597d4",
-      "original_source_url": "https://kenney.nl/assets/impact-sounds",
-      "author": "Kenney",
-      "license": "CC0-1.0",
-      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "license_file": "assets/licenses/Kenney-Impact-Sounds.txt",
-      "modifications": "Decoded to mono 16-bit PCM at 22050 Hz; silence trimmed; limited to 0.65 s; peak ceiling 0.65, gain boost at most 6 dB; 5 ms attack/25 ms release fades",
-      "destination_filename": "assets/audio/door_close3.wav",
-      "sha256": "65a8e72a993601aa4d8f115f947c640e147940d488ff1c8e2a9cbc4c1cdf5565",
       "attribution": "Kenney",
       "redistribution_notes": "CC0; attribution appreciated, not required"
     },
@@ -1115,7 +1214,7 @@
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
       "license_file": "assets/licenses/Minetest-doors-README.md",
       "modifications": "Decoded to mono 16-bit PCM at 22050 Hz; silence trimmed; limited to 0.9 s; peak ceiling 0.65, gain boost at most 6 dB; 5 ms attack/25 ms release fades",
-      "destination_filename": "assets/audio/door_open1.wav",
+      "destination_filename": "assets/audio/gate_open1.wav",
       "sha256": "0d1f1f557c72428613b14f27b2e2cbb164262675f54b6689c47746125ffde6e9",
       "attribution": "mhtaylor67",
       "redistribution_notes": "CC0; attribution appreciated, not required"
@@ -1178,6 +1277,105 @@
       "destination_filename": "assets/audio/lava2.wav",
       "sha256": "366bcbc34bd9c0b301cbe1e29e5bd0c7f8e5f38ba441797fc0338d4c703b232d",
       "attribution": "Halion",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/luanti-org/minetest_game/blob/c42e4d0c0ff9d27ff7b9b308c3cfc14098dd3a0f/mods/doors/sounds/doors_glass_door_close.ogg",
+      "source_path": "mods/doors/sounds/doors_glass_door_close.ogg",
+      "source_sha256": "0c32629f52b13d8b4c739b8810ba6c51e02513100228b0bd0cf8aebdab57a739",
+      "original_source_url": "https://freesound.org/people/SkeetMasterFunk69/sounds/235546/",
+      "author": "SkeetMasterFunk69",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "license_file": "assets/licenses/Minetest-doors-README.md",
+      "modifications": "Decoded to mono 16-bit PCM at 22050 Hz; silence trimmed; limited to 1.0 s; peak ceiling 0.55, gain boost at most 6 dB; 5 ms attack/25 ms release fades",
+      "destination_filename": "assets/audio/door_close1.wav",
+      "sha256": "90d657202a374c525ad3f1f752bbda5fc4599998d24af0ff31854a4fc253f8bc",
+      "attribution": "SkeetMasterFunk69",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/luanti-org/minetest_game/blob/c42e4d0c0ff9d27ff7b9b308c3cfc14098dd3a0f/mods/doors/sounds/doors_glass_door_open.ogg",
+      "source_path": "mods/doors/sounds/doors_glass_door_open.ogg",
+      "source_sha256": "5de408bd6f7c6afe5099dc3fe4727c8aff69342b7b008f231a3dbcc990a109c0",
+      "original_source_url": "https://freesound.org/people/SkeetMasterFunk69/sounds/235546/",
+      "author": "SkeetMasterFunk69",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "license_file": "assets/licenses/Minetest-doors-README.md",
+      "modifications": "Decoded to mono 16-bit PCM at 22050 Hz; silence trimmed; limited to 1.0 s; peak ceiling 0.55, gain boost at most 6 dB; 5 ms attack/25 ms release fades",
+      "destination_filename": "assets/audio/door_open1.wav",
+      "sha256": "82f019a02bf3fc0fee02e9f97e0213b9314a41836501a34eff147c26a0422808",
+      "attribution": "SkeetMasterFunk69",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/luanti-org/minetest_game/blob/c42e4d0c0ff9d27ff7b9b308c3cfc14098dd3a0f/mods/default/sounds/default_snow_footstep.4.ogg",
+      "source_path": "mods/default/sounds/default_snow_footstep.4.ogg",
+      "source_sha256": "154585bdd27761b21d4299809860927076934b56220ea852341c18852b3e31ed",
+      "original_source_url": "https://freesound.org/people/Ryding/sounds/94337/",
+      "author": "Ryding",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "license_file": "assets/licenses/Minetest-default-README.md",
+      "modifications": "Decoded to mono 16-bit PCM at 22050 Hz; silence trimmed; limited to 0.5 s; peak ceiling 0.45, gain boost at most 6 dB; 5 ms attack/25 ms release fades",
+      "destination_filename": "assets/audio/step_snow4.wav",
+      "sha256": "d1b89756d3ecea61f3f85344c57af42d2f53c09d85cab08b0e8613d64058cd9e",
+      "attribution": "Ryding",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "source_url": "https://github.com/luanti-org/minetest_game/blob/c42e4d0c0ff9d27ff7b9b308c3cfc14098dd3a0f/mods/default/sounds/default_snow_footstep.5.ogg",
+      "source_path": "mods/default/sounds/default_snow_footstep.5.ogg",
+      "source_sha256": "6cf2266f57376ae1b82ef98858bc34c2a4637ab6edcd78adba548ed0beda3c30",
+      "original_source_url": "https://freesound.org/people/Ryding/sounds/94337/",
+      "author": "Ryding",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "license_file": "assets/licenses/Minetest-default-README.md",
+      "modifications": "Decoded to mono 16-bit PCM at 22050 Hz; silence trimmed; limited to 0.5 s; peak ceiling 0.45, gain boost at most 6 dB; 5 ms attack/25 ms release fades",
+      "destination_filename": "assets/audio/step_snow5.wav",
+      "sha256": "375af57280085b446e7e5f2e2e38f3e478ba32a83680983e3e28ff308d335123",
+      "attribution": "Ryding",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "destination_filename": "assets/native/LapisCube.ico",
+      "sha256": "3d1c8c24522da4dc3fd9d5d4dd4f03dab909a3aae584455b9f26152f8b589812",
+      "source_url": "https://github.com/aksulightning/lapisobsidian/blob/testing-cube/clients/lapiscube/assets/web-icon.svg",
+      "source_sha256": "9608f07391a8aac27cc36deec21e7137c9a537fb0f0f8edb823cef4bb328026c",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "license_file": "assets/licenses/LapisCube-Originals.txt",
+      "modifications": "Rasterized CC0 SVG into Windows ICO or X11 ARGB icon sizes",
+      "attribution": "LapisCube",
+      "redistribution_notes": "CC0; attribution appreciated, not required"
+    },
+    {
+      "destination_filename": "assets/native/LapisFont.h",
+      "sha256": "4c75ff76c53743df076d5cc500bf16c29d253a599447e0b702abe252740a61b0",
+      "source_url": "https://github.com/dhepper/font8x8/blob/8e279d2d864e79128e96188a6b9526cfa3fbfef9/font8x8_basic.h",
+      "source_sha256": "49d8df366296b203ca3211bc0672cf2a762135bf12710735b6292756b19dffd5",
+      "author": "Daniel Hepper; Marcel Sondaar; IBM",
+      "license": "LicenseRef-Public-Domain",
+      "license_url": "https://github.com/dhepper/font8x8/blob/8e279d2d864e79128e96188a6b9526cfa3fbfef9/README",
+      "license_file": "assets/licenses/font8x8-README.txt",
+      "modifications": "Selected printable ASCII U+0021-U+007E; original LSB-first pixel order retained",
+      "attribution": "Daniel Hepper; Marcel Sondaar; IBM",
+      "redistribution_notes": "Public domain; provenance retained"
+    },
+    {
+      "destination_filename": "assets/native/LapisIcon_X11.h",
+      "sha256": "0fd6146e046a2671de309fb35cf2d7b14cb277f0eb25dceefe524d7d6e0f3bd3",
+      "source_url": "https://github.com/aksulightning/lapisobsidian/blob/testing-cube/clients/lapiscube/assets/web-icon.svg",
+      "source_sha256": "9608f07391a8aac27cc36deec21e7137c9a537fb0f0f8edb823cef4bb328026c",
+      "author": "LapisCube contributors",
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "license_file": "assets/licenses/LapisCube-Originals.txt",
+      "modifications": "Rasterized CC0 SVG into Windows ICO or X11 ARGB icon sizes",
+      "attribution": "LapisCube",
       "redistribution_notes": "CC0; attribution appreciated, not required"
     }
   ]

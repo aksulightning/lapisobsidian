@@ -85,7 +85,9 @@
     "step_snow": [
       "step_snow1",
       "step_snow2",
-      "step_snow3"
+      "step_snow3",
+      "step_snow4",
+      "step_snow5"
     ]
   },
   "events": {
@@ -100,9 +102,7 @@
       "click3"
     ],
     "door_close": [
-      "door_close1",
-      "door_close2",
-      "door_close3"
+      "door_close1"
     ],
     "pickup": [
       "pickup1",
@@ -150,6 +150,9 @@
       "impact1",
       "impact2",
       "impact3"
+    ],
+    "gate_open": [
+      "gate_open1"
     ]
   },
   "notes": {
@@ -161,7 +164,7 @@
   "implementation": "src/LapisAudio.c",
   "limits": [
     "Animal/monster species voices are not included; unsupported ambient events are silent",
-    "Door closing, eating, explosions and percussion use documented foley substitutes",
+    "Doors use CC0 glass-door recordings; gates/chests share door close foley; eating, explosions and percussion use substitutes",
     "Harp, bass and bell/chime note-block tones remain original pitched synthesis"
   ]
 }

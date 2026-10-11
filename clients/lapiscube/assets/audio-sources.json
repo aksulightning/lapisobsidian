@@ -382,39 +382,6 @@
       "peak": 0.45
     },
     {
-      "name": "door_close1",
-      "source": "kenney",
-      "path": "Audio/impactWood_heavy_000.ogg",
-      "source_sha256": "15ff82332f342c30e469215539e1cc57e11b221aa2cf7e11e811d313a9927f3d",
-      "author": "Kenney",
-      "original_url": "https://kenney.nl/assets/impact-sounds",
-      "license": "CC0-1.0",
-      "max_seconds": 0.65,
-      "peak": 0.65
-    },
-    {
-      "name": "door_close2",
-      "source": "kenney",
-      "path": "Audio/impactWood_heavy_001.ogg",
-      "source_sha256": "f1b07a53ac10c615fff9ba470511fdeb722b5902e1a8520759fc20ad6f546015",
-      "author": "Kenney",
-      "original_url": "https://kenney.nl/assets/impact-sounds",
-      "license": "CC0-1.0",
-      "max_seconds": 0.65,
-      "peak": 0.65
-    },
-    {
-      "name": "door_close3",
-      "source": "kenney",
-      "path": "Audio/impactWood_heavy_002.ogg",
-      "source_sha256": "ce1e06f2a05f2634c645cb72f6a1623e64bc2d92be34917430a61031fb6597d4",
-      "author": "Kenney",
-      "original_url": "https://kenney.nl/assets/impact-sounds",
-      "license": "CC0-1.0",
-      "max_seconds": 0.65,
-      "peak": 0.65
-    },
-    {
       "name": "pickup1",
       "source": "kenney",
       "path": "Audio/impactBell_heavy_000.ogg",
@@ -778,7 +745,7 @@
       "peak": 0.5
     },
     {
-      "name": "door_open1",
+      "name": "gate_open1",
       "source": "minetest",
       "path": "mods/doors/sounds/doors_fencegate_open.ogg",
       "source_sha256": "68334be94edec603b3e7c6f40fb3169d4a25a854452d8b879fd92ccdbd9ac650",
@@ -831,6 +798,50 @@
       "license": "CC0-1.0",
       "max_seconds": 0.8,
       "peak": 0.5
+    },
+    {
+      "name": "door_close1",
+      "source": "minetest",
+      "path": "mods/doors/sounds/doors_glass_door_close.ogg",
+      "source_sha256": "0c32629f52b13d8b4c739b8810ba6c51e02513100228b0bd0cf8aebdab57a739",
+      "license": "CC0-1.0",
+      "author": "SkeetMasterFunk69",
+      "original_url": "https://freesound.org/people/SkeetMasterFunk69/sounds/235546/",
+      "max_seconds": 1.0,
+      "peak": 0.55
+    },
+    {
+      "name": "door_open1",
+      "source": "minetest",
+      "path": "mods/doors/sounds/doors_glass_door_open.ogg",
+      "source_sha256": "5de408bd6f7c6afe5099dc3fe4727c8aff69342b7b008f231a3dbcc990a109c0",
+      "license": "CC0-1.0",
+      "author": "SkeetMasterFunk69",
+      "original_url": "https://freesound.org/people/SkeetMasterFunk69/sounds/235546/",
+      "max_seconds": 1.0,
+      "peak": 0.55
+    },
+    {
+      "name": "step_snow4",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_snow_footstep.4.ogg",
+      "source_sha256": "154585bdd27761b21d4299809860927076934b56220ea852341c18852b3e31ed",
+      "license": "CC0-1.0",
+      "author": "Ryding",
+      "original_url": "https://freesound.org/people/Ryding/sounds/94337/",
+      "max_seconds": 0.5,
+      "peak": 0.45
+    },
+    {
+      "name": "step_snow5",
+      "source": "minetest",
+      "path": "mods/default/sounds/default_snow_footstep.5.ogg",
+      "source_sha256": "6cf2266f57376ae1b82ef98858bc34c2a4637ab6edcd78adba548ed0beda3c30",
+      "license": "CC0-1.0",
+      "author": "Ryding",
+      "original_url": "https://freesound.org/people/Ryding/sounds/94337/",
+      "max_seconds": 0.5,
+      "peak": 0.45
     }
   ],
   "material": {
@@ -918,7 +929,9 @@
     "step_snow": [
       "step_snow1",
       "step_snow2",
-      "step_snow3"
+      "step_snow3",
+      "step_snow4",
+      "step_snow5"
     ]
   },
   "events": {
@@ -933,9 +946,7 @@
       "click3"
     ],
     "door_close": [
-      "door_close1",
-      "door_close2",
-      "door_close3"
+      "door_close1"
     ],
     "pickup": [
       "pickup1",
@@ -983,6 +994,9 @@
       "impact1",
       "impact2",
       "impact3"
+    ],
+    "gate_open": [
+      "gate_open1"
     ]
   },
   "notes": {

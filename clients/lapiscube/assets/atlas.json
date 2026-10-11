@@ -10,9 +10,9 @@
     "5": "stone",
     "6": "stone",
     "7": "brick_red",
-    "8": "wood_red",
-    "9": "wood_red",
-    "10": "wood_red",
+    "8": "tnt_side",
+    "9": "tnt_top",
+    "10": "tnt_bottom",
     "11": "wood",
     "12": "grass4",
     "13": "grass3",
@@ -191,5 +191,19 @@
     "PNG/Tiles/wheat_stage4.png": 394,
     "PNG/Tiles/wood.png": 395,
     "PNG/Tiles/wood_red.png": 396
+  },
+  "afcms_tiles": {
+    "TOOLS/default_tool_woodsword.png": 397,
+    "TOOLS/default_tool_stonesword.png": 398,
+    "TOOLS/default_tool_steelsword.png": 399,
+    "TOOLS/default_tool_goldsword.png": 400,
+    "TOOLS/default_tool_diamondsword.png": 401,
+    "TOOLS/default_tool_netheritesword.png": 402,
+    "ITEMS/default_diamond.png": 403,
+    "ITEMS/default_stick.png": 404,
+    "NODES/default_tnt_side.png": 405,
+    "NODES/default_tnt_top.png": 406,
+    "NODES/default_tnt_bottom.png": 407,
+    "ITEMS/mcl_enchanting_table_top.png": 408
   }
 }

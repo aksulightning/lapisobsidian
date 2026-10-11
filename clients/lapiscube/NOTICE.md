@@ -23,7 +23,8 @@ retain their existing GPLv3 notices and terms.
 https://github.com/ClassiCube/ClassiCube. Its `license.txt`, `credits.txt`, source
 headers and third-party licenses are retained. `patches/engine.patch` and `patches/audio.patch` explicitly
 record integration changes to Server, input, screens, font/skin paths, branding
-and the entrypoint; no upstream copyright header is removed. Builds apply those changes only to a staged copy.
+and the entrypoint; no upstream copyright header is removed. `tools/prepare_engine.py`
+also substitutes the separately credited native icons and fallback font in staging. Builds apply those changes only to a staged copy.
 
 ClassiCube's principal source license is BSD-3-Clause. Source redistribution
 must preserve its notices, conditions and disclaimer. Binary redistribution
@@ -60,7 +61,9 @@ document for upstream factual data sources. The client does not link server code
 
 ## Assets
 
-The asset collection uses Kenney Vleugels' verified CC0 Voxel Pack, Kenney Impact
+The asset collection uses Kenney Vleugels' verified CC0 Voxel Pack, AFCMS/TechDudie
+CC0 textures from mc-like-textures, a public-domain font8x8 fallback by Daniel
+Hepper/Marcel Sondaar/IBM, Kenney Impact
 Sounds, individually credited CC0 recordings from Minetest Game, and original
 geometric UI/model designs and pitched note tones dedicated under CC0.
 Minetest Game is mixed-license; only the files in `assets/audio-sources.json`
