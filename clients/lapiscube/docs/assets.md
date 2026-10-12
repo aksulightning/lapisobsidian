@@ -21,9 +21,8 @@ atlas; water/ice alpha is adjusted and Classic cloth colors are tinted.
 AFCMS `mc-like-textures` revision `45f167320f99632549be0672416b9caf52b83180`
 provides 12 additional atlas sprites: six sword materials, diamond, stick, TNT
 side/top/bottom, and the enchanting-table top. These 16-pixel images scale to
-32 pixels with nearest-neighbor sampling. Two AFCMS hotbar images replace the
-original UI placeholders. The diamond is by TechDudie; the other imported art
-is by AFCMS. `assets/texture-sources.json` records all 14 source hashes, authors,
+32 pixels with nearest-neighbor sampling. Two AFCMS hotbar images and four health/hunger icons provide the HUD. The diamond is by TechDudie; the other imported art
+is by AFCMS. `assets/texture-sources.json` records all 18 source hashes, authors,
 and runtime destinations. The retained CC0 license and contributor README live
 in `assets/licenses/AFCMS-*`. Unsupported book/emerald items are not imported.
 
@@ -31,6 +30,12 @@ The first 256 atlas cells preserve the Classic/CPE texture layout with independe
 substitutes. `assets/atlas.json` records locations. The rest hold Lapis images.
 
 `tools/build_assets.py` packs the textures and authors the crosshair geometry.
+`tools/pixel_assets.py` adds 24 distinct material/tool sprites and 22 block-face
+tiles (including six ores, log rings, planks, workbench, chest and furnace faces).
+These original 16×16 CC0 images use nearest-neighbor scaling; their generator
+hash and license are recorded in the manifest. Held non-block items use sprites;
+empty slots show the geometric player hand, with the engine swing animation.
+Health and food each show ten two-point icons with partial foreground clipping.
 `LapisMobs.c` authors ten geometric shapes: eight mob species, players, and a shared item/projectile shape. These
 original designs and the pitched note-block synthesis are CC0; generator/renderer
 code remains BSD-3-Clause. See `assets/licenses/LapisCube-Originals.txt`.

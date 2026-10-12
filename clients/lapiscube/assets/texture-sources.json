@@ -118,6 +118,34 @@
       "sha256": "52cacf20c37d577ba993c4572b610799fcbe40781ff20c12e654f35bbb9cfcda",
       "author": "AFCMS",
       "target": "gui"
+    },
+    {
+      "name": "health_empty",
+      "path": "default/hudbars_bgicon_health.png",
+      "sha256": "63177f7d525e1a3f13fd138bc5a02140c8c2c7072462d8893cc3145298a0d971",
+      "author": "AFCMS",
+      "target": "gui"
+    },
+    {
+      "name": "health_full",
+      "path": "default/hudbars_icon_health.png",
+      "sha256": "9ea6a75e62b4b0721588d23f5b4193a5dadac1a954d20a451f91b59152c25771",
+      "author": "AFCMS",
+      "target": "gui"
+    },
+    {
+      "name": "food_empty",
+      "path": "default/hbhunger_bgicon.png",
+      "sha256": "b63de2f57d16c815a991fe856f1b2846241182355b1cb0e2a291916d238c546d",
+      "author": "AFCMS",
+      "target": "gui"
+    },
+    {
+      "name": "food_full",
+      "path": "default/hbhunger_icon.png",
+      "sha256": "48b4a236c6d3a6d7b7a6bbb34d2b706e423f6f739b8cc897ddc1ad2654b4fcac",
+      "author": "AFCMS",
+      "target": "gui"
     }
   ]
 }

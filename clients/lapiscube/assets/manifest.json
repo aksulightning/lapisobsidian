@@ -9,9 +9,9 @@
       "author": "AFCMS",
       "license": "CC0-1.0",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "modifications": "AFCMS hotbar copied; selected-slot border resized 22 to 24 pixels using nearest-neighbor",
+      "modifications": "AFCMS hotbar, selected border, health and hunger icons packed with nearest-neighbor scaling",
       "destination_filename": "assets/gui.png",
-      "sha256": "a2e4491afa1f762d43b61f027f9aa9a896463cf88fdf336829eb82e0e9370a04",
+      "sha256": "bf60c909f5090f1905cf8d7dfc56f18662e5f7ace3d3b5f854b5c1a72fee3e51",
       "attribution": "AFCMS",
       "redistribution_notes": "CC0; attribution appreciated, not required",
       "license_file": "assets/licenses/AFCMS-CC0.txt",
@@ -28,6 +28,38 @@
           "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/default/mcl_inventory_hotbar_selected.png",
           "source_path": "default/mcl_inventory_hotbar_selected.png",
           "source_sha256": "52cacf20c37d577ba993c4572b610799fcbe40781ff20c12e654f35bbb9cfcda",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/default/hudbars_bgicon_health.png",
+          "source_path": "default/hudbars_bgicon_health.png",
+          "source_sha256": "63177f7d525e1a3f13fd138bc5a02140c8c2c7072462d8893cc3145298a0d971",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/default/hudbars_icon_health.png",
+          "source_path": "default/hudbars_icon_health.png",
+          "source_sha256": "9ea6a75e62b4b0721588d23f5b4193a5dadac1a954d20a451f91b59152c25771",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/default/hbhunger_bgicon.png",
+          "source_path": "default/hbhunger_bgicon.png",
+          "source_sha256": "b63de2f57d16c815a991fe856f1b2846241182355b1cb0e2a291916d238c546d",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/default/hbhunger_icon.png",
+          "source_path": "default/hbhunger_icon.png",
+          "source_sha256": "48b4a236c6d3a6d7b7a6bbb34d2b706e423f6f739b8cc897ddc1ad2654b4fcac",
           "author": "AFCMS",
           "license": "CC0-1.0",
           "license_file": "assets/licenses/AFCMS-CC0.txt"
@@ -39,9 +71,9 @@
       "author": "AFCMS",
       "license": "CC0-1.0",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "modifications": "AFCMS hotbar copied; selected-slot border resized 22 to 24 pixels using nearest-neighbor",
+      "modifications": "AFCMS hotbar, selected border, health and hunger icons packed with nearest-neighbor scaling",
       "destination_filename": "assets/gui_classic.png",
-      "sha256": "a2e4491afa1f762d43b61f027f9aa9a896463cf88fdf336829eb82e0e9370a04",
+      "sha256": "bf60c909f5090f1905cf8d7dfc56f18662e5f7ace3d3b5f854b5c1a72fee3e51",
       "attribution": "AFCMS",
       "redistribution_notes": "CC0; attribution appreciated, not required",
       "license_file": "assets/licenses/AFCMS-CC0.txt",
@@ -58,6 +90,38 @@
           "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/default/mcl_inventory_hotbar_selected.png",
           "source_path": "default/mcl_inventory_hotbar_selected.png",
           "source_sha256": "52cacf20c37d577ba993c4572b610799fcbe40781ff20c12e654f35bbb9cfcda",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/default/hudbars_bgicon_health.png",
+          "source_path": "default/hudbars_bgicon_health.png",
+          "source_sha256": "63177f7d525e1a3f13fd138bc5a02140c8c2c7072462d8893cc3145298a0d971",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/default/hudbars_icon_health.png",
+          "source_path": "default/hudbars_icon_health.png",
+          "source_sha256": "9ea6a75e62b4b0721588d23f5b4193a5dadac1a954d20a451f91b59152c25771",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/default/hbhunger_bgicon.png",
+          "source_path": "default/hbhunger_bgicon.png",
+          "source_sha256": "b63de2f57d16c815a991fe856f1b2846241182355b1cb0e2a291916d238c546d",
+          "author": "AFCMS",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/AFCMS/mc-like-textures/blob/45f167320f99632549be0672416b9caf52b83180/default/hbhunger_icon.png",
+          "source_path": "default/hbhunger_icon.png",
+          "source_sha256": "48b4a236c6d3a6d7b7a6bbb34d2b706e423f6f739b8cc897ddc1ad2654b4fcac",
           "author": "AFCMS",
           "license": "CC0-1.0",
           "license_file": "assets/licenses/AFCMS-CC0.txt"
@@ -88,13 +152,13 @@
     },
     {
       "source_url": "https://github.com/AFCMS/mc-like-textures/tree/45f167320f99632549be0672416b9caf52b83180",
-      "author": "Kenney Vleugels; AFCMS; TechDudie",
+      "author": "Kenney Vleugels; AFCMS; TechDudie; LapisCube contributors",
       "license": "CC0-1.0",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "modifications": "Kenney base plus nearest-neighbor AFCMS sprites; explicit item and block-face mappings; see atlas.json and texture-sources.json",
+      "modifications": "Kenney base plus AFCMS sprites and original CC0 pixel_assets.py geometry; explicit item and block-face mappings; see atlas.json and texture-sources.json",
       "destination_filename": "assets/terrain.png",
-      "sha256": "f9e95a8da2475f29bd5ef9ee6da7184bc1b0ebaebdd312df80ecf5e5a90f27b9",
-      "attribution": "Kenney Vleugels; AFCMS; TechDudie",
+      "sha256": "fc85ac1927cc7586d5da654a093888e29b1f03ac632de815751f3ba71ba53f71",
+      "attribution": "Kenney Vleugels; AFCMS; TechDudie; LapisCube contributors",
       "redistribution_notes": "CC0; attribution appreciated, not required",
       "license_file": "assets/licenses/AFCMS-CC0.txt",
       "sources": [
@@ -200,6 +264,14 @@
           "author": "AFCMS",
           "license": "CC0-1.0",
           "license_file": "assets/licenses/AFCMS-CC0.txt"
+        },
+        {
+          "source_url": "https://github.com/aksulightning/lapisobsidian",
+          "source_path": "tools/pixel_assets.py",
+          "source_sha256": "8ceee54b2151dd5ecc50c22174739a065e716514d4a9456f19fbfb5fd58af0e6",
+          "author": "LapisCube contributors",
+          "license": "CC0-1.0",
+          "license_file": "assets/licenses/LapisCube-Originals.txt"
         }
       ]
     },

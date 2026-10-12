@@ -40,6 +40,8 @@ void LapisBlocks_Init(void) {
         Block_ResetProps(b);text=String_FromReadonly(name);Block_SetName(b,&text);
         Block_SetSide((TextureLoc)f->side,b);
         Block_Tex(b,FACE_YMAX)=(TextureLoc)f->top;Block_Tex(b,FACE_YMIN)=(TextureLoc)f->bottom;
+        if(!strcmp(name,"furnace"))Block_Tex(b,FACE_ZMIN)=LAPIS_TILE_FURNACE_FRONT;
+        if(!strcmp(name,"chest"))Block_Tex(b,FACE_ZMIN)=LAPIS_TILE_CHEST_FRONT;
         Blocks.Draw[b]=DRAW_OPAQUE;Blocks.Collide[b]=COLLIDE_SOLID;Blocks.BlocksLight[b]=true;
         Blocks.StepSounds[b]=Blocks.DigSounds[b]=LapisAudio_Material(name);
         Blocks.SpeedMultiplier[b]=1;Box(b,0,0,0,1,1,1);
@@ -120,6 +122,18 @@ void LapisBlocks_Init(void) {
     states[5892]=states[5893]=Named("oak_pressure_plate");
     for(i=0;i<16;i++) { states[86+i]=Named("water");states[102+i]=Named("lava"); }
     for(i=0;i<9;i++) states[2402+i]=Named("torch");
+    /* Non-block stacks need held sprites too. Zero remains the empty hand;
+       these presentation-only definitions never enter the world state map. */
+    for(i=0;i<LAPIS_ITEM_FACT_COUNT;i++) {
+        const struct LapisItemFact* item=&Lapis_ItemFacts[i];
+        if(item->id<=0 || item->id>=1416 || items[item->id] || item->icon<0)continue;
+        b=(BlockID)nextBlock++;
+        Block_ResetProps(b);text=String_FromReadonly(item->name);Block_SetName(b,&text);
+        Block_SetSide((TextureLoc)item->icon,b);
+        Blocks.Draw[b]=DRAW_SPRITE;Blocks.Collide[b]=COLLIDE_NONE;Blocks.BlocksLight[b]=false;
+        Blocks.CanPlace[b]=Blocks.CanDelete[b]=false;
+        Box(b,0,0,0,1,1,1);Define(b);items[item->id]=b;
+    }
 }
 BlockID LapisBlocks_State(int state) { return state>=0 && state<65536?states[state]:256; }
 BlockID LapisBlocks_Item(int item) { return item>=0 && item<1416?items[item]:0; }

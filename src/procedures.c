@@ -235,7 +235,7 @@ void disconnectClient (int *client_fd, int cause) {
   setClientState(*client_fd, STATE_NONE);
   handlePlayerDisconnect(*client_fd);
   int transport_owned = 0;
-  #if defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1
+  #if (defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1) || defined(LAPIS_SINGLEPLAYER)
   transport_owned = webclient_disconnect(*client_fd);
   #endif
   #ifdef _WIN32
