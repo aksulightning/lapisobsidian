@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import package
 import argparse
+import package_singleplayer
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -19,7 +20,7 @@ def main():
         raise SystemExit('Run make web first')
     if (engine/'LapisCube.wasm').read_bytes()[:4] != b'\0asm':
         raise SystemExit('Missing compiled WebAssembly module')
-    output = ROOT/'build'/('singleplayer' if singleplayer else 'webclient')
+    output = ROOT/'build'/('singleplayer-resources' if singleplayer else 'webclient')
     shutil.rmtree(output, ignore_errors=True)
     shutil.copytree(ROOT/'web', output, ignore=shutil.ignore_patterns('build.mk'))
     shutil.copy2(ROOT/'assets/web-icon.svg',output/'icon.svg')
@@ -66,8 +67,13 @@ def main():
     shutil.copy2(compiler_license,licenses/'Emscripten.txt')
     (output/'toolchain.json').write_text(json.dumps({'emcc':subprocess.check_output(['emcc','--version'],text=True).splitlines()[0]},indent=2)+'\n')
     package.release_manifest(output,'web-singleplayer' if singleplayer else 'web')
-    archive=shutil.make_archive(str(ROOT/'build'/('LapisCube-singleplayer' if singleplayer else 'LapisCube-web')),'zip',root_dir=output.parent,base_dir=output.name)
-    print(archive)
+    if singleplayer:
+        destination=ROOT/'build/singleplayer'
+        shutil.rmtree(destination,ignore_errors=True)
+        package_singleplayer.bundle(output,destination)
+        (ROOT/'build/LapisCube-singleplayer.zip').unlink(missing_ok=True)
+    else:
+        print(shutil.make_archive(str(ROOT/'build/LapisCube-web'),'zip',root_dir=output.parent,base_dir=output.name))
 
 
 if __name__=='__main__': main()

@@ -12,9 +12,10 @@ are original LapisCube work under the accompanying BSD-3-Clause `LICENSE`.
 Protocol identifiers and wire behavior were studied from the Lapis testing
 source; the client does not link or copy Lapis server implementation code.
 The standalone singleplayer package additionally includes the existing GPL-3.0
-Lapis Obsidian server as a separate `LapisServer.wasm` worker module; it is not
-linked into the BSD client. That package includes `LICENSE-server.txt` and
-`SOURCE-server.txt` with the corresponding revision and build command. The
+Lapis Obsidian server as a separate `LapisServer.wasm` worker module embedded
+alongside the BSD client in one HTML file. Its offline credits panel includes
+`LICENSE-server.txt` and `SOURCE-server.txt` with the corresponding revision and
+build command, also available in the embedded notices download. The
 multiplayer client does not bundle this server module.
 `tests/survival_fixture.c` includes
 the root server headers solely to write its pinned saved-game structures. That

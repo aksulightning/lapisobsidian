@@ -3,7 +3,7 @@
 window.LapisSingleplayer={
   worker:null, stream:null, release:null,
   async start(){
-    if(!navigator.locks)throw Error('Singleplayer saves require a browser with Web Locks (HTTPS or localhost).');
+    if(!navigator.locks)throw Error('Singleplayer saves require Web Locks. Open this file in a current desktop browser, or serve it over HTTPS or localhost.');
     await new Promise((resolve,reject)=>{
       navigator.locks.request('lapiscube-singleplayer-world',{ifAvailable:true},lock=>{
         if(!lock){reject(Error('This world is already open in another tab. Close it before playing here.'));return;}
@@ -11,7 +11,8 @@ window.LapisSingleplayer={
       }).catch(reject);
     });
     return new Promise((resolve,reject)=>{
-      this.worker=new Worker('server-worker.js');
+      try{this.worker=window.LapisEmbedded?LapisEmbedded.worker():new Worker('server-worker.js');}
+      catch(error){this.release();reject(error);return;}
       let booted=false;
       const timeout=setTimeout(()=>fail('The local server did not start. Reload to retry.'),90000);
       const fail=message=>{

@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Real standalone WASM acceptance. The only host is a static HTTP server."""
+"""Run the real single HTML file offline, both via HTTP and file://."""
+import argparse
 import functools
 import http.server
 import json
 import os
 import pathlib
 import struct
+import shutil
+import tempfile
 import threading
 from playwright.sync_api import sync_playwright
 from web_browser import Wire
@@ -14,12 +17,17 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 EVIDENCE=ROOT/'build/singleplayer-evidence'
 
 
-def main():
-    EVIDENCE.mkdir(exist_ok=True)
+def main(mode):
+    evidence=EVIDENCE/mode
+    evidence.mkdir(parents=True,exist_ok=True)
+    # There must be no adjacent JS, WASM, texture, sound or license dependencies.
+    isolated=tempfile.TemporaryDirectory(prefix='single-html-',dir=ROOT/'build')
+    document=pathlib.Path(isolated.name)/'LapisCube-singleplayer.html'
+    shutil.copy2(ROOT/'build/singleplayer'/document.name,document)
     host=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(
-        http.server.SimpleHTTPRequestHandler,directory=str(ROOT/'build/singleplayer')))
+        http.server.SimpleHTTPRequestHandler,directory=isolated.name))
     threading.Thread(target=host.serve_forever,daemon=True).start()
-    url=f'http://127.0.0.1:{host.server_port}/'
+    url=document.as_uri() if mode=='file' else f'http://127.0.0.1:{host.server_port}/{document.name}'
     logs=[];errors=[];sockets=[];requests=[]
     try:
         with sync_playwright() as p:
@@ -27,6 +35,7 @@ def main():
             if os.environ.get('LAPIS_BROWSER_EXECUTABLE'):launch['executable_path']=os.environ['LAPIS_BROWSER_EXECUTABLE']
             browser=p.chromium.launch(**launch)
             context=browser.new_context(viewport={'width':1024,'height':640})
+            if mode=='file':context.set_offline(True)
             page=context.new_page()
             page.on('dialog',lambda dialog:dialog.dismiss())
             page.on('console',lambda e:logs.append(e.text))
@@ -53,10 +62,24 @@ def main():
                 for chunk in page.evaluate('sent'):result.feed(bytes(chunk))
                 return result
             try:
-                page.goto(url);join()
+                page.goto(url)
+                context.set_offline(True)
+                page.click('#show-credits')
+                assert page.locator('#embedded-credits').is_visible()
+                assert 'GNU GENERAL PUBLIC LICENSE' in page.locator('#embedded-credits').text_content()
+                with page.expect_download() as download:
+                    page.click('#download-notices')
+                assert download.value.suggested_filename=='LapisCube-notices.zip'
+                assert download.value.failure() is None
+                page.click('#close-credits')
+                join()
                 assert page.workers, 'Embedded server must run in a worker'
+                assert page.workers[0].url.startswith('blob:'),page.workers[0].url
                 assert any('world rendered and player loaded' in s for s in logs)
-                page.screenshot(path=str(EVIDENCE/'empty-hand-and-hud.png'))
+                # Decode a material sound through the compiled engine interop.
+                page.evaluate("_interop_AudioDownload('dig_stone1')")
+                page.wait_for_function("window.AUDIO && AUDIO.buffers.dig_stone1 && AUDIO.buffers.dig_stone1.length > 0")
+                page.screenshot(path=str(evidence/'empty-hand-and-hud.png'))
                 # Presentation fixtures pass through the real client decoder.
                 # They never mutate the worker's authoritative inventory/health.
                 def inject(payload):
@@ -65,15 +88,15 @@ def main():
                 inject(b'\x61'+struct.pack('!fBf',11.0,7,0.0))
                 inject(bytes([0x14,0,0,0,36,1,0x81,0x07,0,0])) # diamond pickaxe (897)
                 page.wait_for_timeout(300)
-                page.screenshot(path=str(EVIDENCE/'held-tool-and-partial-vitals.png'))
+                page.screenshot(path=str(evidence/'held-tool-and-partial-vitals.png'))
                 inject(bytes([0x14,0,0,0,36,0]))
                 inject(b'\x61'+struct.pack('!fBf',20.0,20,0.0))
                 page.wait_for_timeout(300)
-                page.screenshot(path=str(EVIDENCE/'returned-empty-hand.png'))
+                page.screenshot(path=str(evidence/'returned-empty-hand.png'))
                 # Empty selection uses the hand, and inventory opens with no server.
                 page.keyboard.press('2');page.keyboard.press('b')
                 page.wait_for_function('(Module._LapisWeb_State() & 2) !== 0')
-                page.screenshot(path=str(EVIDENCE/'inventory.png'))
+                page.screenshot(path=str(evidence/'inventory.png'))
                 page.keyboard.press('b')
                 page.wait_for_function('(Module._LapisWeb_State() & 2) === 0')
                 initial=wire().positions()[-1]
@@ -82,7 +105,11 @@ def main():
                 moved=wire().positions()[-1]
                 assert abs(initial[0]-moved[0])+abs(initial[2]-moved[2])>.1,(initial,moved)
                 assert wire().count(0x34)>0,'Selection must reach the embedded server'
-                second=context.new_page();second.goto(url);second.click('#play')
+                second=context.new_page()
+                if mode=='http':context.set_offline(False)
+                second.goto(url)
+                context.set_offline(True)
+                second.click('#play')
                 second.wait_for_function("document.getElementById('logmsg').textContent.includes('already open')")
                 assert not second.workers,'Second tab must not start a competing server'
                 second.close()
@@ -92,7 +119,10 @@ def main():
                 saved=page.workers[0].evaluate("Array.from(FS.readFile('/save/world.bin'))")
                 metadata=page.workers[0].evaluate("Array.from(FS.readFile('/save/world.meta'))")
                 assert len(saved)>100000,'World and player data must be persisted'
+                # Only the top-level HTML is reloaded; gameplay stays offline.
+                if mode=='http':context.set_offline(False)
                 with page.expect_navigation():page.click('#quit-world')
+                context.set_offline(True)
                 join()
                 resumed=wire().positions()[-1]
                 assert abs(resumed[0]-moved[0])+abs(resumed[2]-moved[2])<1,(moved,resumed)
@@ -101,23 +131,30 @@ def main():
                 # Position round-trips above; world length and seed remain stable.
                 assert len(restored)==len(saved)
                 assert page.workers[0].evaluate("Array.from(FS.readFile('/save/world.meta'))")==metadata
-                page.screenshot(path=str(EVIDENCE/'resumed-world.png'))
+                page.screenshot(path=str(evidence/'resumed-world.png'))
                 page.set_viewport_size({'width':390,'height':320})
                 page.wait_for_timeout(300)
-                page.screenshot(path=str(EVIDENCE/'compact-hud.png'))
+                page.screenshot(path=str(evidence/'compact-hud.png'))
                 assert not sockets,sockets
                 assert not errors,errors
-                assert all(r.startswith(url) for r in requests),requests
-                (EVIDENCE/'results.json').write_text(json.dumps(dict(
+                assert all(r==url or r.startswith(('blob:','data:')) for r in requests),requests
+                (evidence/'results.json').write_text(json.dumps(dict(
+                    single_file=True,offline=True,mode=mode,embedded_sound=True,embedded_notices=True,
                     loaded=True,movement=True,save_reload=True,second_tab_locked=True,
                     websockets=sockets,errors=errors,saved_bytes=len(saved)),indent=2)+'\n')
             finally:
-                (EVIDENCE/'browser.log').write_text('\n'.join(logs+errors)+'\n')
-                try:page.screenshot(path=str(EVIDENCE/'last.png'),timeout=5000)
+                (evidence/'browser.log').write_text('\n'.join(logs+errors)+'\n')
+                (evidence/'requests.json').write_text(json.dumps(requests,indent=2)+'\n')
+                try:page.screenshot(path=str(evidence/'last.png'),timeout=5000)
                 finally:browser.close()
     finally:
         host.shutdown();host.server_close()
-    print('Standalone: real worker/world, input, IndexedDB reload, tab lock and zero WebSockets passed')
+        isolated.cleanup()
+    print(f'Single HTML ({mode}): offline worker/world, sound, notices, input, IndexedDB reload, tab lock and zero WebSockets passed')
 
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--mode',choices=('http','file','both'),default='both')
+    mode=parser.parse_args().mode
+    for choice in ('http','file') if mode=='both' else (mode,):main(choice)
