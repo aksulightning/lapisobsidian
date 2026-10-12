@@ -5,6 +5,7 @@ import http.server
 import json
 import os
 import pathlib
+import struct
 import threading
 from playwright.sync_api import sync_playwright
 from web_browser import Wire
@@ -27,6 +28,7 @@ def main():
             browser=p.chromium.launch(**launch)
             context=browser.new_context(viewport={'width':1024,'height':640})
             page=context.new_page()
+            page.on('dialog',lambda dialog:dialog.dismiss())
             page.on('console',lambda e:logs.append(e.text))
             page.on('pageerror',lambda e:errors.append(str(e)))
             page.on('websocket',lambda s:sockets.append(s.url))
@@ -55,6 +57,19 @@ def main():
                 assert page.workers, 'Embedded server must run in a worker'
                 assert any('world rendered and player loaded' in s for s in logs)
                 page.screenshot(path=str(EVIDENCE/'empty-hand-and-hud.png'))
+                # Presentation fixtures pass through the real client decoder.
+                # They never mutate the worker's authoritative inventory/health.
+                def inject(payload):
+                    assert len(payload)<128
+                    page.evaluate('(data)=>LapisSingleplayer.stream.onmessage({data:new Uint8Array(data).buffer})',list(bytes([len(payload)])+payload))
+                inject(b'\x61'+struct.pack('!fBf',11.0,7,0.0))
+                inject(bytes([0x14,0,0,0,36,1,0x81,0x07,0,0])) # diamond pickaxe (897)
+                page.wait_for_timeout(300)
+                page.screenshot(path=str(EVIDENCE/'held-tool-and-partial-vitals.png'))
+                inject(bytes([0x14,0,0,0,36,0]))
+                inject(b'\x61'+struct.pack('!fBf',20.0,20,0.0))
+                page.wait_for_timeout(300)
+                page.screenshot(path=str(EVIDENCE/'returned-empty-hand.png'))
                 # Empty selection uses the hand, and inventory opens with no server.
                 page.keyboard.press('2');page.keyboard.press('b')
                 page.wait_for_function('(Module._LapisWeb_State() & 2) !== 0')
@@ -97,9 +112,9 @@ def main():
                     loaded=True,movement=True,save_reload=True,second_tab_locked=True,
                     websockets=sockets,errors=errors,saved_bytes=len(saved)),indent=2)+'\n')
             finally:
-                page.screenshot(path=str(EVIDENCE/'last.png'))
                 (EVIDENCE/'browser.log').write_text('\n'.join(logs+errors)+'\n')
-                browser.close()
+                try:page.screenshot(path=str(EVIDENCE/'last.png'),timeout=5000)
+                finally:browser.close()
     finally:
         host.shutdown();host.server_close()
     print('Standalone: real worker/world, input, IndexedDB reload, tab lock and zero WebSockets passed')

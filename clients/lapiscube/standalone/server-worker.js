@@ -15,10 +15,11 @@ var Module={
   }],
   onRuntimeInitialized:()=>{loaded=true;},
   saveWorld(ok,quit){
+    if(!ok){postMessage({type:'error',message:'Server could not save the world. Last completed save retained.'});return;}
     Module.saving=true;
     FS.syncfs(false,error=>{
       Module.saving=false;
-      postMessage(error || !ok ? {type:'error',message:'World save failed. Keep this tab open and retry.'} : {type:'saved',quit});
+      postMessage(error ? {type:'error',message:'World save failed. Keep this tab open and retry.'} : {type:'saved',quit});
     });
   },
   onExit:status=>{exited=true;exitOK=status===0;Module.saveWorld(exitOK,true);}
