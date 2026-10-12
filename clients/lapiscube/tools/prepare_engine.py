@@ -85,10 +85,16 @@ def main():
         if mode == 'singleplayer':
             interop = DEST/'src/webclient/interop_web.js'
             data = interop.read_bytes()
-            old = b"new WebSocket(url, Module['lapisSocketURL'] ? 'LapisCube' : 'ClassiCube')"
-            if data.count(old) != 1:
-                raise ValueError('Pinned socket interop changed')
-            interop.write_bytes(data.replace(old, b"Module['lapisSocketFactory']()"))
+            replacements = {
+                b"new WebSocket(url, Module['lapisSocketURL'] ? 'LapisCube' : 'ClassiCube')": b"Module['lapisSocketFactory']()",
+                b"var url  = 'default.zip';": b"var url  = Module['lapisAssetURL']('default.zip');",
+                b"xhr.open('GET', 'sounds/' + name + '.wav', true);": b"xhr.open('GET', Module['lapisAssetURL']('sounds/' + name + '.wav'), true);",
+            }
+            for old,new in replacements.items():
+                if data.count(old) != 1:
+                    raise ValueError('Pinned singleplayer interop changed: '+repr(old))
+                data=data.replace(old,new)
+            interop.write_bytes(data)
     subprocess.run(['python3', str(ROOT/'tools/package.py'), '--stage-only'], check=True)
     stamp.write_text(build_key)
 

@@ -172,7 +172,9 @@ identities, not authentication. See the matrix for exact coverage.
 
 For a standalone, singleplayer-only browser package with the C server embedded
 in a worker and local world saves, run `make singleplayer`. It has its own
-`lapiscube-singleplayer.yml` workflow and `LapisCube-singleplayer.zip` artifact.
+`lapiscube-singleplayer.yml` workflow. Its artifact contains one
+`LapisCube-singleplayer.html` file, including all code, textures, sounds and
+license notices; it can run offline without companion files.
 See the [singleplayer guide](docs/singleplayer.md).
 
 Build the C client for desktop browsers and landscape fullscreen touch play with
