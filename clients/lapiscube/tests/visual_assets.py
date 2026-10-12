@@ -17,6 +17,20 @@ spec.loader.exec_module(prepare)
 
 
 class VisualAssets(unittest.TestCase):
+    def test_held_items_fit_staged_block_table(self):
+        original=(ROOT/'engine/src/BlockID.h').read_bytes()
+        facts=(ROOT/'src/LapisFacts.h').read_text()
+        blocks={int(i) for i in re.findall(r'\{\d+, (\d+), \d+, \d+, \d+, "',facts)}
+        items={int(i) for i in re.findall(r'\{(\d+), \d+, "',facts)}
+        with tempfile.TemporaryDirectory() as tmp:
+            destination=pathlib.Path(tmp);(destination/'src').mkdir()
+            (destination/'src/BlockID.h').write_bytes(original)
+            prepare.stage_block_capacity(destination)
+            limit=int(re.search(rb'BLOCK_MAX_DEFINED = (0x[0-9A-F]+)',(destination/'src/BlockID.h').read_bytes())[1],16)+1
+            self.assertLessEqual(745+len(items-blocks),limit)
+            self.assertEqual(limit,1024)
+        self.assertEqual((ROOT/'engine/src/BlockID.h').read_bytes(),original)
+
     def test_runtime_mappings_and_provenance(self):
         plan = json.loads((ROOT/'assets/texture-sources.json').read_text())
         atlas = json.loads((ROOT/'assets/atlas.json').read_text())

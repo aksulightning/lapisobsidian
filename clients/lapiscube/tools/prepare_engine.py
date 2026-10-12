@@ -14,6 +14,17 @@ DEST = ROOT / 'build' / 'engine'
 PIN = 'd41c3f7eef2038f59702b58bdb373483fb0d28f9'
 
 
+def stage_block_capacity(destination):
+    # 745 world definitions plus 87 held item sprites exceed the upstream
+    # 768-entry table. Keep Classic/CPE cells intact and allocate 1024 entries.
+    path = destination/'src/BlockID.h'
+    data = path.read_bytes()
+    old = b'BLOCK_MAX_DEFINED = 0x2FF'
+    if data.count(old) != 1:
+        raise ValueError('Pinned block table layout changed')
+    path.write_bytes(data.replace(old, b'BLOCK_MAX_DEFINED = 0x3FF'))
+
+
 def stage_native_assets(destination):
     # Replace the upstream artwork only in the staged engine, never the submodule.
     manifest = json.loads((ROOT/'assets/manifest.json').read_text())
@@ -66,6 +77,7 @@ def main():
     subprocess.run(['patch', '-p1', '--binary', '--forward', '-i', str(ROOT/'patches/audio.patch')],
                    cwd=DEST, check=True)
     stage_native_assets(DEST)
+    stage_block_capacity(DEST)
     subprocess.run(['python3', str(ROOT/'tools/embed_audio.py'), str(DEST/'src')], check=True)
     if mode in ('web', 'singleplayer'):
         subprocess.run(['patch', '-p1', '--binary', '--forward', '-i', str(ROOT/'patches/web.patch')],

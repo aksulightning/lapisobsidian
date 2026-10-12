@@ -4,10 +4,17 @@
 #include "Block.h"
 #include "Audio.h"
 #include "String_.h"
+#include "Logger.h"
 #include <string.h>
 
 static BlockID states[65536], items[1416];
 static int nextBlock;
+/* Staging reserves room for world variants and held sprites. */
+typedef char LapisBlockCapacityCheck[BLOCK_COUNT>=1024?1:-1];
+static BlockID Allocate(void) {
+    if(nextBlock>=BLOCK_COUNT)Logger_DoAbort(0,"LapisCube block definition capacity exceeded",NULL);
+    return (BlockID)nextBlock++;
+}
 static BlockID Named(const char* name) {
     int i;
     for (i = 0; i < 256; i++) if (!strcmp(Lapis_BlockFacts[i].name,name)) return (BlockID)(256+i);
@@ -18,7 +25,7 @@ static void Box(BlockID b, float x0,float y0,float z0,float x1,float y1,float z1
 }
 static void Define(BlockID b) { Block_DefineCustom(b, false); }
 static BlockID Clone(BlockID source) {
-    BlockID b = (BlockID)nextBlock++; int f;
+    BlockID b = Allocate(); int f;
     cc_string name = Block_UNSAFE_GetName(source);
     Block_ResetProps(b); Block_SetName(b,&name);
     for (f=0; f<FACE_COUNT; f++) Block_Tex(b,f)=Block_Tex(source,f);
@@ -127,7 +134,7 @@ void LapisBlocks_Init(void) {
     for(i=0;i<LAPIS_ITEM_FACT_COUNT;i++) {
         const struct LapisItemFact* item=&Lapis_ItemFacts[i];
         if(item->id<=0 || item->id>=1416 || items[item->id] || item->icon<0)continue;
-        b=(BlockID)nextBlock++;
+        b=Allocate();
         Block_ResetProps(b);text=String_FromReadonly(item->name);Block_SetName(b,&text);
         Block_SetSide((TextureLoc)item->icon,b);
         Blocks.Draw[b]=DRAW_SPRITE;Blocks.Collide[b]=COLLIDE_NONE;Blocks.BlocksLight[b]=false;
