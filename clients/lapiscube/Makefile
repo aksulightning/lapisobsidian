@@ -1,5 +1,6 @@
 CC ?= cc
 PYTHON ?= python3
+NODE ?= $(if $(EMSDK_NODE),$(EMSDK_NODE),node)
 ENGINE_JOBS ?= 2
 ENGINE := engine
 CPPFLAGS += -Isrc -I$(ENGINE)/src
@@ -29,8 +30,8 @@ test: build/protocol-test build/gameplay-test build/audio-test
 	$(PYTHON) tests/package.py
 	$(PYTHON) tests/audio_assets.py
 	$(PYTHON) tests/visual_assets.py
-	node tests/audio_web.js
-	node tests/singleplayer_transport.js
+	$(NODE) tests/audio_web.js
+	$(NODE) tests/singleplayer_transport.js
 sanitize: build/md5.o build/dec32le.o build/enc32le.o | build
 	$(CC) $(CPPFLAGS) $(SANITIZER_FLAGS) -O1 -g $(WARN) -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie tests/protocol.c $(CORE) $(IDENTITY) -o build/protocol-sanitize
 	./build/protocol-sanitize
