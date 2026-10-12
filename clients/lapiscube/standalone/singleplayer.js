@@ -38,7 +38,7 @@ window.LapisSingleplayer={
   socket(){
     if(this.stream || !this.worker)throw Error('Singleplayer allows one local client.');
     const worker=this.worker;
-    this.stream={readyState:0,bufferedAmount:0,binaryType:'arraybuffer',
+    this.stream={CONNECTING:0,OPEN:1,CLOSING:2,CLOSED:3,readyState:0,bufferedAmount:0,binaryType:'arraybuffer',
       send(data){
         if(this.readyState!==1)throw Error('Local connection closed.');
         const copy=new Uint8Array(data).slice();this.bufferedAmount+=copy.length;
