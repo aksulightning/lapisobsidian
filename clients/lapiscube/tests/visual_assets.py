@@ -41,7 +41,7 @@ class VisualAssets(unittest.TestCase):
         self.assertEqual(blocks['enchanting_table'][1], atlas['afcms_tiles']['ITEMS/mcl_enchanting_table_top.png'])
         # Compatibility cells must remain available to the upstream renderer.
         self.assertEqual([atlas['classic_slots'][str(i)] for i in (8,9,10)], ['tnt_side','tnt_top','tnt_bottom'])
-        slots = list(atlas['tiles'].values()) + list(atlas['afcms_tiles'].values())
+        slots = list(atlas['tiles'].values()) + list(atlas['afcms_tiles'].values()) + list(atlas['original_tiles'].values())
         self.assertEqual(len(slots), len(set(slots)))
         self.assertTrue(all(256 <= s < 512 for s in slots))
         for name,entry in entries.items():
@@ -50,6 +50,19 @@ class VisualAssets(unittest.TestCase):
             self.assertIn(entry['license'], ('CC0-1.0', 'LicenseRef-Public-Domain'))
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(), entry['sha256'])
         self.assertEqual(struct.unpack('>II', (ROOT/'assets/terrain.png').read_bytes()[16:24]), (512,1024))
+        tools = [material+'_'+tool for material in ('wooden','stone','iron','golden','diamond','netherite')
+                 for tool in ('pickaxe','axe','shovel','hoe')]
+        self.assertEqual(len({items[t] for t in tools}),24)
+        for tool in tools:
+            self.assertEqual(items[tool],atlas['original_tiles'][tool])
+        for block in ('coal_ore','iron_ore','gold_ore','diamond_ore','redstone_ore','lapis_ore','obsidian','bookshelf'):
+            self.assertEqual(blocks[block][0],atlas['original_tiles'][block])
+        self.assertEqual(blocks['crafting_table'][1],atlas['original_tiles']['crafting_top'])
+        self.assertEqual(blocks['oak_log'][1],atlas['original_tiles']['log_top'])
+        self.assertTrue({'health_full','health_empty','food_full','food_empty'} <= {a['name'] for a in plan['textures']})
+        evidence=next(s for s in entries['assets/terrain.png']['sources'] if s.get('source_path')=='tools/pixel_assets.py')
+        self.assertEqual(evidence['source_sha256'],hashlib.sha256((ROOT/'tools/pixel_assets.py').read_bytes()).hexdigest())
+        self.assertTrue((ROOT/evidence['license_file']).is_file())
 
     def test_embedded_art_is_replaced_in_staging(self):
         original = (ROOT/'engine/src/SystemFonts.c').read_bytes()

@@ -43,7 +43,7 @@ def stage_native_assets(destination):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', choices=['native', 'terminal', 'windows', 'web'], default='native')
+    parser.add_argument('--mode', choices=['native', 'terminal', 'windows', 'web', 'singleplayer'], default='native')
     mode = parser.parse_args().mode
     head = subprocess.check_output(['git', '-C', str(UPSTREAM), 'rev-parse', 'HEAD'], text=True).strip()
     if head != PIN:
@@ -67,9 +67,16 @@ def main():
                    cwd=DEST, check=True)
     stage_native_assets(DEST)
     subprocess.run(['python3', str(ROOT/'tools/embed_audio.py'), str(DEST/'src')], check=True)
-    if mode == 'web':
+    if mode in ('web', 'singleplayer'):
         subprocess.run(['patch', '-p1', '--binary', '--forward', '-i', str(ROOT/'patches/web.patch')],
                        cwd=DEST, check=True)
+        if mode == 'singleplayer':
+            interop = DEST/'src/webclient/interop_web.js'
+            data = interop.read_bytes()
+            old = b"new WebSocket(url, Module['lapisSocketURL'] ? 'LapisCube' : 'ClassiCube')"
+            if data.count(old) != 1:
+                raise ValueError('Pinned socket interop changed')
+            interop.write_bytes(data.replace(old, b"Module['lapisSocketFactory']()"))
     subprocess.run(['python3', str(ROOT/'tools/package.py'), '--stage-only'], check=True)
     stamp.write_text(build_key)
 

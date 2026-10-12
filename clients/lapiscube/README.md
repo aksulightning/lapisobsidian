@@ -170,6 +170,11 @@ identities, not authentication. See the matrix for exact coverage.
 
 ## WebAssembly browser client
 
+For a standalone, singleplayer-only browser package with the C server embedded
+in a worker and local world saves, run `make singleplayer`. It has its own
+`lapiscube-singleplayer.yml` workflow and `LapisCube-singleplayer.zip` artifact.
+See the [singleplayer guide](docs/singleplayer.md).
+
 Build the C client for desktop browsers and landscape fullscreen touch play with
 `make web` (Emscripten 4.0.23). From the repository root,
 `LAPIS_ENABLE_WEBCLIENT=1 ./build.sh` builds the browser package and optional HTTP /

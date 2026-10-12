@@ -1,0 +1,42 @@
+name: LapisCube standalone singleplayer
+on:
+  push:
+    branches: [testing-cube]
+    paths: ['clients/lapiscube/**', 'src/**', 'include/**', '.github/workflows/lapiscube-singleplayer.yml']
+  pull_request:
+    paths: ['clients/lapiscube/**', 'src/**', 'include/**', '.github/workflows/lapiscube-singleplayer.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  singleplayer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Install pinned compiler and browser
+        run: |
+          git clone --depth 1 --branch 4.0.23 https://github.com/emscripten-core/emsdk.git clients/lapiscube/build/emsdk
+          clients/lapiscube/build/emsdk/emsdk install 4.0.23
+          clients/lapiscube/build/emsdk/emsdk activate 4.0.23
+          python3 -m pip install playwright==1.51.0
+          python3 -m playwright install --with-deps chromium
+      - name: Build standalone client and embedded server
+        run: |
+          source clients/lapiscube/build/emsdk/emsdk_env.sh
+          make -C clients/lapiscube test singleplayer
+      - name: Static-only browser acceptance and persistence
+        run: python3 clients/lapiscube/tests/singleplayer_browser.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: LapisCube-singleplayer
+          path: clients/lapiscube/build/LapisCube-singleplayer.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: LapisCube-singleplayer-evidence
+          path: clients/lapiscube/build/singleplayer-evidence

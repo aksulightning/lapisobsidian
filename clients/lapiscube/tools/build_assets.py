@@ -11,6 +11,7 @@ import zipfile
 import argparse
 import subprocess
 from PIL import Image, ImageDraw
+from pixel_assets import textures as pixel_textures
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SERVER = ROOT.parents[1]
@@ -96,6 +97,16 @@ def main():
             item[asset['item']] = slot
         if 'tile' in asset:
             tile[asset['tile']] = slot
+    original = {}
+    for name, im in pixel_textures().items():
+        slot = 256 + len(paths) + len(imported) + len(original)
+        if slot >= 512:
+            raise ValueError('Terrain atlas capacity exceeded')
+        original[name] = slot
+        tile[name] = slot
+        if name.endswith(('_pickaxe', '_axe', '_shovel', '_hoe')):
+            item[name] = slot
+        atlas.paste(im.resize((32, 32), Image.Resampling.NEAREST), (slot % 16 * 32, slot // 16 * 32))
     # Classic TNT cells also get the three distinct faces.
     for slot, name in ((8, 'tnt_side'), (9, 'tnt_top'), (10, 'tnt_bottom')):
         atlas.paste(supplements[name].resize((32, 32), Image.Resampling.NEAREST),
@@ -103,13 +114,15 @@ def main():
         classic[slot] = name
     atlas.save(dest / 'terrain.png')
     (dest / 'atlas.json').write_text(json.dumps({'tile_size':32, 'columns':16, 'classic_slots':classic,
-        'tiles':dict(zip(paths,range(256,256+len(paths)))), 'afcms_tiles': imported}, indent=2)+'\n')
+        'tiles':dict(zip(paths,range(256,256+len(paths)))), 'afcms_tiles': imported, 'original_tiles': original}, indent=2)+'\n')
     # Exact simple geometry, authored in code; deliberately independent UI.
     gui = Image.new('RGBA', (256,256)); d = ImageDraw.Draw(gui)
     d.rectangle((0,0,181,21), fill='#182738', outline='#617d8c', width=1)
     d.rectangle((0,22,23,45), outline='#f5d281', width=2)
     gui.paste(supplements['hotbar'], (0, 0))
     gui.paste(supplements['hotbar_selected'].resize((24, 24), Image.Resampling.NEAREST), (0, 22))
+    for i, name in enumerate(('health_empty', 'health_full', 'food_empty', 'food_full')):
+        gui.paste(supplements[name].resize((16, 16), Image.Resampling.NEAREST), (i*16, 48))
     gui.save(dest/'gui.png'); gui.save(dest/'gui_classic.png')
     icons = Image.new('RGBA',(256,256)); d=ImageDraw.Draw(icons)
     d.line((7,3,7,11),fill='white'); d.line((3,7,11,7),fill='white')
@@ -122,6 +135,7 @@ def main():
     states = [int(x) for x in re.search(r'block_palette\[\] = \{([^}]+)', (SERVER/'src/registries.c').read_text())[1].split(',')]
     names = {int(v):k for k,v in re.findall(r'#define B_(\w+) (\d+)',(SERVER/'include/registries.h').read_text())}
     def texture(name):
+        if name in original:return name
         exact = {'tnt':'tnt_side','grass_block':'dirt_grass','snowy_grass_block':'dirt_snow','dirt':'dirt','coarse_dirt':'gravel_dirt',
                  'bedrock':'greystone','cobblestone':'rock','mossy_cobblestone':'rock_moss','oak_planks':'wood',
                  'oak_log':'trunk_side','oak_leaves':'leaves_transparent','glass':'glass','furnace':'oven',
@@ -148,16 +162,22 @@ def main():
         if name=='cactus':top='cactus_top';bottom='cactus_inside'
         if name=='tnt':top='tnt_top';bottom='tnt_bottom'
         if name=='enchanting_table':top='enchanting_table_top'
+        if name=='oak_log':top=bottom='log_top'
+        if name=='crafting_table':tex='crafting_side';top='crafting_top';bottom='oak_planks'
+        if name=='furnace':tex=top=bottom='furnace_side'
+        if name=='chest':tex=top=bottom='chest_side'
         h.append(f'    {{{state}, {facts["items"].get(name,0)}, {tile[tex]}, {tile[top]}, {tile[bottom]}, "{name}"}},')
     h += ['};','struct LapisItemFact { int id, icon; const char* name; };','static const struct LapisItemFact Lapis_ItemFacts[] = {']
     for name,id in facts['items'].items():
         icon=item.get(name,-1)
+        if name in original and icon<0:icon=original[name]
         for material, substitute in [('wooden','bronze'),('stone','silver'),('golden','gold'),('iron','iron'),('diamond','diamond'),('netherite','diamond')]:
             for tool, asset in [('sword','sword'),('shovel','shovel'),('pickaxe','pick'),('axe','axe'),('hoe','hoe')]:
                 if name==material+'_'+tool and name not in item:icon=item[asset+'_'+substitute]
         if icon<0:icon=tile[texture(name)]
         h.append(f'    {{{id}, {icon}, "{name}"}},')
     h += ['};',f'#define LAPIS_ITEM_FACT_COUNT {len(facts["items"])}',f'#define LAPIS_TILE_WHEAT {tile["wheat_stage1"]}',
+          f'#define LAPIS_TILE_FURNACE_FRONT {tile["furnace_front"]}', f'#define LAPIS_TILE_CHEST_FRONT {tile["chest_front"]}',
           'static const int Lapis_WheatTiles[4] = {'+','.join(str(tile[f'wheat_stage{i}']) for i in range(1,5))+'};','#endif']
     (ROOT/'src/LapisFacts.h').write_text('\n'.join(h)+'\n')
     # Keep recording provenance intact; use build_audio.py to regenerate WAVs.
@@ -173,17 +193,20 @@ def main():
     for entry in entries:
         filename = pathlib.Path(entry['destination_filename']).name
         if filename in ('terrain.png', 'gui.png', 'gui_classic.png'):
-            entry['author'] = 'Kenney Vleugels; AFCMS; TechDudie' if filename == 'terrain.png' else 'AFCMS'
+            entry['author'] = 'Kenney Vleugels; AFCMS; TechDudie; LapisCube contributors' if filename == 'terrain.png' else 'AFCMS'
             entry['source_url'] = plan['url'] + '/tree/' + plan['revision']
             entry['license_file'] = plan['notices']['LICENSE.txt']
             entry['attribution'] = entry['author']
-            entry['modifications'] = ('Kenney base plus nearest-neighbor AFCMS sprites; explicit item and block-face mappings; see atlas.json and texture-sources.json'
-                                      if filename == 'terrain.png' else 'AFCMS hotbar copied; selected-slot border resized 22 to 24 pixels using nearest-neighbor')
+            entry['modifications'] = ('Kenney base plus AFCMS sprites and original CC0 pixel_assets.py geometry; explicit item and block-face mappings; see atlas.json and texture-sources.json'
+                                      if filename == 'terrain.png' else 'AFCMS hotbar, selected border, health and hunger icons packed with nearest-neighbor scaling')
             entry['sources'] = [dict(source_url=plan['url']+'/blob/'+plan['revision']+'/'+a['path'],
                                     source_path=a['path'], source_sha256=a['sha256'], author=a['author'],
                                     license='CC0-1.0', license_file=plan['notices']['LICENSE.txt'])
                                 for a in plan['textures'] if a['target'] == ('terrain' if filename == 'terrain.png' else 'gui')]
             if filename == 'terrain.png':
+                entry['sources'].append(dict(source_url='https://github.com/aksulightning/lapisobsidian',
+                    source_path='tools/pixel_assets.py', source_sha256=hashlib.sha256((ROOT/'tools/pixel_assets.py').read_bytes()).hexdigest(),
+                    author='LapisCube contributors', license='CC0-1.0', license_file='assets/licenses/LapisCube-Originals.txt'))
                 entry['sources'].insert(0, dict(source_url=URL, source_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
                     author='Kenney Vleugels', license='CC0-1.0', license_file='assets/licenses/Kenney-Voxel.txt'))
     entries += [a for a in old_manifest['assets'] if a['destination_filename'].startswith(('assets/audio/', 'assets/native/'))]

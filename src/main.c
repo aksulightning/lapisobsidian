@@ -1,4 +1,7 @@
 #include "plates.h"
+#ifdef LAPIS_SINGLEPLAYER
+#include "standalone.h"
+#endif
 #include "webclient.h"
 #include "fluids.h"
 #include "items.h"
@@ -532,6 +535,7 @@ int main (int argc, char **argv) {
 
   }
 
+  #ifndef LAPIS_SINGLEPLAYER
   // Create server TCP socket
   int server_fd, opt = 1;
   struct sockaddr_in server_addr, client_addr;
@@ -571,10 +575,13 @@ int main (int argc, char **argv) {
   }
   printf("Server listening on port %u...\n", (unsigned)server_config.port);
 
-  #if defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1
+  #endif /* !LAPIS_SINGLEPLAYER */
+
+  #if (defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1) || defined(LAPIS_SINGLEPLAYER)
   if (!webclient_start()) { fputs("Cannot start optional web host\n",stderr); return EXIT_FAILURE; }
   #endif
 
+  #ifndef LAPIS_SINGLEPLAYER
   // Make the socket non-blocking
   // This is necessary to not starve the idle task during slow connections
   #ifdef _WIN32
@@ -587,6 +594,8 @@ int main (int argc, char **argv) {
   int flags = fcntl(server_fd, F_GETFL, 0);
   fcntl(server_fd, F_SETFL, flags | O_NONBLOCK);
   #endif
+
+  #endif /* !LAPIS_SINGLEPLAYER */
 
   // Track time of last server tick (in microseconds)
   int64_t last_tick_time = get_program_time();
@@ -609,26 +618,32 @@ int main (int argc, char **argv) {
   while (true) {
     // Check if it's time to yield to the idle task
     task_yield();
+    #ifdef LAPIS_SINGLEPLAYER
+    if (standalone_yield()) break;
+    #else
     server_console_poll(&console,stdout);
     if (console.stop) break;
+    #endif
 
-    #if defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1
+    #if (defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1) || defined(LAPIS_SINGLEPLAYER)
     webclient_poll(get_program_time());
     #endif
     // Attempt to accept a new connection
     for (int i = 0; i < MAX_PLAYERS; i ++) {
       if (clients[i] != -1) continue;
+      #ifndef LAPIS_SINGLEPLAYER
       clients[i] = accept(server_fd, (struct sockaddr *)&client_addr, &addr_len);
-      #if defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1
+      #endif
+      #if (defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1) || defined(LAPIS_SINGLEPLAYER)
       if (clients[i] == -1) clients[i] = webclient_accept();
       #endif
       // If the accept was successful, make the client non-blocking too
       if (clients[i] != -1) {
         printf("New client, fd: %d\n", clients[i]);
-      #ifdef _WIN32
+      #if defined(_WIN32)
         u_long mode = 1;
         ioctlsocket(clients[i], FIONBIO, &mode);
-      #else
+      #elif !defined(LAPIS_SINGLEPLAYER)
         int flags = fcntl(clients[i], F_GETFL, 0);
         fcntl(clients[i], F_SETFL, flags | O_NONBLOCK);
       #endif
@@ -691,7 +706,7 @@ int main (int argc, char **argv) {
     plates_select_for_fd(clients[i]);
     disconnectClient(&clients[i],0);
   }
-  #if defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1
+  #if (defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1) || defined(LAPIS_SINGLEPLAYER)
   webclient_stop();
   #endif
   bool saved = true;
@@ -708,10 +723,12 @@ int main (int argc, char **argv) {
   if (plates_enabled) plates_shutdown(); else musicbox_shutdown();
   if (!saved) fputs("Could not save one or more world sidecar files.\n",stderr);
 
+  #ifndef LAPIS_SINGLEPLAYER
   #ifdef _WIN32
   closesocket(server_fd);
   #else
   close(server_fd);
+  #endif
   #endif
  
   #ifdef _WIN32 //cleanup windows socket

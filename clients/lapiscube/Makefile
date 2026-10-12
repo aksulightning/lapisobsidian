@@ -8,7 +8,7 @@ WARN := -std=c89 -Wall -Wextra -Werror -Wshadow -Wconversion
 CORE := src/LapisProtocol.c src/LapisSession.c src/LapisWorld.c src/LapisGameplay.c src/LapisEntities.c src/LapisEffects.c src/LapisText.c src/LapisSigns.c src/LapisMining.c
 IDENTITY := src/LapisIdentity.c build/md5.o build/dec32le.o build/enc32le.o
 
-.PHONY: all test sanitize probe integration survival progression travel native-smoke engine-prepare native terminal windows web web-test package clean
+.PHONY: all test sanitize probe integration survival progression travel native-smoke engine-prepare native terminal windows web singleplayer web-test package clean
 all: test probe
 build:
 	mkdir -p build
@@ -65,6 +65,11 @@ web:
 	$(PYTHON) tools/prepare_engine.py --mode web
 	$(MAKE) -C build/engine -f ../../web/build.mk RELEASE=1 -j$(ENGINE_JOBS)
 	$(PYTHON) tools/package_web.py
+singleplayer:
+	$(PYTHON) tools/prepare_engine.py --mode singleplayer
+	$(MAKE) -C build/engine -f ../../web/build.mk RELEASE=1 -j$(ENGINE_JOBS)
+	emcc ../../src/*.c -O2 -Wall -Wextra -ffp-contract=off -I../../include -DLAPIS_SINGLEPLAYER=1 -sASYNCIFY=1 -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=67108864 -sSTACK_SIZE=1048576 -sENVIRONMENT=worker -sEXIT_RUNTIME=1 -sFORCE_FILESYSTEM=1 -lidbfs.js -sEXPORTED_FUNCTIONS='["_main","_malloc","_free"]' -sEXPORTED_RUNTIME_METHODS='["HEAPU8"]' -o build/LapisServer.js
+	$(PYTHON) tools/package_web.py --singleplayer
 package:
 	$(PYTHON) tools/package.py
 	$(PYTHON) tools/check_package.py build/LapisCube-linux.zip

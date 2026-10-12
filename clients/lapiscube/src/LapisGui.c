@@ -75,6 +75,30 @@ static int HotbarBackground(int x,int y,int size) {
     Texture_Render(&tex);
     return true;
 }
+/* Each icon represents two points. Clipping the foreground preserves half
+   hearts/food and fractional health without changing authoritative values. */
+static void Vitals(float value,int food,int x,int y,int step) {
+    struct Texture tex;int i,width,extent=step-1;
+    float fill;
+    if(value<0)value=0;if(value>20)value=20;
+    tex.ID=Gui.ClassicTexture?Gui.GuiClassicTex:Gui.GuiTex;
+    for(i=0;i<10;i++) {
+        fill=(value-(float)(i*2))/2;if(fill<0)fill=0;if(fill>1)fill=1;
+        width=(int)(extent*fill+.5f);
+        if(tex.ID) {
+            Tex_SetRect(tex,x+i*step,y,extent,extent);
+            Tex_SetUV(tex,(food?32:0)/256.0f,48/128.0f,(food?48:16)/256.0f,64/128.0f);
+            Texture_Render(&tex);
+            if(!width)continue;
+            Tex_SetRect(tex,x+i*step,y,width,extent);
+            Tex_SetUV(tex,(food?48:16)/256.0f,48/128.0f,((food?48:16)+16*fill)/256.0f,64/128.0f);
+            Texture_Render(&tex);
+        } else {
+            Gfx_Draw2DFlat(x+i*step,y,extent,extent,PackedCol_Make(33,34,40,240));
+            if(width)Gfx_Draw2DFlat(x+i*step,y,width,extent,food?PackedCol_Make(208,148,72,255):PackedCol_Make(212,68,76,255));
+        }
+    }
+}
 static int Slots(void) {
     int window=LapisBackend_Gameplay()->window;
     return window==2?63:window==14?39:46;
@@ -186,8 +210,10 @@ void LapisGui_RenderHUD(void) {
         if(textured)SlotContents(70+i,g->slots[0][36+i],x+i*size,y,size);
         else Slot(70+i,g->slots[0][36+i],x+i*size,y,size,i==Inventory.SelectedIndex);
     }
-    sprintf(buffer,"Health %.0f/20    Food %d/20    %s",g->health,g->food,LapisBlocks_ItemName(g->slots[0][36+Inventory.SelectedIndex].item));
-    Text(68,buffer,x,y-26);
+    Vitals(g->health,0,x,y-size/2-7,size*4/10);
+    Vitals((float)g->food,1,x+size*9-size*4/10*10,y-size/2-7,size*4/10);
+    sprintf(buffer,"%s",LapisBlocks_ItemName(g->slots[0][36+Inventory.SelectedIndex].item));
+    Text(68,buffer,x,y-size/2-32);
     {
         float progress=LapisBackend_DigProgress();int mid=Window_Main.Width/2;
         if(progress>=0) {
