@@ -12,6 +12,7 @@ import struct
 import shutil
 import tempfile
 import threading
+import time
 from playwright.sync_api import sync_playwright
 from web_browser import Wire
 
@@ -125,21 +126,40 @@ def main(mode):
                     return [struct.unpack_from('<QffhhHBBII',raw,32+i*32) for i in range(count)]
                 if os.environ.get('LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM')=='1':
                     # Mine real nearby blocks through protocol 772; the server
-                    # owns the loot. Keep it beyond pickup range for the reload.
+                    # owns the loot. Wait for each committed action, then stop
+                    # after one drop so queued mining cannot change its count.
+                    # Keep it beyond pickup range for the reload.
+                    page.evaluate('''() => {
+                        window.dropReplies=[];
+                        const stream=LapisSingleplayer.stream,receive=stream.onmessage.bind(stream);
+                        stream.onmessage=event=>{dropReplies.push(Array.from(new Uint8Array(event.data)));receive(event);};
+                    }''')
+                    replies=Wire();sequence=32
                     x,y,z=(math.floor(v) for v in moved[:3])
                     for dx,dz in ((3,0),(-3,0),(0,3),(0,-3)):
                         for dy in range(-4,3):
                             by=y+dy
                             if not 0<=by<=255:continue
                             packed=(((x+dx)&0x3ffffff)<<38)|(((z+dz)&0x3ffffff)<<12)|(by&0xfff)
-                            payload=bytes([0x28,2])+struct.pack('!Q',packed)+bytes([1,0])
+                            sequence+=1
+                            payload=bytes([0x28,2])+struct.pack('!Q',packed)+bytes([1,sequence])
                             page.evaluate('(data)=>LapisSingleplayer.stream.send(new Uint8Array(data))',list(bytes([len(payload)])+payload))
-                        page.wait_for_timeout(500)
-                        records=drop_records()
-                        if records:
-                            persistent_drop=records[0]
-                            break
+                            acknowledged=bytes([0x04,sequence]);deadline=time.monotonic()+10
+                            while acknowledged not in replies.packets and time.monotonic()<deadline:
+                                page.wait_for_timeout(50)
+                                for chunk in page.evaluate('dropReplies.splice(0)'):replies.feed(bytes(chunk))
+                            assert acknowledged in replies.packets,'Mining action must be committed before reading drops'
+                            records=drop_records()
+                            if records:
+                                persistent_drop=records[0]
+                                break
+                        if persistent_drop:break
                     assert persistent_drop,'Mining must produce an authoritative persistent drop'
+                    deadline=time.monotonic()+10
+                    while persistent_drop[8]==0 and time.monotonic()<deadline:
+                        page.wait_for_timeout(50)
+                        persistent_drop=next(r for r in drop_records() if r[0]==persistent_drop[0])
+                    assert persistent_drop[8]>0,'Save a nonzero lifetime to detect age resets on reload'
                 else:
                     assert not drop_records(),'Default singleplayer must remain transient'
                 page.evaluate('document.exitPointerLock()')
