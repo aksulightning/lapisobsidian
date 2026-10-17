@@ -126,7 +126,7 @@ def main(mode):
                 if os.environ.get('LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM')=='1':
                     # Mine real nearby blocks through protocol 772; the server
                     # owns the loot. Keep it beyond pickup range for the reload.
-                    x,y,z=(math.floor(v) for v in moved)
+                    x,y,z=(math.floor(v) for v in moved[:3])
                     for dx,dz in ((3,0),(-3,0),(0,3),(0,-3)):
                         for dy in range(-4,3):
                             by=y+dy
@@ -180,6 +180,9 @@ def main(mode):
                 (evidence/'browser.log').write_text('\n'.join(logs+errors)+'\n')
                 (evidence/'requests.json').write_text(json.dumps(requests,indent=2)+'\n')
                 try:page.screenshot(path=str(evidence/'last.png'),timeout=5000)
+                except Exception as error:
+                    # Evidence collection must not hide the acceptance failure.
+                    (evidence/'screenshot-error.txt').write_text(str(error)+'\n')
                 finally:browser.close()
     finally:
         host.shutdown();host.server_close()
