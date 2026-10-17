@@ -6,7 +6,16 @@ flags=(-std=c11 -O2 -Wall -Wextra -Wconversion -Wshadow -Werror -ffp-contract=of
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   flags+=(-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie)
 fi
-for source in plates plate_state plate_terrain fluids circuits notes midi musicbox farming packet_input server_config server_stats server_console; do
+experimental=()
+libs=()
+for feature in LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM LAPIS_ENABLE_EXPERIMENTAL_AUTH; do
+  value="${!feature:-0}"
+  [[ "$value" == 0 || "$value" == 1 ]] || { echo "$feature must be 0 or 1" >&2; exit 1; }
+  experimental+=("-D$feature=$value")
+done
+if [[ "${LAPIS_ENABLE_EXPERIMENTAL_AUTH:-0}" == 1 ]]; then libs=(-lcurl -lssl -lcrypto); fi
+flags+=("${experimental[@]}")
+for source in auth auth_profile durable drop_store plates plate_state plate_terrain fluids circuits notes midi musicbox farming packet_input server_config server_stats server_console; do
   "${CC:-gcc}" "${flags[@]}" -c "src/$source.c" -o ".tests/$source.o"
 done
 "${CC:-gcc}" "${flags[@]}" tests/server_config.c tests/sanitizer.c src/server_config.c src/beta173_rng.c -o .tests/server-config
@@ -47,34 +56,58 @@ integration_flags=(-O2 -Wall -Wextra -ffp-contract=off -ffunction-sections -fdat
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   integration_flags+=(-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie)
 fi
-"${CC:-gcc}" "${integration_flags[@]}" tests/chunk_packet.c tests/sanitizer.c src/plate_state.c src/procedures.c src/fluids.c src/farming.c src/circuits.c src/notes.c src/doors.c src/signs.c src/sign_packets.c src/packets.c src/varnum.c src/worldgen.c src/globals.c src/registries.c src/registry.c src/beta173_*.c -Wl,--gc-sections -lm -o .tests/chunk_packet
-.tests/chunk_packet
+integration_flags+=("${experimental[@]}")
+# Compile shared integration sources once. Each object has an explicit path;
+# avoid repeated compiler/linker temporary files for every test executable.
+mkdir -p .tests/integration
 sources=()
 for source in src/*.c; do
-  [[ "$source" == src/main.c ]] || sources+=("$source")
+  [[ "$source" == src/main.c ]] && continue
+  name=${source##*/}; name=${name%.c}
+  "${CC:-gcc}" "${integration_flags[@]}" -c "$source" -o ".tests/integration/$name.o"
+  sources+=(".tests/integration/$name.o")
 done
-"${CC:-gcc}" "${integration_flags[@]}" tests/plates.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/plates
+chunk_sources=()
+for name in plate_state procedures fluids farming circuits notes doors signs sign_packets packets varnum worldgen globals registries registry; do
+  chunk_sources+=(".tests/integration/$name.o")
+done
+chunk_sources+=(.tests/integration/beta173_*.o)
+"${CC:-gcc}" "${integration_flags[@]}" tests/chunk_packet.c tests/sanitizer.c "${chunk_sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/chunk_packet
+.tests/chunk_packet
+"${CC:-gcc}" "${integration_flags[@]}" tests/plates.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/plates
 .tests/plates
-"${CC:-gcc}" "${integration_flags[@]}" tests/fluids.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/fluids
+"${CC:-gcc}" "${integration_flags[@]}" tests/fluids.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/fluids
 .tests/fluids
-"${CC:-gcc}" "${integration_flags[@]}" tests/config_packets.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/config-packets
+"${CC:-gcc}" "${integration_flags[@]}" tests/config_packets.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/config-packets
 .tests/config-packets
-"${CC:-gcc}" "${integration_flags[@]}" tests/packet_input.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/packet_input
+"${CC:-gcc}" "${integration_flags[@]}" tests/packet_input.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/packet_input
 if ! .tests/packet_input 2>.tests/packet-rejections.log; then cat .tests/packet-rejections.log; exit 1; fi
-"${CC:-gcc}" "${integration_flags[@]}" tests/command_packets.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/command_packets
+"${CC:-gcc}" "${integration_flags[@]}" tests/command_packets.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/command_packets
 .tests/command_packets
-"${CC:-gcc}" "${integration_flags[@]}" tests/signs.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/signs
+"${CC:-gcc}" "${integration_flags[@]}" tests/signs.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/signs
 .tests/signs
-"${CC:-gcc}" "${integration_flags[@]}" tests/doors.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/doors
+"${CC:-gcc}" "${integration_flags[@]}" tests/doors.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/doors
 .tests/doors
-"${CC:-gcc}" "${integration_flags[@]}" tests/items.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/items
+"${CC:-gcc}" "${integration_flags[@]}" tests/items.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/items
 .tests/items
-"${CC:-gcc}" "${integration_flags[@]}" tests/mobs.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/mobs
+"${CC:-gcc}" "${integration_flags[@]}" tests/mobs.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/mobs
 .tests/mobs
-"${CC:-gcc}" "${integration_flags[@]}" tests/circuits.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/circuits
+"${CC:-gcc}" "${integration_flags[@]}" tests/circuits.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/circuits
 .tests/circuits
-"${CC:-gcc}" "${integration_flags[@]}" tests/farming_circuits.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/farming-circuits
+"${CC:-gcc}" "${integration_flags[@]}" tests/farming_circuits.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/farming-circuits
 .tests/farming-circuits
-"${CC:-gcc}" "${integration_flags[@]}" tests/security.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm -o .tests/security
+"${CC:-gcc}" "${integration_flags[@]}" tests/security.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/security
 .tests/security
+if [[ "${LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM:-0}" == 1 ]]; then
+  "${CC:-gcc}" "${flags[@]}" -c tests/drop_store.c -o .tests/drop-test.o
+  "${CC:-gcc}" "${integration_flags[@]}" tests/drop_store.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/drop-store
+  .tests/drop-store
+fi
+if [[ "${LAPIS_ENABLE_EXPERIMENTAL_AUTH:-0}" == 1 ]]; then
+  "${CC:-gcc}" "${flags[@]}" -DLAPIS_AUTH_TESTING=1 -c tests/auth.c -o .tests/auth-test.o
+  auth_sources=()
+  for object in "${sources[@]}"; do [[ "$object" == .tests/integration/auth.o ]] || auth_sources+=("$object"); done
+  "${CC:-gcc}" "${integration_flags[@]}" -DLAPIS_AUTH_TESTING=1 tests/auth.c tests/sanitizer.c src/auth.c "${auth_sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/auth
+  .tests/auth
+fi
 ./tests/no-jar.sh

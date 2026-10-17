@@ -19,3 +19,7 @@ make-demo-song.exe
 
 /plates/
 /webclient/
+
+# Experimental drop recovery is part of the save, never source.
+*.journal
+*.bin.tmp

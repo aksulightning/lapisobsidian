@@ -96,6 +96,18 @@ if [ "$debug" = 1 ]; then
 fi
 [ "$static" = 0 ] || set -- "$@" -static
 [ "$webclient" = 0 ] || set -- "$@" -DLAPIS_ENABLE_WEBCLIENT=1
+for feature in LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM LAPIS_ENABLE_EXPERIMENTAL_AUTH; do
+  case "$feature" in
+    LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM) value=${LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM:-0} ;;
+    LAPIS_ENABLE_EXPERIMENTAL_AUTH) value=${LAPIS_ENABLE_EXPERIMENTAL_AUTH:-0} ;;
+  esac
+  case "$value" in 0|1) ;; *) fail "$feature must be 0 or 1" ;; esac
+  set -- "$@" "-D$feature=$value"
+done
+if [ "${LAPIS_ENABLE_EXPERIMENTAL_AUTH:-0}" = 1 ]; then
+  [ "$static" = 0 ] || fail "Experimental authentication currently requires a dynamic build (OpenSSL and libcurl)"
+  set -- "$@" -lcurl -lssl -lcrypto
+fi
 printf 'Building Lapis Obsidian for Alpine %s using %s\n' "$arch" "$triple"
 "$compiler" src/*.c "$@" -o "$work/lapis-obsidian" -lm
 mkdir -p "$(dirname "$output")"

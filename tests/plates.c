@@ -17,6 +17,7 @@
 #include "farming.h"
 #include "fluids.h"
 #include "items.h"
+#include "drop_store.h"
 #include "mobs.h"
 #include "packets.h"
 #include "procedures.h"
@@ -169,9 +170,25 @@ int main (void) {
 
   /* Shared inventory persists; fresh connections always enter hub. */
   a->inventory_items[0] = I_diamond; a->inventory_count[0] = 3; a->uuid[0] = 7;
-  writePlayerDataToDisk(); disconnect_players(); plates_shutdown();
+  writePlayerDataToDisk();
+#if LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM
+  unsigned flat_drops=0; for(unsigned i=0;i<ITEM_ENTITY_LIMIT;i++) flat_drops+=items_at(i)->count;
+  assert(flat_drops && items_save());
+  pid_t crash=fork(); assert(crash>=0);
+  if(!crash) {
+    a->flags=0; assert(drop_store_begin()); assert(items_drop_slot(a,0,true));
+    writePlayerDataToDisk(); assert(items_save()); _exit(73);
+  }
+  int crash_status; assert(waitpid(crash,&crash_status,0)==crash && WIFEXITED(crash_status) && WEXITSTATUS(crash_status)==73);
+  /* Startup must recover the Plate journal before reading shared players.bin. */
+#endif
+  disconnect_players(); plates_shutdown();
   assert(plates_start() && !strcmp(plates_name(0),"hub") && player_plates[0] == 0 && a->inventory_items[0] == I_diamond && a->inventory_count[0] == 3);
   assert(plates_select((unsigned)plates_find("flat")) && getBlockAt(9,201,0) == B_obsidian);
+#if LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM
+  unsigned restored_drops=0; for(unsigned i=0;i<ITEM_ENTITY_LIMIT;i++) restored_drops+=items_at(i)->count;
+  assert(restored_drops==flat_drops);
+#endif
   const Sign *sign = signs_at(0,201,0); assert(sign && !strcmp(sign->lines[0][0],"flat sign"));
   assert(circuits_state_at(1,201,0,B_lever,&state) && farming_state_at(3,201,0,B_wheat,&state));
   assert(plates_find("sky") < 0 && plates_find("race") > 0);

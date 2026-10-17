@@ -12,6 +12,11 @@ jobs:
   singleplayer:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    strategy:
+      matrix:
+        drops: [0, 1]
+    env:
+      LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM: ${{ matrix.drops }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -33,11 +38,11 @@ jobs:
         run: python3 clients/lapiscube/tests/singleplayer_browser.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: LapisCube-singleplayer
+          name: LapisCube-singleplayer-drops-${{ matrix.drops }}
           path: clients/lapiscube/build/singleplayer/LapisCube-singleplayer.html
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
-          name: LapisCube-singleplayer-evidence
+          name: LapisCube-singleplayer-evidence-drops-${{ matrix.drops }}
           path: clients/lapiscube/build/singleplayer-evidence

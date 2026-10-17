@@ -27,6 +27,8 @@
 #include "procedures.h"
 #include "tools.h"
 #include "packet_input.h"
+#include "drop_store.h"
+#include "auth.h"
 #include "webclient.h"
 
 #ifndef htonll
@@ -97,12 +99,7 @@ ssize_t recv_all (int client_fd, void *buf, size_t n, uint8_t require_first) {
   return total; // got exactly n bytes
 }
 
-ssize_t send_all (int client_fd, const void *buf, ssize_t len) {
-  /* Defence in depth for world-scoped broadcasts from inherited packet code. */
-  if (!plates_fd_active(client_fd)) return len;
-  #if (defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1) || defined(LAPIS_SINGLEPLAYER)
-  if (webclient_has(client_fd)) return len < 0 ? -1 : webclient_send(client_fd,buf,(size_t)len);
-  #endif
+static ssize_t send_transport (int client_fd, const void *buf, ssize_t len) {
   // Treat any input buffer as *uint8_t for simplicity
   const uint8_t *p = (const uint8_t *)buf;
   ssize_t sent = 0;
@@ -146,6 +143,21 @@ ssize_t send_all (int client_fd, const void *buf, ssize_t len) {
   }
 
   return sent;
+}
+
+ssize_t send_all (int client_fd, const void *buf, ssize_t len) {
+  /* Defence in depth for world-scoped broadcasts from inherited packet code. */
+  if (!plates_fd_active(client_fd)) return len;
+  if (len < 0) return -1;
+  int queued = drop_store_buffer(client_fd,buf,(size_t)len);
+  if (queued) return queued < 0 ? -1 : len;
+  #if (defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1) || defined(LAPIS_SINGLEPLAYER)
+  if (webclient_has(client_fd)) return len < 0 ? -1 : webclient_send(client_fd,buf,(size_t)len);
+  #endif
+#if LAPIS_ENABLE_EXPERIMENTAL_AUTH
+  if(auth_encrypted(client_fd)) return auth_send(client_fd,buf,(size_t)len,send_transport);
+#endif
+  return send_transport(client_fd,buf,len);
 }
 
 void discard_all (int client_fd, size_t remaining, uint8_t require_first) {
@@ -297,3 +309,5 @@ int64_t get_program_time () {
   return (int64_t)ts.tv_sec * 1000000LL + ts.tv_nsec / 1000LL;
 }
 #endif
+
+unsigned player_name_length(const char name[16]) { unsigned n=0; while(n<16 && name[n]) n++; return n; }

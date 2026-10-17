@@ -4,10 +4,17 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <unistd.h>
+#include "auth.h"
 /* Only implemented inbound packets are supported; no large plugin payloads. */
 #define PACKET_INPUT_LIMIT 8192u
 #define PACKET_INPUT_TIMEOUT_US INT64_C(15000000)
-typedef struct { int64_t started; int fd; bool pending; } PacketInput;
+typedef struct {
+  int64_t started; int fd; bool pending;
+#if LAPIS_ENABLE_EXPERIMENTAL_AUTH
+  uint8_t bytes[PACKET_INPUT_LIMIT+3u];
+  size_t used, prefix, length;
+#endif
+} PacketInput;
 void packet_input_reset (PacketInput *input, int fd);
 /* Sockets must be nonblocking. -1: disconnect, 0: incomplete, 1: frame ready. */
 int packet_input_poll (PacketInput *input, int64_t now);

@@ -15,6 +15,7 @@
 #include <unistd.h>
 #endif
 #include "plates.h"
+#include "drop_store.h"
 #include "plate_contexts.h"
 #include "server_config.h"
 #include "beta173_rng.h"
@@ -134,8 +135,8 @@ bool plates_load (unsigned id) {
   if (plates[id].world) return true;
   char path[96]; snprintf(path,sizeof(path),"plates/%s",plates[id].name);
   if (!plain_path(path,true,false)) return false;
-  static const char *const files[] = {"world.bin","world.meta","signs.bin","doors.bin","circuits.bin","farming.bin"};
-  for (unsigned i = 0; i < 6; i++) {
+  static const char *const files[] = {"world.bin","world.meta","signs.bin","doors.bin","circuits.bin","farming.bin","drops.bin","drops.journal"};
+  for (unsigned i = 0; i < sizeof(files)/sizeof(files[0]); i++) {
     snprintf(path,sizeof(path),"plates/%s/%s",plates[id].name,files[i]);
     if (!plain_path(path,false,true)) return false;
     size_t n = strlen(path); memcpy(path+n,".tmp",5);
@@ -155,7 +156,8 @@ bool plates_load (unsigned id) {
     i += 14;
   }
   if (ok) {
-    snprintf(path,sizeof(path),"plates/%s/doors.bin",plates[id].name); ok = doors_load(path);
+    snprintf(path,sizeof(path),"plates/%s/drops.bin",plates[id].name); ok = items_load(path);
+    snprintf(path,sizeof(path),"plates/%s/doors.bin",plates[id].name); ok = doors_load(path) && ok;
     snprintf(path,sizeof(path),"plates/%s/signs.bin",plates[id].name); ok = signs_load(path) && ok;
     snprintf(path,sizeof(path),"plates/%s/farming.bin",plates[id].name); ok = farming_load(path) && ok;
     snprintf(path,sizeof(path),"plates/%s/circuits.bin",plates[id].name); ok = circuits_load(path) && ok;
@@ -231,6 +233,11 @@ bool plates_start (void) {
     if (ferror(f)) ok = false;
     if (fclose(f)) ok = false;
     if (!ok || strcmp(plates[0].name,"hub") || plate_types[0] != PLATE_HUB) return false;
+  }
+  /* Recover all Plates before loading the shared player inventory image. */
+  for (unsigned i=0;i<PLATE_LIMIT;i++) if (plates[i].name[0]) {
+    char root[80]; snprintf(root,sizeof(root),"plates/%.24s",plates[i].name);
+    if (!drop_store_recover(root,true)) return false;
   }
   if (!plain_path("plates/players.bin",false,true) || !plain_path("plates/players.bin.tmp",false,true)) return false;
   f = fopen("plates/players.bin","rb");

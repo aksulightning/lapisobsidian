@@ -47,4 +47,6 @@ uint64_t splitmix64 (uint64_t state);
   int64_t get_program_time ();
 #endif
 
+/* Saved player names occupy exactly 16 bytes and need not end in NUL. */
+unsigned player_name_length(const char name[16]);
 #endif

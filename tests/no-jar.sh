@@ -10,6 +10,6 @@ cp -R src include build.sh "$tmp/source/"
 for tool in bash dirname uname gcc as ld; do
   ln -s "$(command -v "$tool")" "$tmp/bin/$tool"
 done
-(cd "$tmp/source" && PATH="$tmp/bin" ./build.sh)
+(cd "$tmp/source" && LAPIS_ENABLE_EXPERIMENTAL_AUTH=0 LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM=0 PATH="$tmp/bin" ./build.sh)
 test -x "$tmp/source/lapis-obsidian"
 echo 'source-only build without Java, JARs, extraction or registry generation: passed'
