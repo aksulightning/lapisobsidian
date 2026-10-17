@@ -47,6 +47,28 @@ Nightly static binaries for all three targets are configured in
 [GitHub Actions](https://github.com/aksulightning/lapisobsidian/actions/workflows/nightly.yml),
 with tests, source archives and checksums; see the guide for download details.
 
+For the experimental **LapisCube web client**, use `./build_client.sh`.
+It installs Alpine build dependencies on request, sets up the pinned toolchain
+and engine, and packages only the browser client with its assets and notices. See the
+[Alpine client build guide](clients/lapiscube/docs/alpine.md).
+
+To also build the server with **optional HTTP/WebSocket hosting**, use
+`./build_clientsrv.sh`. It packages the server and browser assets together;
+normal server builds stay TCP-only. See the
+[Alpine client/server guide](clients/lapiscube/docs/alpine-server.md).
+
+## Debian and experimental build presets
+
+`./build-debian.sh` builds the Debian/Ubuntu server with HTTP/WebSocket hosting
+and its browser bundle enabled. `./build-experiments-debian.sh` and
+`./build-experiments-alpine.sh` additionally default persistent drops and Java
+authentication to on. The Alpine preset compiles only the server; browser assets
+are installed separately. Each script provides `--help`.
+
+LapisCube cannot join an authentication-enabled server. For browser play with
+persistent drops, use `LAPIS_ENABLE_EXPERIMENTAL_AUTH=0` with an experimental
+preset. See [prerequisites, build options and examples](docs/build-presets.md).
+
 ## Tests
 
 ```sh
@@ -70,7 +92,10 @@ not expose `/proc`; AddressSanitizer and UndefinedBehaviorSanitizer remain enabl
 Broken blocks and existing mob loot now leave collectible item entities.
 Q/Ctrl-Q and inventory drop actions work, with gravity, stack merging, partial
 pickup, a five-minute lifetime and a fixed 128-item-entity limit. Drops are
-transient across restarts. See [item behavior and tests](docs/items.md).
+transient by default. `LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM=1 ./build.sh` enables
+`drops.bin` persistence and recovery. Lava is the only environmental hazard that
+destroys drops; the five-minute expiry still applies. See [item behavior and tests](docs/items.md)
+and [experimental systems](docs/experimental-systems.md).
 
 Skeletons shoot arrows, spiders are neutral until attacked, and creepers produce
 harmless firecracker bursts. Admins can use `/spawnmob <type> [x y z]`.
@@ -102,8 +127,12 @@ private random `LAPIS_ADMIN_TOKEN` environment value (32..128 non-space ASCII
 bytes), then use `/admin <token>` in-game. Admin login is disabled by default.
 Permissions and game modes reset on reconnect; no world-file migration is needed.
 
-The inherited connection is unencrypted and does not verify player UUIDs; use
-administrator commands on a trusted network or protected tunnel. See
+Default builds use unencrypted, unverified offline login.
+`LAPIS_ENABLE_EXPERIMENTAL_AUTH=1 ./build.sh` enables encrypted Java online-mode
+login with verified Minecraft sessions (OpenSSL/libcurl required). LapisCube
+multiplayer cannot join that mode; standalone singleplayer stays offline. See
+[experimental systems and compatibility](docs/experimental-systems.md). Use
+administrator commands on a trusted network or protected tunnel with offline builds. See
 [command syntax, permissions and limits](docs/commands.md) for details.
 [Inventory and packet hardening](docs/security-hardening.md) describes the current
 protections, regression tests and remaining network limitations.
@@ -145,7 +174,8 @@ pass is still pending.
 
 Create a new world with `./lapis-obsidian --seed -12345`, using a signed 64-bit
 decimal seed. Later runs load the seed from `world.meta`. Supplying a different
-seed for the same world fails. Keep `world.meta`, `world.bin`, `signs.bin`, `doors.bin`, `circuits.bin`, and `farming.bin` together. Run the
+seed for the same world fails. Keep `world.meta`, `world.bin`, `signs.bin`, `doors.bin`, `circuits.bin`, and `farming.bin` together, plus `drops.bin` and any `drops.journal`
+when using experimental persistence. Run the
 binary from a fresh directory to start another world. Legacy saves without
 metadata are rejected rather than overlaid onto a different terrain generator.
 Generator version 3 upgrades version 2 metadata automatically, retaining seeds,
@@ -208,3 +238,6 @@ On `testing-cube`, `LAPIS_ENABLE_WEBCLIENT=1 ./build.sh` also builds and bundles
 the C/WebAssembly LapisCube client and enables HTTP/WebSocket hosting on port 8080.
 Desktop keyboard/mouse and landscape fullscreen touch controls are included.
 The default build contains no web host. See [build and hosting instructions](clients/lapiscube/docs/web.md).
+
+See [asset credits and license audit](docs/credits.md) for current asset sources,
+CC0 coverage, engine asset exceptions, and reviewed texture/sound alternatives.

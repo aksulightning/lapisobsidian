@@ -1,7 +1,7 @@
 #ifndef LAPIS_WEBCLIENT_H
 #define LAPIS_WEBCLIENT_H
 /* Optional transport only. Java packet validation and game rules remain shared. */
-#if defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1
+#if (defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1) || defined(LAPIS_SINGLEPLAYER)
 #include <stddef.h>
 #include <stdint.h>
 int webclient_start(void);

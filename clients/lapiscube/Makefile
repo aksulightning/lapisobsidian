@@ -1,5 +1,6 @@
 CC ?= cc
 PYTHON ?= python3
+NODE ?= $(if $(EMSDK_NODE),$(EMSDK_NODE),node)
 ENGINE_JOBS ?= 2
 ENGINE := engine
 CPPFLAGS += -Isrc -I$(ENGINE)/src
@@ -8,7 +9,7 @@ WARN := -std=c89 -Wall -Wextra -Werror -Wshadow -Wconversion
 CORE := src/LapisProtocol.c src/LapisSession.c src/LapisWorld.c src/LapisGameplay.c src/LapisEntities.c src/LapisEffects.c src/LapisText.c src/LapisSigns.c src/LapisMining.c
 IDENTITY := src/LapisIdentity.c build/md5.o build/dec32le.o build/enc32le.o
 
-.PHONY: all test sanitize probe integration survival progression travel native-smoke engine-prepare native terminal windows web web-test package clean
+.PHONY: all test sanitize probe integration survival progression travel native-smoke engine-prepare native terminal windows web singleplayer web-test package clean
 all: test probe
 build:
 	mkdir -p build
@@ -18,10 +19,19 @@ build/protocol-test: tests/protocol.c $(CORE) $(IDENTITY) src/*.h | build
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARN) tests/protocol.c $(CORE) $(IDENTITY) -o $@
 build/gameplay-test: tests/gameplay.c $(CORE) src/*.h | build
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(WARN) tests/gameplay.c $(CORE) -o $@
-test: build/protocol-test build/gameplay-test
+build/LapisSoundData.h: tools/embed_audio.py assets/sound-map.json assets/manifest.json $(wildcard assets/audio/*.wav) | build
+	$(PYTHON) tools/embed_audio.py build
+build/audio-test: tests/audio.c src/LapisAudio.c src/LapisAudio.h build/LapisSoundData.h | build
+	$(CC) $(CPPFLAGS) -Ibuild $(CFLAGS) $(WARN) tests/audio.c src/LapisAudio.c -lm -o $@
+test: build/protocol-test build/gameplay-test build/audio-test
 	./build/protocol-test
 	./build/gameplay-test
+	./build/audio-test
 	$(PYTHON) tests/package.py
+	$(PYTHON) tests/audio_assets.py
+	$(PYTHON) tests/visual_assets.py
+	$(NODE) tests/audio_web.js
+	$(NODE) tests/singleplayer_transport.js
 sanitize: build/md5.o build/dec32le.o build/enc32le.o | build
 	$(CC) $(CPPFLAGS) $(SANITIZER_FLAGS) -O1 -g $(WARN) -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie tests/protocol.c $(CORE) $(IDENTITY) -o build/protocol-sanitize
 	./build/protocol-sanitize
@@ -57,6 +67,13 @@ web:
 	$(PYTHON) tools/prepare_engine.py --mode web
 	$(MAKE) -C build/engine -f ../../web/build.mk RELEASE=1 -j$(ENGINE_JOBS)
 	$(PYTHON) tools/package_web.py
+singleplayer:
+	@test "$(LAPIS_ENABLE_EXPERIMENTAL_AUTH)" != 1 || { echo 'Singleplayer cannot enable multiplayer authentication' >&2; exit 1; }
+	@case "$(LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM)" in ''|0|1) ;; *) echo 'LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM must be 0 or 1' >&2; exit 1;; esac
+	$(PYTHON) tools/prepare_engine.py --mode singleplayer
+	$(MAKE) -C build/engine -f ../../web/build.mk RELEASE=1 -j$(ENGINE_JOBS)
+	emcc ../../src/*.c -O2 -Wall -Wextra -ffp-contract=off -I../../include -DLAPIS_SINGLEPLAYER=1 -DLAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM=$(if $(LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM),$(LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM),0) -sASYNCIFY=1 -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=67108864 -sSTACK_SIZE=1048576 -sENVIRONMENT=worker -sEXIT_RUNTIME=1 -sFORCE_FILESYSTEM=1 -lidbfs.js -sEXPORTED_FUNCTIONS='["_main","_malloc","_free"]' -sEXPORTED_RUNTIME_METHODS='["HEAPU8"]' -o build/LapisServer.js
+	$(PYTHON) tools/package_web.py --singleplayer
 package:
 	$(PYTHON) tools/package.py
 	$(PYTHON) tools/check_package.py build/LapisCube-linux.zip

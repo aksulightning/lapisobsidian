@@ -1,5 +1,6 @@
 #include "webclient.h"
 #include "plates.h"
+#include "auth.h"
 #include "fluids.h"
 #include "items.h"
 #include "inventory.h"
@@ -181,8 +182,8 @@ void handlePlayerDisconnect (int client_fd) {
     items_forget_player(&player_data[i]);
     mobs_forget_player(&player_data[i]);
     // Prepare leave message for broadcast
-    uint8_t player_name_len = strlen(player_data[i].name);
-    strcpy((char *)recv_buffer, player_data[i].name);
+    uint8_t player_name_len = player_name_length(player_data[i].name);
+    memcpy(recv_buffer, player_data[i].name, player_name_len);
     strcpy((char *)recv_buffer + player_name_len, " left the game");
     // Broadcast this player's leave to all other connected clients
     for (int j = 0; j < MAX_PLAYERS; j ++) {
@@ -208,8 +209,8 @@ void handlePlayerDisconnect (int client_fd) {
 void handlePlayerJoin (PlayerData* player) {
 
   // Prepare join message for broadcast
-  uint8_t player_name_len = strlen(player->name);
-  strcpy((char *)recv_buffer, player->name);
+  uint8_t player_name_len = player_name_length(player->name);
+  memcpy(recv_buffer, player->name, player_name_len);
   strcpy((char *)recv_buffer + player_name_len, " joined the game");
 
   // Inform other clients (and the joining client) of the player's name and entity
@@ -234,8 +235,9 @@ void disconnectClient (int *client_fd, int cause) {
   client_count --;
   setClientState(*client_fd, STATE_NONE);
   handlePlayerDisconnect(*client_fd);
+  auth_forget(*client_fd);
   int transport_owned = 0;
-  #if defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1
+  #if (defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1) || defined(LAPIS_SINGLEPLAYER)
   transport_owned = webclient_disconnect(*client_fd);
   #endif
   #ifdef _WIN32
@@ -1464,8 +1466,8 @@ void hurtEntity (int entity_id, int attacker_id, uint8_t damage_type, uint8_t da
       entity_died = true;
 
       // Prepare death message in recv_buffer
-      uint8_t player_name_len = strlen(player->name);
-      strcpy((char *)recv_buffer, player->name);
+      uint8_t player_name_len = player_name_length(player->name);
+      memcpy(recv_buffer, player->name, player_name_len);
 
       if (damage_type == D_fall && damage > 8) {
         // Killed by a greater than 5 block fall
@@ -1488,8 +1490,8 @@ void hurtEntity (int entity_id, int attacker_id, uint8_t damage_type, uint8_t da
         PlayerData *attacker;
         if (getPlayerData(attacker_id, &attacker)) return;
         strcpy((char *)recv_buffer + player_name_len, " was slain by ");
-        strcpy((char *)recv_buffer + player_name_len + 14, attacker->name);
-        recv_buffer[player_name_len + 14 + strlen(attacker->name)] = '\0';
+        memcpy(recv_buffer + player_name_len + 14, attacker->name, player_name_length(attacker->name));
+        recv_buffer[player_name_len + 14 + player_name_length(attacker->name)] = '\0';
       } else if (damage_type == D_cactus) {
         // Killed by being near a cactus
         strcpy((char *)recv_buffer + player_name_len, " was pricked to death");

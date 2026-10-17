@@ -19,7 +19,7 @@ function updateGate(){
   document.getElementById('instruction').textContent=touchDevice && !landscape() ?
     'Rotate your device to landscape to play.' : touchDevice && !fullscreen() ?
     'Touch play requires fullscreen. Tap Play, or open this page from your home screen.' :
-    started?'Resume your world.':'Explore, build and survive together.';
+    started?'Resume your world.':window.LapisSingleplayer?'Singleplayer. Your world stays on this device.':'Explore, build and survive together.';
 }
 async function enterFullscreen(){
   if(touchDevice && !fullscreen()){
@@ -38,16 +38,22 @@ document.getElementById('join').addEventListener('submit',async event=>{
   event.preventDefault();
   if(started || !document.getElementById('join').reportValidity())return;
   if(!await enterFullscreen())return;
+  if(window.LapisSingleplayer){
+    const play=document.getElementById('play');play.disabled=true;message.textContent='Opening your world…';
+    try{await LapisSingleplayer.start();}catch(error){message.textContent=error.message;play.disabled=false;return;}
+  }
   started=true;updateGate();
-  const endpoint=new URL('ws',location.href);endpoint.protocol=location.protocol==='https:'?'wss:':'ws:';
+  const endpoint=new URL('ws',window.LapisSingleplayer?'http://localhost/':location.href);endpoint.protocol=location.protocol==='https:'?'wss:':'ws:';
   window.Module={canvas,lapisSocketURL:endpoint.href,lapisTouch:touchDevice,
-    arguments:['--lapis',document.getElementById('username').value,location.hostname,String(location.port || (location.protocol==='https:'?443:80))],
+    lapisSocketFactory:window.LapisSingleplayer?()=>LapisSingleplayer.socket():null,
+    arguments:['--lapis',document.getElementById('username').value,window.LapisSingleplayer?'localhost':location.hostname,String(location.port || (location.protocol==='https:'?443:80))],
     print:console.log,printErr:console.error,
     setStatus:text=>{message.textContent=text;},
     onAbort:reason=>{failed=true;message.textContent='The client stopped: '+reason;reset();updateGate();},
     onRuntimeInitialized:()=>{ready=true;resize();resumeAudio();}
   };
-  const script=document.createElement('script');script.src='LapisCube.js';
+  if(window.LapisEmbedded)LapisEmbedded.configure(Module);
+  const script=document.createElement('script');script.src=window.LapisEmbedded?LapisEmbedded.clientURL():'LapisCube.js';
   script.onerror=()=>{failed=true;message.textContent='Client download failed. Reload to retry.';updateGate();};
   document.body.append(script);canvas.focus();
 });

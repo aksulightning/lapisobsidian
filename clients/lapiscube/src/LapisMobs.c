@@ -129,6 +129,15 @@ static void Draw(struct Entity* e) {
     memcpy(Models.Cols,colors,sizeof(colors));Model_UnlockVB();Gfx_DrawVb_IndexedTris(vertices);
 }
 static float NameY(struct Entity* e) { return ((struct Shape*)e->Model)->height+.2f; }
+static void DrawArm(struct Entity* e) {
+    struct Shape* s=Current();PackedCol colors[6];int i;
+    memcpy(colors,Models.Cols,sizeof(colors));
+    for(i=0;i<6;i++)Models.Cols[i]=PackedCol_Tint(colors[i],PackedCol_Make(205,161,120,255));
+    Model_ApplyTexture(e);Model_LockVB(e,24);
+    Model_DrawArmPart(&s->parts[5]);
+    Model_UnlockVB();Gfx_DrawVb_IndexedTris(24);
+    memcpy(Models.Cols,colors,sizeof(colors));
+}
 static float EyeY(struct Entity* e) { return ((struct Shape*)e->Model)->height*.9f; }
 static void Size(struct Entity* e) {
     struct Shape* s=(struct Shape*)e->Model;Vec3_Set(e->Size,s->width,s->height,s->length);
@@ -146,6 +155,7 @@ void LapisMobs_Init(void) {
         memset(s,0,sizeof(*s));m->name=names[i];m->vertices=s->vertices;m->defaultTex=&texture;
         m->MakeParts=Make;m->Draw=Draw;m->GetNameY=NameY;m->GetEyeY=EyeY;m->GetCollisionSize=Size;m->GetPickingBounds=Bounds;
         Model_Init(m);m->maxVertices=PARTS*24;m->usesSkin=false;m->usesHumanSkin=false;m->pushes=false;
+        if(i==0) { m->DrawArm=DrawArm;m->armX=5;m->armY=13; }
         s->width=i==3?1.62f:i==4?.3f:.8f;
         s->height=(i==0 || i==8)?1.65f:i==9?1.60f:i==5?1.46f:i==1?1.24f:i==7?1.1f:i==6?.82f:i==2?.85f:.6f;
         s->length=(i==1 || i==6 || i==7)?1.65f:i==8?1.2f:i==9?.8f:i==2?.92f:s->width;

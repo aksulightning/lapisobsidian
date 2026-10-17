@@ -1,12 +1,20 @@
 #include "LapisBlocks.h"
+#include "LapisAudio.h"
 #include "LapisFacts.h"
 #include "Block.h"
 #include "Audio.h"
 #include "String_.h"
+#include "Logger.h"
 #include <string.h>
 
 static BlockID states[65536], items[1416];
 static int nextBlock;
+/* Staging reserves room for world variants and held sprites. */
+typedef char LapisBlockCapacityCheck[BLOCK_COUNT>=1024?1:-1];
+static BlockID Allocate(void) {
+    if(nextBlock>=BLOCK_COUNT)Logger_DoAbort(0,"LapisCube block definition capacity exceeded",NULL);
+    return (BlockID)nextBlock++;
+}
 static BlockID Named(const char* name) {
     int i;
     for (i = 0; i < 256; i++) if (!strcmp(Lapis_BlockFacts[i].name,name)) return (BlockID)(256+i);
@@ -17,7 +25,7 @@ static void Box(BlockID b, float x0,float y0,float z0,float x1,float y1,float z1
 }
 static void Define(BlockID b) { Block_DefineCustom(b, false); }
 static BlockID Clone(BlockID source) {
-    BlockID b = (BlockID)nextBlock++; int f;
+    BlockID b = Allocate(); int f;
     cc_string name = Block_UNSAFE_GetName(source);
     Block_ResetProps(b); Block_SetName(b,&name);
     for (f=0; f<FACE_COUNT; f++) Block_Tex(b,f)=Block_Tex(source,f);
@@ -39,13 +47,11 @@ void LapisBlocks_Init(void) {
         Block_ResetProps(b);text=String_FromReadonly(name);Block_SetName(b,&text);
         Block_SetSide((TextureLoc)f->side,b);
         Block_Tex(b,FACE_YMAX)=(TextureLoc)f->top;Block_Tex(b,FACE_YMIN)=(TextureLoc)f->bottom;
+        if(!strcmp(name,"furnace"))Block_Tex(b,FACE_ZMIN)=LAPIS_TILE_FURNACE_FRONT;
+        if(!strcmp(name,"chest"))Block_Tex(b,FACE_ZMIN)=LAPIS_TILE_CHEST_FRONT;
         Blocks.Draw[b]=DRAW_OPAQUE;Blocks.Collide[b]=COLLIDE_SOLID;Blocks.BlocksLight[b]=true;
-        Blocks.StepSounds[b]=Blocks.DigSounds[b]=SOUND_STONE;
+        Blocks.StepSounds[b]=Blocks.DigSounds[b]=LapisAudio_Material(name);
         Blocks.SpeedMultiplier[b]=1;Box(b,0,0,0,1,1,1);
-        if (strstr(name,"wood") || strstr(name,"oak") || strstr(name,"chest")) Blocks.StepSounds[b]=Blocks.DigSounds[b]=SOUND_WOOD;
-        if (strstr(name,"grass") || strstr(name,"dirt") || strstr(name,"leaves")) Blocks.StepSounds[b]=Blocks.DigSounds[b]=SOUND_GRASS;
-        if (strstr(name,"sand")) Blocks.StepSounds[b]=Blocks.DigSounds[b]=SOUND_SAND;
-        if (strstr(name,"gravel")) Blocks.StepSounds[b]=Blocks.DigSounds[b]=SOUND_GRAVEL;
         if (strstr(name,"water") || strstr(name,"lava")) {
             Blocks.Draw[b]=DRAW_TRANSLUCENT;Blocks.Collide[b]=strstr(name,"water")?COLLIDE_WATER:COLLIDE_LAVA;
             Blocks.BlocksLight[b]=false;Blocks.StepSounds[b]=Blocks.DigSounds[b]=SOUND_NONE;
@@ -123,6 +129,18 @@ void LapisBlocks_Init(void) {
     states[5892]=states[5893]=Named("oak_pressure_plate");
     for(i=0;i<16;i++) { states[86+i]=Named("water");states[102+i]=Named("lava"); }
     for(i=0;i<9;i++) states[2402+i]=Named("torch");
+    /* Non-block stacks need held sprites too. Zero remains the empty hand;
+       these presentation-only definitions never enter the world state map. */
+    for(i=0;i<LAPIS_ITEM_FACT_COUNT;i++) {
+        const struct LapisItemFact* item=&Lapis_ItemFacts[i];
+        if(item->id<=0 || item->id>=1416 || items[item->id] || item->icon<0)continue;
+        b=Allocate();
+        Block_ResetProps(b);text=String_FromReadonly(item->name);Block_SetName(b,&text);
+        Block_SetSide((TextureLoc)item->icon,b);
+        Blocks.Draw[b]=DRAW_SPRITE;Blocks.Collide[b]=COLLIDE_NONE;Blocks.BlocksLight[b]=false;
+        Blocks.CanPlace[b]=Blocks.CanDelete[b]=false;
+        Box(b,0,0,0,1,1,1);Define(b);items[item->id]=b;
+    }
 }
 BlockID LapisBlocks_State(int state) { return state>=0 && state<65536?states[state]:256; }
 BlockID LapisBlocks_Item(int item) { return item>=0 && item<1416?items[item]:0; }

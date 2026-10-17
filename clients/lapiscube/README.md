@@ -14,8 +14,8 @@ then verifies the earned inventory on reconnect. The next slice adds bounded
 column updates, eight distinct original mob shapes, server-driven hit/swing/bow
 effects, smaller-window layouts and an extracted-package native acceptance run.
 
-The client uses an independent CC0 atlas, geometric models/UI and synthesized
-sounds. It requires no Java, game JAR, Microsoft account or proprietary assets.
+The client uses an independent CC0 atlas, geometric models/UI and recorded CC0
+gameplay sounds (with pitched note-block synthesis). It requires no Java, game JAR, Microsoft account or proprietary assets.
 Original Classic/CPE packet code remains intact; `--lapis` selects the separate
 Java protocol-772 backend. Compatibility is with the pinned Lapis profile, not
 arbitrary vanilla servers.
@@ -35,6 +35,10 @@ See [milestone status](docs/milestones.md), [packet matrix](docs/protocol-matrix
 Linux needs Git, GCC/Clang, Make, Python 3.8+, `patch`, and X11/Xi/OpenGL development
 libraries (`libx11-dev libxi-dev libgl-dev` on Debian/Ubuntu). Pillow is needed
 only to regenerate assets, not to build or run from the committed bundle.
+
+**Alpine Linux web client:** use `./build_client.sh` from the repository root. It
+supports dependency installation, pinned Emscripten/engine setup, WebAssembly
+compilation, optional client tests and a complete browser package. See the [Alpine client guide](docs/alpine.md).
 
 ```sh
 git clone --branch testing-cube --recurse-submodules https://github.com/aksulightning/lapisobsidian.git
@@ -165,6 +169,13 @@ No server security checks have been relaxed. Offline UUIDs are deterministic
 identities, not authentication. See the matrix for exact coverage.
 
 ## WebAssembly browser client
+
+For a standalone, singleplayer-only browser package with the C server embedded
+in a worker and local world saves, run `make singleplayer`. It has its own
+`lapiscube-singleplayer.yml` workflow. Its artifact contains one
+`LapisCube-singleplayer.html` file, including all code, textures, sounds and
+license notices; it can run offline without companion files.
+See the [singleplayer guide](docs/singleplayer.md).
 
 Build the C client for desktop browsers and landscape fullscreen touch play with
 `make web` (Emscripten 4.0.23). From the repository root,

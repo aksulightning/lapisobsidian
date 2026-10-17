@@ -264,7 +264,7 @@ static void PlayerTick(void) {
         }
     }
     Inventory.Offset=0;
-    for(i=0;i<9;i++)Inventory.Table[i]=LapisBlocks_Item(gameplay.slots[0][36+i].item);
+    for(i=0;i<9;i++)Inventory.Table[i]=gameplay.slots[0][36+i].count>0?LapisBlocks_Item(gameplay.slots[0][36+i].item):0;
     if(selected!=Inventory.SelectedIndex) {
         selected=Inventory.SelectedIndex;gameplay.selected=selected;LapisGameplay_Select(p,selected);
     }

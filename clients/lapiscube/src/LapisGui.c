@@ -53,11 +53,51 @@ static void Icon(int item,int x,int y,int size) {
     tex.uv=Atlas1D_TexRec((TextureLoc)icon,1,&atlas);tex.ID=Atlas1D.TexIds[atlas];
     tex.x=x;tex.y=y;tex.width=size;tex.height=size;Texture_Render(&tex);
 }
-static void Slot(int slot,struct LapisStack stack,int x,int y,int size,int active) {
+static void SlotContents(int slot,struct LapisStack stack,int x,int y,int size) {
     char count[24];
-    Gfx_Draw2DFlat(x,y,size-2,size-2,active?PackedCol_Make(118,101,64,235):PackedCol_Make(31,49,62,235));
     Icon(stack.item,x+3,y+3,size-10);
     if(stack.count) { sprintf(count,"%d",stack.count);Text(slot,count,x+(size>24?size-20:1),y+(size>24?size-20:0)); }
+}
+static void Slot(int slot,struct LapisStack stack,int x,int y,int size,int active) {
+    Gfx_Draw2DFlat(x,y,size-2,size-2,active?PackedCol_Make(118,101,64,235):PackedCol_Make(31,49,62,235));
+    SlotContents(slot,stack,x,y,size);
+}
+static int HotbarBackground(int x,int y,int size) {
+    struct Texture tex;int border=(size+19)/20;
+    tex.ID=Gui.ClassicTexture?Gui.GuiClassicTex:Gui.GuiTex;
+    if(!tex.ID)return false;
+    /* Gui loads only the top half of the 256x256 source sheet. */
+    Tex_SetRect(tex,x-border,y-border,9*size+2*border,size+2*border);
+    Tex_SetUV(tex,0,0,182/256.0f,22/128.0f);
+    Texture_Render(&tex);
+    Tex_SetRect(tex,x+Inventory.SelectedIndex*size-2*border,y-2*border,size+4*border,size+4*border);
+    Tex_SetUV(tex,0,22/128.0f,24/256.0f,46/128.0f);
+    Texture_Render(&tex);
+    return true;
+}
+/* Each icon represents two points. Clipping the foreground preserves half
+   hearts/food and fractional health without changing authoritative values. */
+static void Vitals(float value,int food,int x,int y,int step) {
+    struct Texture tex;int i,width,extent=step-1;
+    float fill;
+    if(value<0)value=0;if(value>20)value=20;
+    tex.ID=Gui.ClassicTexture?Gui.GuiClassicTex:Gui.GuiTex;
+    for(i=0;i<10;i++) {
+        fill=(value-(float)(i*2))/2;if(fill<0)fill=0;if(fill>1)fill=1;
+        width=(int)(extent*fill+.5f);
+        if(tex.ID) {
+            Tex_SetRect(tex,x+i*step,y,extent,extent);
+            Tex_SetUV(tex,(food?32:0)/256.0f,48/128.0f,(food?48:16)/256.0f,64/128.0f);
+            Texture_Render(&tex);
+            if(!width)continue;
+            Tex_SetRect(tex,x+i*step,y,width,extent);
+            Tex_SetUV(tex,(food?48:16)/256.0f,48/128.0f,((food?48:16)+16*fill)/256.0f,64/128.0f);
+            Texture_Render(&tex);
+        } else {
+            Gfx_Draw2DFlat(x+i*step,y,extent,extent,PackedCol_Make(33,34,40,240));
+            if(width)Gfx_Draw2DFlat(x+i*step,y,width,extent,food?PackedCol_Make(208,148,72,255):PackedCol_Make(212,68,76,255));
+        }
+    }
 }
 static int Slots(void) {
     int window=LapisBackend_Gameplay()->window;
@@ -158,16 +198,22 @@ void LapisGui_Close(void) {
     if(Gui_GetScreen(GUI_PRIORITY_INVENTORY)==&signScreen)Gui_Remove(&signScreen);
 }
 void LapisGui_RenderHUD(void) {
-    struct LapisGameplay* g=LapisBackend_Gameplay();char buffer[160];int i,x,y,size=40;
+    struct LapisGameplay* g=LapisBackend_Gameplay();char buffer[160];int i,x,y,textured,size=40;
     if(!g || !LapisBackend_Protocol()->loaded || Game_HideGui)return;
     if(Gui_GetScreen(GUI_PRIORITY_INVENTORY)==&inventoryScreen)return;
     if(size>(Window_Main.Width-16)/9)size=(Window_Main.Width-16)/9;
     x=(Window_Main.Width-9*size)/2;y=Window_Main.Height-size-6;
     Gfx_Draw2DFlat(Window_Main.Width/2-5,Window_Main.Height/2,11,1,PackedCol_Make(245,245,230,255));
     Gfx_Draw2DFlat(Window_Main.Width/2,Window_Main.Height/2-5,1,11,PackedCol_Make(245,245,230,255));
-    for(i=0;i<9;i++)Slot(70+i,g->slots[0][36+i],x+i*size,y,size,i==Inventory.SelectedIndex);
-    sprintf(buffer,"Health %.0f/20    Food %d/20    %s",g->health,g->food,LapisBlocks_ItemName(g->slots[0][36+Inventory.SelectedIndex].item));
-    Text(68,buffer,x,y-26);
+    textured=HotbarBackground(x,y,size);
+    for(i=0;i<9;i++) {
+        if(textured)SlotContents(70+i,g->slots[0][36+i],x+i*size,y,size);
+        else Slot(70+i,g->slots[0][36+i],x+i*size,y,size,i==Inventory.SelectedIndex);
+    }
+    Vitals(g->health,0,x,y-size/2-7,size*4/10);
+    Vitals((float)g->food,1,x+size*9-size*4/10*10,y-size/2-7,size*4/10);
+    sprintf(buffer,"%s",LapisBlocks_ItemName(g->slots[0][36+Inventory.SelectedIndex].item));
+    Text(68,buffer,x,y-size/2-32);
     {
         float progress=LapisBackend_DigProgress();int mid=Window_Main.Width/2;
         if(progress>=0) {

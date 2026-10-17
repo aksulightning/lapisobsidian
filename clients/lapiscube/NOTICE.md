@@ -11,7 +11,13 @@ components are included in this change.
 are original LapisCube work under the accompanying BSD-3-Clause `LICENSE`.
 Protocol identifiers and wire behavior were studied from the Lapis testing
 source; the client does not link or copy Lapis server implementation code.
-The test server remains a separate executable. `tests/survival_fixture.c` includes
+The standalone singleplayer package additionally includes the existing GPL-3.0
+Lapis Obsidian server as a separate `LapisServer.wasm` worker module embedded
+alongside the BSD client in one HTML file. Its offline credits panel includes
+`LICENSE-server.txt` and `SOURCE-server.txt` with the corresponding revision and
+build command, also available in the embedded notices download. The
+multiplayer client does not bundle this server module.
+`tests/survival_fixture.c` includes
 the root server headers solely to write its pinned saved-game structures. That
 test utility is not part of the shipped client or binary packages; server headers
 retain their existing GPLv3 notices and terms.
@@ -21,9 +27,10 @@ retain their existing GPLv3 notices and terms.
 `engine/` is the unmodified ClassiCube Git submodule at
 `d41c3f7eef2038f59702b58bdb373483fb0d28f9` from
 https://github.com/ClassiCube/ClassiCube. Its `license.txt`, `credits.txt`, source
-headers and third-party licenses are retained. `patches/engine.patch` explicitly
-records integration changes to Server, input, screens, font/skin paths, branding
-and the entrypoint; no upstream copyright header is removed. Builds apply those changes only to a staged copy.
+headers and third-party licenses are retained. `patches/engine.patch` and `patches/audio.patch` explicitly
+record integration changes to Server, input, screens, font/skin paths, branding
+and the entrypoint; no upstream copyright header is removed. `tools/prepare_engine.py`
+also substitutes the separately credited native icons and fallback font in staging. Builds apply those changes only to a staged copy.
 
 ClassiCube's principal source license is BSD-3-Clause. Source redistribution
 must preserve its notices, conditions and disclaimer. Binary redistribution
@@ -60,8 +67,13 @@ document for upstream factual data sources. The client does not link server code
 
 ## Assets
 
-The initial asset collection uses Kenney Vleugels' verified CC0 Voxel Pack and
-original geometric UI/model designs and synthesized effects dedicated under CC0.
+The asset collection uses Kenney Vleugels' verified CC0 Voxel Pack, AFCMS/TechDudie
+CC0 textures from mc-like-textures, a public-domain font8x8 fallback by Daniel
+Hepper/Marcel Sondaar/IBM, Kenney Impact
+Sounds, individually credited CC0 recordings from Minetest Game, and original
+geometric UI/model designs and pitched note tones dedicated under CC0.
+Minetest Game is mixed-license; only the files in `assets/audio-sources.json`
+are imported. `docs/credits.md` records the creators and upstream evidence.
 `assets/manifest.json` records hashes and per-file provenance; exact notices are
 in `assets/licenses`. Original audiovisual designs/output are CC0, independently
 of the BSD license of code that creates or renders them.
