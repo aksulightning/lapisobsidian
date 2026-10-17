@@ -7,7 +7,9 @@ workflow is `.github/workflows/lapiscube-singleplayer.yml`.
 
 The complete game is one file at
 `clients/lapiscube/build/singleplayer/LapisCube-singleplayer.html`. Download the
-`LapisCube-singleplayer` Actions artifact and extract that HTML file. It embeds
+`LapisCube-singleplayer-drops-0` Actions artifact for the default build, or
+`LapisCube-singleplayer-drops-1` for experimental persistent drops, and extract
+that HTML file. It embeds
 the client, server, WebAssembly modules, textures, sounds, styles, licenses and
 asset provenance. No companion files or network downloads are needed during play.
 
