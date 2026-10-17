@@ -80,7 +80,10 @@ not expose `/proc`; AddressSanitizer and UndefinedBehaviorSanitizer remain enabl
 Broken blocks and existing mob loot now leave collectible item entities.
 Q/Ctrl-Q and inventory drop actions work, with gravity, stack merging, partial
 pickup, a five-minute lifetime and a fixed 128-item-entity limit. Drops are
-transient across restarts. See [item behavior and tests](docs/items.md).
+transient by default. `LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM=1 ./build.sh` enables
+`drops.bin` persistence and recovery. Lava is the only environmental hazard that
+destroys drops; the five-minute expiry still applies. See [item behavior and tests](docs/items.md)
+and [experimental systems](docs/experimental-systems.md).
 
 Skeletons shoot arrows, spiders are neutral until attacked, and creepers produce
 harmless firecracker bursts. Admins can use `/spawnmob <type> [x y z]`.
@@ -112,8 +115,12 @@ private random `LAPIS_ADMIN_TOKEN` environment value (32..128 non-space ASCII
 bytes), then use `/admin <token>` in-game. Admin login is disabled by default.
 Permissions and game modes reset on reconnect; no world-file migration is needed.
 
-The inherited connection is unencrypted and does not verify player UUIDs; use
-administrator commands on a trusted network or protected tunnel. See
+Default builds use unencrypted, unverified offline login.
+`LAPIS_ENABLE_EXPERIMENTAL_AUTH=1 ./build.sh` enables encrypted Java online-mode
+login with verified Minecraft sessions (OpenSSL/libcurl required). LapisCube
+multiplayer cannot join that mode; standalone singleplayer stays offline. See
+[experimental systems and compatibility](docs/experimental-systems.md). Use
+administrator commands on a trusted network or protected tunnel with offline builds. See
 [command syntax, permissions and limits](docs/commands.md) for details.
 [Inventory and packet hardening](docs/security-hardening.md) describes the current
 protections, regression tests and remaining network limitations.
@@ -155,7 +162,8 @@ pass is still pending.
 
 Create a new world with `./lapis-obsidian --seed -12345`, using a signed 64-bit
 decimal seed. Later runs load the seed from `world.meta`. Supplying a different
-seed for the same world fails. Keep `world.meta`, `world.bin`, `signs.bin`, `doors.bin`, `circuits.bin`, and `farming.bin` together. Run the
+seed for the same world fails. Keep `world.meta`, `world.bin`, `signs.bin`, `doors.bin`, `circuits.bin`, and `farming.bin` together, plus `drops.bin` and any `drops.journal`
+when using experimental persistence. Run the
 binary from a fresh directory to start another world. Legacy saves without
 metadata are rejected rather than overlaid onto a different terrain generator.
 Generator version 3 upgrades version 2 metadata automatically, retaining seeds,

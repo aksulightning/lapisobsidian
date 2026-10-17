@@ -143,3 +143,12 @@ can receive updates, so this is not a bit-for-bit reproducible build claim.
 The workflow only needs read access to repository contents. Static/YAML checks
 were performed locally; a completed three-target Actions run is still required
 to establish that this CI environment builds and tests every target successfully.
+
+## Experimental drops and authentication
+
+`LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM=1` enables persistent drop saves.
+`LAPIS_ENABLE_EXPERIMENTAL_AUTH=1` requires verified Java sessions and adds
+OpenSSL/libcurl/CA dependencies (`openssl-dev curl-dev ca-certificates`).
+Authentication currently supports dynamic builds; `--static` with authentication
+is rejected. Both variables propagate through `build_clientsrv.sh`.
+See [experimental systems](experimental-systems.md) for compatibility and recovery.

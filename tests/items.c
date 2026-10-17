@@ -121,8 +121,11 @@ int main (void) {
   assert(items_spawn(I_dirt,3,-2,201,-2,2000)); drain(); assert(total() == 4 && first()->age_ms == 4000 && first()->delay_ms == 2000);
   items_tick(INT64_MAX); drain(); assert(total() == 0);
   block(-32768,0,32767,B_air);
-  assert(items_spawn(I_dirt,1,-32768,0,32767,0)); items_tick(1000000); drain(); assert(total() == 0);
+  assert(items_spawn(I_dirt,1,-32768,0,32767,0)); items_tick(1000000); drain(); assert(total() == 1 && first()->y == 0 && first()->velocity == 0);
   clean(); block(-2,201,-2,B_lava); assert(items_spawn(I_dirt,1,-2,201,-2,0)); items_tick(100000); drain(); assert(!total()); block(-2,201,-2,B_air);
+  clean(); p->x=20; other->x=20;
+  block(-2,201,-2,B_cactus); assert(items_spawn(I_dirt,1,-2,201,-2,0)); items_tick(100000); drain(); assert(total()==1);
+  clean(); block(-2,201,-2,B_air);
   /* Joining/leaving range updates tracking, and disconnect removes viewer bits. */
   p->x = 1000; other->x = 1000; assert(items_spawn(I_dirt,1,-2,201,-2,1500)); assert(first()->viewers == 0);
   p->x = -2; items_sync_player(p); wire_spawn(sockets[0],1,I_dirt); assert(first()->viewers == 1);

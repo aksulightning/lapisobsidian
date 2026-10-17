@@ -32,6 +32,9 @@ compiler="${CC:-gcc}"
 for arg in "$@"; do
   case $arg in
     --9x)
+      if [[ "${LAPIS_ENABLE_EXPERIMENTAL_AUTH:-0}" == 1 || "${LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM:-0}" == 1 ]]; then
+        echo "Experimental persistence/authentication require a modern native target, not --9x" >&2; exit 1
+      fi
       if [[ "$unameOut" == MINGW64_NT* ]]; then
         compiler="/opt/bin/i686-w64-mingw32-gcc"
         windows_linker="$windows_linker -Wl,--subsystem,console:4"
@@ -58,5 +61,14 @@ if [[ "${LAPIS_ENABLE_WEBCLIENT:-0}" == 1 ]]; then
   fi
   flags+=(-DLAPIS_ENABLE_WEBCLIENT=1)
 fi
+experimental_libs=()
+for feature in LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM LAPIS_ENABLE_EXPERIMENTAL_AUTH; do
+  value="${!feature:-0}"
+  [[ "$value" == 0 || "$value" == 1 ]] || { echo "$feature must be 0 or 1" >&2; exit 1; }
+  flags+=("-D$feature=$value")
+done
+if [[ "${LAPIS_ENABLE_EXPERIMENTAL_AUTH:-0}" == 1 ]]; then
+  experimental_libs=(-lcurl -lssl -lcrypto)
+fi
 # Disable contraction so density vectors do not depend on FMA availability.
-"$compiler" src/*.c "${flags[@]}" -ffp-contract=off -Iinclude -o "lapis-obsidian$exe" $windows_linker -lm
+"$compiler" src/*.c "${flags[@]}" -ffp-contract=off -Iinclude -o "lapis-obsidian$exe" $windows_linker -lm "${experimental_libs[@]}"

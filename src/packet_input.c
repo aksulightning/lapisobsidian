@@ -22,6 +22,7 @@ static bool would_block (void) {
   return errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR;
 #endif
 }
+#if !LAPIS_ENABLE_EXPERIMENTAL_AUTH
 static int receive (int fd, size_t size, int flags) {
 #if (defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1) || defined(LAPIS_SINGLEPLAYER)
   if (webclient_has(fd)) return webclient_recv(fd,frame,size,flags == MSG_PEEK);
@@ -32,10 +33,46 @@ static int receive (int fd, size_t size, int flags) {
   return (int)recv(fd,frame,size,flags);
 #endif
 }
+#endif
 void packet_input_reset (PacketInput *input, int fd) { *input = (PacketInput){.fd=fd}; }
 int packet_input_poll (PacketInput *input, int64_t now) {
   if (!input || input->fd < 0 || now < 0 || active_fd >= 0) return -1;
   if (input->pending && (now < input->started || now-input->started >= PACKET_INPUT_TIMEOUT_US)) return -1;
+#if LAPIS_ENABLE_EXPERIMENTAL_AUTH
+  /* Consume each encrypted byte exactly once. Read only the current frame so
+   * the encryption transition cannot accidentally consume plaintext/ciphertext
+   * from the following packet under the wrong cipher state. */
+  for (;;) {
+    size_t want=input->prefix?input->prefix+input->length-input->used:1;
+    if(!want) {
+      memcpy(frame,input->bytes,input->used); active_fd=input->fd;
+      cursor=input->prefix; end=input->used; failed=false;
+      input->used=input->prefix=input->length=0; input->pending=false; return 1;
+    }
+    int n;
+#if defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT==1
+    if(webclient_has(input->fd)) n=webclient_recv(input->fd,input->bytes+input->used,want,0);
+    else
+#endif
+#ifdef _WIN32
+    n=(int)recv(input->fd,(char *)input->bytes+input->used,(int)want,0);
+#else
+    n=(int)recv(input->fd,input->bytes+input->used,want,0);
+#endif
+    if(n<0) return would_block()?0:-1;
+    if(!n || !auth_decrypt(input->fd,input->bytes+input->used,(size_t)n)) return -1;
+    if(!input->pending) { input->pending=true; input->started=now; }
+    input->used+=(size_t)n;
+    if(!input->prefix) {
+      uint8_t byte=input->bytes[input->used-1];
+      input->length|=(size_t)(byte&127u)<<(7*(input->used-1));
+      if(!(byte&128u)) {
+        if(!input->length || input->length>PACKET_INPUT_LIMIT) return -1;
+        input->prefix=input->used;
+      } else if(input->used==3) return -1;
+    }
+  }
+#else
   /* Peek a protocol length prefix, at most three bytes. */
   int n = receive(input->fd,3,MSG_PEEK);
   if (n < 0) return would_block() ? 0 : -1;
@@ -59,6 +96,7 @@ int packet_input_poll (PacketInput *input, int64_t now) {
   if (n < 0 || (size_t)n != total) return -1;
   input->pending = false; active_fd = input->fd; cursor = prefix; end = total; failed = false;
   return 1;
+#endif
 }
 bool packet_input_read (int fd, void *buffer, size_t count, ssize_t *result) {
   if (active_fd < 0) return false;

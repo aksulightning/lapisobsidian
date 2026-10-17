@@ -20,12 +20,12 @@ default), rather than increasing the whole server's tick rate.
 
 ## Bounded behavior
 
-- `ITEM_ENTITY_LIMIT` is 128, backed by a fixed C array (3584 bytes on the tested
-  64-bit build). There is no per-item heap allocation or new dependency.
+- `ITEM_ENTITY_LIMIT` is 128, backed by a fixed C array (5120 bytes on the tested
+  64-bit build, including stable persistent IDs). There is no per-item heap allocation or new dependency.
 - Compatible stacks in the same horizontal block cell merge within half a
   block vertically. Merging keeps the older age and longer pickup delay.
-- Items expire after five minutes, disappear below Y=0, and are destroyed by
-  lava. They continue aging when the last player disconnects.
+- Items expire after five minutes, stop at Y=0, and are destroyed by lava.
+  Cactus does not destroy drops; no fire-damage path is enabled. They continue aging when the last player disconnects.
 - Gravity has at most 20 collision steps per server tick, with each step less
   than a block. Lag does not cause an unbounded physics catch-up loop.
 - If the pool is full, an inventory drop leaves the inventory unchanged.
@@ -55,8 +55,12 @@ or server binaries are required. Existing notices continue to apply.
 
 ## Intentional limits
 
-Drops are transient and are not saved across a server restart. The world and
-player save layouts are unchanged. There is no horizontal throw trajectory,
+Drops are transient by default. Compile with
+`LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM=1` for a versioned `drops.bin` registry,
+coordinated inventory/world recovery, and saved age/pickup delays. See
+[experimental systems](experimental-systems.md) for build options, switching
+modes, storage costs, recovery, and browser durability limits. The existing
+world and player save layouts are unchanged. There is no horizontal throw trajectory,
 water current, item damage, hopper handling or precise slab/stair collision.
 Collision uses the compact server block classification, with open oak doors
 passable. Inventory stack sizes follow the existing server gameplay table.
@@ -73,7 +77,7 @@ SANITIZE=1 ./tests/run.sh
 ```
 
 The item tests independently decode spawn/metadata/pickup/removal packets and
-exercise gravity, lifetime, lava/void cleanup, partial and competing pickups,
+exercise gravity, lifetime, lava destruction, cactus immunity and the Y=0 boundary, partial and competing pickups,
 merging, viewer tracking, negative coordinates, mining, mob loot, Q/Ctrl-Q,
 cursor drops, capacity rejection and malformed inventory frames. Existing sign
 and door tests now collect their drops instead of expecting instant delivery.

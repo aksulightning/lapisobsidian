@@ -4,6 +4,8 @@ import argparse
 import functools
 import http.server
 import json
+import math
+import zlib
 import os
 import pathlib
 import struct
@@ -113,6 +115,33 @@ def main(mode):
                 second.wait_for_function("document.getElementById('logmsg').textContent.includes('already open')")
                 assert not second.workers,'Second tab must not start a competing server'
                 second.close()
+                persistent_drop=None
+                def drop_records():
+                    raw=bytes(page.workers[0].evaluate("FS.analyzePath('/save/drops.bin').exists ? Array.from(FS.readFile('/save/drops.bin')) : []"))
+                    if not raw:return []
+                    assert raw[:8]==b'LAPDROP1' and zlib.crc32(raw[:-4])==struct.unpack_from('<I',raw,len(raw)-4)[0]
+                    count=struct.unpack_from('<I',raw,20)[0]
+                    assert len(raw)==36+count*32
+                    return [struct.unpack_from('<QffhhHBBII',raw,32+i*32) for i in range(count)]
+                if os.environ.get('LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM')=='1':
+                    # Mine real nearby blocks through protocol 772; the server
+                    # owns the loot. Keep it beyond pickup range for the reload.
+                    x,y,z=(math.floor(v) for v in moved)
+                    for dx,dz in ((3,0),(-3,0),(0,3),(0,-3)):
+                        for dy in range(-4,3):
+                            by=y+dy
+                            if not 0<=by<=255:continue
+                            packed=(((x+dx)&0x3ffffff)<<38)|(((z+dz)&0x3ffffff)<<12)|(by&0xfff)
+                            payload=bytes([0x28,2])+struct.pack('!Q',packed)+bytes([1,0])
+                            page.evaluate('(data)=>LapisSingleplayer.stream.send(new Uint8Array(data))',list(bytes([len(payload)])+payload))
+                        page.wait_for_timeout(500)
+                        records=drop_records()
+                        if records:
+                            persistent_drop=records[0]
+                            break
+                    assert persistent_drop,'Mining must produce an authoritative persistent drop'
+                else:
+                    assert not drop_records(),'Default singleplayer must remain transient'
                 page.evaluate('document.exitPointerLock()')
                 page.click('#save-world')
                 page.wait_for_function("document.getElementById('save-status').textContent==='Saved on this device.'",timeout=20000)
@@ -131,6 +160,11 @@ def main(mode):
                 # Position round-trips above; world length and seed remain stable.
                 assert len(restored)==len(saved)
                 assert page.workers[0].evaluate("Array.from(FS.readFile('/save/world.meta'))")==metadata
+                if persistent_drop:
+                    records=drop_records()
+                    restored_drop=next((r for r in records if r[0]==persistent_drop[0]),None)
+                    assert restored_drop and restored_drop[5:7]==persistent_drop[5:7],(persistent_drop,records)
+                    assert restored_drop[8]>=persistent_drop[8],'Reload must retain elapsed lifetime'
                 page.screenshot(path=str(evidence/'resumed-world.png'))
                 page.set_viewport_size({'width':390,'height':320})
                 page.wait_for_timeout(300)
@@ -140,7 +174,7 @@ def main(mode):
                 assert all(r==url or r.startswith(('blob:','data:')) for r in requests),requests
                 (evidence/'results.json').write_text(json.dumps(dict(
                     single_file=True,offline=True,mode=mode,embedded_sound=True,embedded_notices=True,
-                    loaded=True,movement=True,save_reload=True,second_tab_locked=True,
+                    loaded=True,movement=True,save_reload=True,second_tab_locked=True,persistent_drop_reload=bool(persistent_drop),
                     websockets=sockets,errors=errors,saved_bytes=len(saved)),indent=2)+'\n')
             finally:
                 (evidence/'browser.log').write_text('\n'.join(logs+errors)+'\n')

@@ -10,6 +10,7 @@
 #define ITEM_LIFETIME_MS 300000u
 
 typedef struct {
+  uint64_t persistent_id;
   float y, velocity;
   uint32_t age_ms, delay_ms, viewers;
   int16_t x, z;
@@ -20,6 +21,9 @@ typedef struct {
 /* A zero count is an unused slot. Coordinates are server block coordinates. */
 const DroppedItem *items_at (size_t index);
 void items_clear (void);
+bool items_load(const char *path);
+bool items_save(void);
+const char *items_path(void);
 bool items_can_spawn (uint16_t item, uint8_t count, int x, int y, int z);
 bool items_can_spawn_pair (uint16_t a, uint8_t ac, uint16_t b, uint8_t bc, int x, int y, int z);
 bool items_spawn (uint16_t item, uint8_t count, int x, int y, int z, uint32_t delay_ms);

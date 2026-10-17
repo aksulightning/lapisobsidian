@@ -55,3 +55,10 @@ and direct `file://` launch. Gameplay runs with networking disabled. It checks
 real WASM world loading and input, embedded sound decoding, offline notices,
 absence of companion-file requests or WebSockets, save/reload and the second-tab
 lock. The separate YAML workflow uploads the HTML itself as the game artifact.
+
+## Optional persistent drops
+
+Build with `LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM=1 make -C clients/lapiscube singleplayer`
+to include drop registries in the browser save. Use Save & quit; durability is
+the last completed IndexedDB save. Offline singleplayer rejects the experimental
+multiplayer authentication flag. See [experimental systems](../../../docs/experimental-systems.md).

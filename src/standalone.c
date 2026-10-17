@@ -7,6 +7,7 @@
 #include <emscripten.h>
 #include "tools.h"
 #include "serialize.h"
+#include "items.h"
 #include "doors.h"
 #include "signs.h"
 #include "farming.h"
@@ -82,7 +83,7 @@ int standalone_yield(void) {
     if (stopped) return 1;
     if (save_requested || get_program_time()-last_save >= 15000000) {
         writeBlockChangesToDisk(0,block_changes_count-1); writePlayerDataToDisk();
-        int ok = doors_save() && signs_save() && farming_save() && circuits_save();
+        int ok = items_save() && doors_save() && signs_save() && farming_save() && circuits_save();
         last_save = get_program_time(); save_requested = 0;
         EM_ASM({ Module.saveWorld(!!$0, false); }, ok);
         while (EM_ASM_INT({ return Module.saving; })) emscripten_sleep(1);

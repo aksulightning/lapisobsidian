@@ -33,6 +33,7 @@
 #include "crafting.h"
 #include "procedures.h"
 #include "packets.h"
+#include "auth.h"
 
 // S->C Status Response (server list ping)
 int sc_statusResponse (int client_fd) {
@@ -88,17 +89,10 @@ int cs_handshake (int client_fd) {
 int cs_loginStart (int client_fd, uint8_t *uuid, char *name) {
   printf("Received Login Start:\n");
 
-  readString(client_fd);
-  if (recv_count == -1) return 1;
-  strncpy(name, (char *)recv_buffer, 16 - 1);
-  name[16 - 1] = '\0';
-  printf("  Player name: %s\n", name);
-  recv_count = recv_all(client_fd, recv_buffer, 16, false);
-  if (recv_count == -1) return 1;
-  memcpy(uuid, recv_buffer, 16);
-  printf("  Player UUID: ");
-  for (int i = 0; i < 16; i ++) printf("%x", uuid[i]);
-  printf("\n\n");
+  int n=readVarInt(client_fd);
+  if(n<1 || n>16 || recv_all(client_fd,name,(size_t)n,false)!=n || !auth_name_valid(name,(size_t)n)) { recv_count=0; return 1; }
+  if(n<16) memset(name+n,0,(size_t)(16-n));
+  if(recv_all(client_fd,uuid,16,false)!=16) { recv_count=0; return 1; }
 
   return 0;
 }
@@ -107,7 +101,7 @@ int cs_loginStart (int client_fd, uint8_t *uuid, char *name) {
 int sc_loginSuccess (int client_fd, uint8_t *uuid, char *name) {
   printf("Sending Login Success...\n\n");
 
-  uint8_t name_length = strlen(name);
+  uint8_t name_length = player_name_length(name);
   writeVarInt(client_fd, 1 + 16 + sizeVarInt(name_length) + name_length + 1);
   writeVarInt(client_fd, 0x02);
   send_all(client_fd, uuid, 16);
@@ -687,7 +681,7 @@ int cs_closeContainer (int client_fd) {
 // S->C Player Info Update, "Add Player" action
 int sc_playerInfoUpdateAddPlayer (int client_fd, PlayerData player) {
 
-  writeVarInt(client_fd, 22 + strlen(player.name)); // Packet length
+  writeVarInt(client_fd, 22 + player_name_length(player.name)); // Packet length
   writeByte(client_fd, 0x3F); // Packet ID
 
   writeByte(client_fd, 0x05); // Add Player + Update Game Mode
@@ -696,8 +690,8 @@ int sc_playerInfoUpdateAddPlayer (int client_fd, PlayerData player) {
   // Player UUID
   send_all(client_fd, player.uuid, 16);
   // Player name
-  writeByte(client_fd, strlen(player.name));
-  send_all(client_fd, player.name, strlen(player.name));
+  writeByte(client_fd, player_name_length(player.name));
+  send_all(client_fd, player.name, player_name_length(player.name));
   // Properties (don't send any)
   writeByte(client_fd, 0);
 

@@ -68,9 +68,11 @@ web:
 	$(MAKE) -C build/engine -f ../../web/build.mk RELEASE=1 -j$(ENGINE_JOBS)
 	$(PYTHON) tools/package_web.py
 singleplayer:
+	@test "$(LAPIS_ENABLE_EXPERIMENTAL_AUTH)" != 1 || { echo 'Singleplayer cannot enable multiplayer authentication' >&2; exit 1; }
+	@case "$(LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM)" in ''|0|1) ;; *) echo 'LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM must be 0 or 1' >&2; exit 1;; esac
 	$(PYTHON) tools/prepare_engine.py --mode singleplayer
 	$(MAKE) -C build/engine -f ../../web/build.mk RELEASE=1 -j$(ENGINE_JOBS)
-	emcc ../../src/*.c -O2 -Wall -Wextra -ffp-contract=off -I../../include -DLAPIS_SINGLEPLAYER=1 -sASYNCIFY=1 -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=67108864 -sSTACK_SIZE=1048576 -sENVIRONMENT=worker -sEXIT_RUNTIME=1 -sFORCE_FILESYSTEM=1 -lidbfs.js -sEXPORTED_FUNCTIONS='["_main","_malloc","_free"]' -sEXPORTED_RUNTIME_METHODS='["HEAPU8"]' -o build/LapisServer.js
+	emcc ../../src/*.c -O2 -Wall -Wextra -ffp-contract=off -I../../include -DLAPIS_SINGLEPLAYER=1 -DLAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM=$(if $(LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM),$(LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM),0) -sASYNCIFY=1 -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=67108864 -sSTACK_SIZE=1048576 -sENVIRONMENT=worker -sEXIT_RUNTIME=1 -sFORCE_FILESYSTEM=1 -lidbfs.js -sEXPORTED_FUNCTIONS='["_main","_malloc","_free"]' -sEXPORTED_RUNTIME_METHODS='["HEAPU8"]' -o build/LapisServer.js
 	$(PYTHON) tools/package_web.py --singleplayer
 package:
 	$(PYTHON) tools/package.py

@@ -5,6 +5,8 @@
 #include "webclient.h"
 #include "fluids.h"
 #include "items.h"
+#include "drop_store.h"
+#include "auth.h"
 #include "server_config.h"
 #include "packet_input.h"
 #include "mobs.h"
@@ -69,6 +71,12 @@
  * frame; individual handlers validate fields before applying game actions. */
 void handlePacket (int client_fd, int length, int packet_id, int state) {
 
+#if LAPIS_ENABLE_EXPERIMENTAL_AUTH
+  if(state==STATE_LOGIN) {
+    if(!auth_login_packet(client_fd,packet_id)) recv_count=0;
+    return;
+  }
+#endif
   // Count the amount of bytes received to catch length discrepancies
   uint64_t bytes_received_start = total_bytes_received;
 
@@ -495,6 +503,7 @@ int main (int argc, char **argv) {
     block_changes[i].block = 0xFF;
   }
 
+  if (!server_config.experimental_enable_plates && !drop_store_recover(".",false)) return EXIT_FAILURE;
   // Start the disk/flash serializer (if applicable)
   if (server_config.experimental_enable_plates) {
     if (!plates_start()) { fputs("Cannot initialize Plates; check plates/index.txt and world saves.\n",stderr); return EXIT_FAILURE; }
@@ -508,6 +517,11 @@ int main (int argc, char **argv) {
   }
 
   if (!plates_enabled) {
+  #ifdef SYNC_WORLD_TO_DISK
+    if (!items_load("drops.bin")) return EXIT_FAILURE;
+  #else
+    if (!items_load(NULL)) return EXIT_FAILURE;
+  #endif
   #ifdef SYNC_WORLD_TO_DISK
     #ifdef ESP_PLATFORM
     if (!doors_load("/littlefs/doors.bin")) exit(EXIT_FAILURE);
@@ -531,7 +545,9 @@ int main (int argc, char **argv) {
     farming_load(NULL); circuits_load(NULL); musicbox_init("songs");
   #endif
   fluids_init();
+  if (!drop_store_begin()) return EXIT_FAILURE;
   circuits_tick();
+  if (!drop_store_commit()) return EXIT_FAILURE;
 
   }
 
@@ -597,6 +613,9 @@ int main (int argc, char **argv) {
 
   #endif /* !LAPIS_SINGLEPLAYER */
 
+  printf("Experimental drops: %s; multiplayer identity: %s\n", LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM ? "persistent" : "transient", LAPIS_ENABLE_EXPERIMENTAL_AUTH ? "verified Java sessions required" : "offline/unverified");
+  if (!auth_init()) { fputs("Cannot initialize experimental authentication (OpenSSL/libcurl).\n",stderr); return EXIT_FAILURE; }
+
   // Track time of last server tick (in microseconds)
   int64_t last_tick_time = get_program_time();
   int64_t last_arrow_time = last_tick_time;
@@ -628,6 +647,7 @@ int main (int argc, char **argv) {
     #if (defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1) || defined(LAPIS_SINGLEPLAYER)
     webclient_poll(get_program_time());
     #endif
+    auth_poll();
     // Attempt to accept a new connection
     for (int i = 0; i < MAX_PLAYERS; i ++) {
       if (clients[i] != -1) continue;
@@ -649,6 +669,7 @@ int main (int argc, char **argv) {
       #endif
         packet_input_reset(&inputs[i],clients[i]);
         client_count ++;
+        if (!auth_accept(clients[i],get_program_time())) disconnectClient(&clients[i],5);
       }
       break;
     }
@@ -664,6 +685,8 @@ int main (int argc, char **argv) {
       /* Only loaded worlds have active simulation. select() itself is cheap. */
       if (plates_enabled && !plates_is_loaded(plate)) continue;
       if (!plates_select(plate)) continue;
+      bool transaction = arrow_now-last_mob_move_time >= 50000 || arrow_now-last_arrow_time >= 100000 || time_since_last_tick > TIME_BETWEEN_TICKS;
+      if (transaction && !drop_store_begin()) return EXIT_FAILURE;
       if (arrow_now-last_mob_move_time >= 50000) mobs_tick_movement(arrow_now-last_mob_move_time);
       if (arrow_now-last_music_time >= 20000) musicbox_tick(arrow_now-last_music_time);
       if (arrow_now-last_arrow_time >= 100000) {
@@ -671,6 +694,7 @@ int main (int argc, char **argv) {
         circuits_tick(); farming_tick(arrow_now-last_arrow_time);
       }
       if (time_since_last_tick > TIME_BETWEEN_TICKS) handleServerTick(time_since_last_tick);
+      if (transaction && !drop_store_commit()) return EXIT_FAILURE;
     }
     if (arrow_now-last_mob_move_time >= 50000) last_mob_move_time = arrow_now;
     if (arrow_now-last_music_time >= 20000) last_music_time = arrow_now;
@@ -687,6 +711,7 @@ int main (int argc, char **argv) {
     int client_fd = clients[client_index];
     plates_select_for_fd(client_fd);
 
+    if (auth_progress(client_fd,get_program_time()) < 0) { disconnectClient(&clients[client_index],5); continue; }
     int ready = packet_input_poll(&inputs[client_index],get_program_time());
     if (ready < 0) { disconnectClient(&clients[client_index],2); continue; }
     if (!ready) continue;
@@ -696,15 +721,20 @@ int main (int argc, char **argv) {
       packet_input_end(); disconnectClient(&clients[client_index],3); continue;
     }
     int state = getClientState(client_fd);
+    bool persistent_action = state == STATE_PLAY;
+    if (persistent_action && !drop_store_begin()) return EXIT_FAILURE;
     handlePacket(client_fd,(int)packet_input_remaining(),packet_id,state);
     bool complete = packet_input_end();
-    if (!complete || recv_count <= 0) { disconnectClient(&clients[client_index],4); continue; }
+    if (!complete || recv_count <= 0) disconnectClient(&clients[client_index],4);
+    if (persistent_action && !drop_store_commit()) return EXIT_FAILURE;
 
   }
 
   for (int i = 0; i < MAX_PLAYERS; i++) if (clients[i] >= 0) {
     plates_select_for_fd(clients[i]);
+    if (!drop_store_begin()) return EXIT_FAILURE;
     disconnectClient(&clients[i],0);
+    if (!drop_store_commit()) return EXIT_FAILURE;
   }
   #if (defined(LAPIS_ENABLE_WEBCLIENT) && LAPIS_ENABLE_WEBCLIENT == 1) || defined(LAPIS_SINGLEPLAYER)
   webclient_stop();
@@ -714,6 +744,7 @@ int main (int argc, char **argv) {
     if (plates_enabled && !plates_is_loaded(plate)) continue;
     if (!plates_select(plate)) continue;
     writeBlockChangesToDisk(0,block_changes_count-1);
+    if (!items_save()) saved = false;
     if (!doors_save()) saved = false;
     if (!signs_save()) saved = false;
     if (!farming_save()) saved = false;
@@ -735,6 +766,7 @@ int main (int argc, char **argv) {
     WSACleanup();
   #endif
 
+  auth_shutdown();
   printf("Server closed.\n");
   return saved ? EXIT_SUCCESS : EXIT_FAILURE;
 

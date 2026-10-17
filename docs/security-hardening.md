@@ -69,7 +69,8 @@ disabled by the existing sandbox test configuration.
 Outbound `send_all` still waits for socket writability and can stall the tick loop
 when a peer stops reading; a bounded outbound queue is a separate follow-up.
 Connections that have sent no first byte are not covered by the frame deadline.
-The inherited offline login does not authenticate UUIDs and transport remains
-unencrypted. Administrator access still requires the configured token and should
+Default offline login does not authenticate UUIDs and transport remains
+unencrypted. Optional `LAPIS_ENABLE_EXPERIMENTAL_AUTH=1` builds verify Java
+sessions and encrypt transport; see [experimental authentication](experimental-systems.md). Administrator access still requires the configured token and should
 be used over a trusted network or protected tunnel. Frame isolation does not
 replace semantic validation inside every handler or a comprehensive audit.
