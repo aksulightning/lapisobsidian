@@ -3,6 +3,20 @@ on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
+  alpine-experimental-preset:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build authenticated and static browser-compatible Alpine presets
+        run: |
+          docker run --rm --volume "$GITHUB_WORKSPACE:/work" --workdir /work alpine:3.23.6 sh -eu -c '
+            apk add --no-cache build-base binutils openssl-dev curl-dev ca-certificates
+            ./build-experiments-alpine.sh --output .tests/experimental-auth
+            LAPIS_ENABLE_EXPERIMENTAL_AUTH=0 ./build-experiments-alpine.sh --static --output .tests/experimental-drops
+            readelf -l .tests/experimental-auth | grep -F /lib/ld-musl-x86_64.so.1
+            if readelf -l .tests/experimental-drops | grep -q INTERP; then exit 1; fi
+            if ./build-experiments-alpine.sh --static; then exit 1; fi
+          '
   build:
     runs-on: ubuntu-24.04
     strategy:

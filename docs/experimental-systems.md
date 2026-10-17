@@ -21,6 +21,13 @@ inherited by `build_clientsrv.sh`. Builds without authentication need no new
 external library. Both experimental features reject the inherited `--9x`
 target; ESP-IDF is not supported by these opt-ins.
 
+For convenient web-enabled builds, `build-experiments-alpine.sh` and
+`build-experiments-debian.sh` default both experiments to `1`; an explicit `0`
+still disables either feature. `build-debian.sh` enables the web client with
+the usual default-off experiments. See [build presets](build-presets.md) for
+dependencies and asset setup. LapisCube browser play still requires building
+with `LAPIS_ENABLE_EXPERIMENTAL_AUTH=0`.
+
 ## Drop behavior
 
 Mining, harvesting, mob loot, shearing and inventory drops use the existing

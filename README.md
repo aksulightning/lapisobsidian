@@ -57,6 +57,18 @@ To also build the server with **optional HTTP/WebSocket hosting**, use
 normal server builds stay TCP-only. See the
 [Alpine client/server guide](clients/lapiscube/docs/alpine-server.md).
 
+## Debian and experimental build presets
+
+`./build-debian.sh` builds the Debian/Ubuntu server with HTTP/WebSocket hosting
+and its browser bundle enabled. `./build-experiments-debian.sh` and
+`./build-experiments-alpine.sh` additionally default persistent drops and Java
+authentication to on. The Alpine preset compiles only the server; browser assets
+are installed separately. Each script provides `--help`.
+
+LapisCube cannot join an authentication-enabled server. For browser play with
+persistent drops, use `LAPIS_ENABLE_EXPERIMENTAL_AUTH=0` with an experimental
+preset. See [prerequisites, build options and examples](docs/build-presets.md).
+
 ## Tests
 
 ```sh
