@@ -2,9 +2,9 @@ name: LapisCube web client
 on:
   push:
     branches: [testing-cube]
-    paths: ['clients/lapiscube/**', 'src/**', 'include/**', 'build.sh', 'build_client.sh', 'build_clientsrv.sh', 'build-alpine.sh', '.github/workflows/lapiscube-web.yml']
+    paths: ['clients/lapiscube/**', 'src/**', 'include/**', 'build.sh', 'build_client.sh', 'build_clientsrv.sh', 'build-alpine.sh', 'build-debian.sh', 'build-experiments-alpine.sh', 'build-experiments-debian.sh', '.github/workflows/lapiscube-web.yml']
   pull_request:
-    paths: ['clients/lapiscube/**', 'src/**', 'include/**', 'build.sh', 'build_client.sh', 'build_clientsrv.sh', 'build-alpine.sh', '.github/workflows/lapiscube-web.yml']
+    paths: ['clients/lapiscube/**', 'src/**', 'include/**', 'build.sh', 'build_client.sh', 'build_clientsrv.sh', 'build-alpine.sh', 'build-debian.sh', 'build-experiments-alpine.sh', 'build-experiments-debian.sh', '.github/workflows/lapiscube-web.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -103,7 +103,7 @@ jobs:
           ./build.sh
           cp lapis-obsidian clients/lapiscube/build/default-server
           source clients/lapiscube/build/emsdk/emsdk_env.sh
-          LAPIS_ENABLE_WEBCLIENT=1 ./build.sh
+          ./build-debian.sh
           cp lapis-obsidian clients/lapiscube/build/web-server
           cp clients/lapiscube/build/default-server lapis-obsidian
       - name: Protocol, malformed input and transport acceptance
@@ -115,6 +115,13 @@ jobs:
         env:
           LAPIS_WEB_REVIEW_IMAGES: '1'
         run: python3 clients/lapiscube/tests/web_browser.py
+      - name: Build experimental Debian presets with the validated browser bundle
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev libcurl4-openssl-dev ca-certificates
+          ./build-experiments-debian.sh --prebuilt webclient
+          LAPIS_ENABLE_EXPERIMENTAL_AUTH=0 ./build-experiments-debian.sh --prebuilt webclient
+          cp clients/lapiscube/build/default-server lapis-obsidian
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: LapisCube-web
