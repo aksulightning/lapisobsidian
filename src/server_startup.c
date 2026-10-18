@@ -74,6 +74,8 @@ int server_initialize(int argc, char **argv, int clients[MAX_PLAYERS]) {
     block_changes[i].block = 0xFF;
   }
 
+  /* Recover interrupted transactions before any serializer reads their files.
+   * Plates perform this recovery separately for each loaded world. */
   if (!server_config.experimental_enable_plates && !drop_store_recover(".",false)) return EXIT_FAILURE;
   // Start the disk/flash serializer (if applicable)
   if (server_config.experimental_enable_plates) {

@@ -10,6 +10,8 @@
 #include "inventory.h"
 #include <string.h>
 
+/* Mob IDs encode their array index as -id-2; validate before indexing so player
+ * IDs and the environmental sentinel cannot be interpreted as mobs. */
 void interactEntity (int entity_id, int interactor_id) {
 
   PlayerData *player;
@@ -52,6 +54,9 @@ void interactEntity (int entity_id, int interactor_id) {
   }
 }
 
+/* Positive IDs are player descriptors, IDs <= -2 are mobs, and attacker -1
+ * denotes environmental damage. Player attacks apply cooldown/weapon scaling
+ * here; callers supply base damage rather than pre-scaling it. */
 void hurtEntity (int entity_id, int attacker_id, uint8_t damage_type, uint8_t damage) {
 
   if (attacker_id > 0) { // Attacker is a player

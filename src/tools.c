@@ -7,6 +7,8 @@
 #endif
 #endif
 
+/* Advance the shared gameplay RNG; zero is an absorbing state, guarded by the
+ * periodic tick. This deterministic generator is not suitable for secrets. */
 uint32_t fast_rand () {
   rng_seed ^= rng_seed << 13;
   rng_seed ^= rng_seed >> 17;
@@ -14,6 +16,7 @@ uint32_t fast_rand () {
   return rng_seed;
 }
 
+/* Stateless seed mixer: callers retain/update state if they need a sequence. */
 uint64_t splitmix64 (uint64_t state) {
   uint64_t z = state + 0x9e3779b97f4a7c15;
   z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9;

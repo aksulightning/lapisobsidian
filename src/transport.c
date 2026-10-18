@@ -35,6 +35,9 @@
 // Helps notice misread packets and clean up after errors
 uint64_t total_bytes_received = 0;
 
+/* An active frame takes precedence over socket reads, preventing a handler
+ * from consuming the next packet. Raw-socket callers must check short reads;
+ * require_first only makes the initial availability check nonblocking. */
 ssize_t recv_all (int client_fd, void *buf, size_t n, uint8_t require_first) {
   ssize_t framed;
   if (packet_input_read(client_fd,buf,n,&framed)) {
@@ -88,6 +91,9 @@ ssize_t recv_all (int client_fd, void *buf, size_t n, uint8_t require_first) {
   return total; // got exactly n bytes
 }
 
+/* Raw TCP writer used directly or beneath encryption. Yield while backpressured
+ * and time out on lack of progress, not total transfer duration; return -1 on
+ * failure even if some bytes were sent before the error. */
 static ssize_t send_transport (int client_fd, const void *buf, ssize_t len) {
   // Treat any input buffer as *uint8_t for simplicity
   const uint8_t *p = (const uint8_t *)buf;
@@ -134,6 +140,9 @@ static ssize_t send_transport (int client_fd, const void *buf, ssize_t len) {
   return sent;
 }
 
+/* Queue plaintext before transport selection so a durable transaction can
+ * withhold all client-visible changes until commit. A successful return may
+ * mean queued output, not bytes already delivered to the peer. */
 ssize_t send_all (int client_fd, const void *buf, ssize_t len) {
   /* Defence in depth for world-scoped broadcasts from inherited packet code. */
   if (!plates_fd_active(client_fd)) return len;
@@ -149,6 +158,8 @@ ssize_t send_all (int client_fd, const void *buf, ssize_t len) {
   return send_transport(client_fd,buf,len);
 }
 
+/* Drain unwanted bytes through the same frame boundary as normal reads. Stop
+ * when reads make no progress; never bypass framing to recover missing bytes. */
 void discard_all (int client_fd, size_t remaining, uint8_t require_first) {
   while (remaining > 0) {
     size_t recv_n = remaining > MAX_RECV_BUF_LEN ? MAX_RECV_BUF_LEN : remaining;

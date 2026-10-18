@@ -205,7 +205,9 @@ void handlePacket (int client_fd, int length, int packet_id, int state) {
 
   }
 
-  // Detect and fix incorrectly parsed packets
+  /* Drain unused payload after normal fallthrough (including unsupported fields).
+   * Explicit rejection paths return above so packet_input_end can report unread
+   * data; draining those would hide the handler's early-error boundary. */
   int processed_length = total_bytes_received - bytes_received_start;
   if (processed_length == length) return;
 

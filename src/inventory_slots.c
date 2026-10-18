@@ -7,6 +7,7 @@
 #include "serialize.h"
 #include <string.h>
 
+/* Translate compact server slots to protocol window slots; 255 is unmapped. */
 uint8_t serverSlotToClientSlot (int window_id, uint8_t slot) {
 
   if (window_id == 0) { // player inventory
@@ -32,6 +33,8 @@ uint8_t serverSlotToClientSlot (int window_id, uint8_t slot) {
   return 255;
 }
 
+/* Values >= 41 identify window-specific storage, not ordinary inventory
+ * indices. Callers must resolve crafting/furnace/chest storage before access. */
 uint8_t clientSlotToServerSlot (int window_id, uint8_t slot) {
 
   if (window_id == 0) { // player inventory
@@ -41,8 +44,7 @@ uint8_t clientSlotToServerSlot (int window_id, uint8_t slot) {
     if (slot == 45) return 40;
     if (slot >= 5 && slot <= 8) return 44 - slot;
 
-    // map inventory crafting slots to player data crafting grid (semi-hack)
-    // this abuses the fact that the buffers are adjacent in player data
+    // Embed the player's 2x2 grid in the top-left cells of the shared 3x3 grid.
     if (slot == 1) return 41;
     if (slot == 2) return 42;
     if (slot == 3) return 44;
@@ -50,7 +52,7 @@ uint8_t clientSlotToServerSlot (int window_id, uint8_t slot) {
 
   } else if (window_id == 12) { // crafting table
 
-    // same crafting offset overflow hack as above
+    // Window-local storage uses the synthetic range starting at 41.
     if (slot >= 1 && slot <= 9) return 40 + slot;
     // the rest of the slots are identical, just shifted by one
     if (slot >= 10 && slot <= 45) return clientSlotToServerSlot(0, slot - 1);
@@ -67,8 +69,7 @@ uint8_t clientSlotToServerSlot (int window_id, uint8_t slot) {
   #ifdef ALLOW_CHESTS
   else if (window_id == 2) { // chest
 
-    // overflow chest slots into crafting grid
-    // technically invalid, expected to be handled on a per-case basis
+    // The chest window resolves these synthetic slots to packed chest storage.
     if (slot <= 26) return 41 + slot;
     // the rest of the slots are identical, just shifted by 18
     if (slot >= 27 && slot <= 62) return clientSlotToServerSlot(0, slot - 18);
@@ -79,6 +80,9 @@ uint8_t clientSlotToServerSlot (int window_id, uint8_t slot) {
   return 255;
 }
 
+/* Insert a valid stack into one main-inventory slot; never split it across
+ * slots. Returns 0 on success/no-op, 1 without mutation if the selected slot
+ * falls outside the main inventory or no slot is available. */
 int givePlayerItem (PlayerData *player, uint16_t item, uint8_t count) {
 
   if (item == 0 || count == 0) return 0;
@@ -114,8 +118,8 @@ int givePlayerItem (PlayerData *player, uint16_t item, uint8_t count) {
 }
 
 #ifdef ALLOW_CHESTS
-// Broadcasts a chest slot update to all clients who have that chest open,
-// except for the client who initiated the update.
+/* Reconcile every viewer of this chest, including the initiating client,
+ * with the authoritative slot; persist immediately unless interval sync owns it. */
 void broadcastChestUpdate (int origin_fd, uint8_t *storage_ptr, uint16_t item, uint8_t count, uint8_t slot) {
   (void)origin_fd;
 

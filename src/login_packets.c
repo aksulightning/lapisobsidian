@@ -12,7 +12,8 @@
 #include <stdio.h>
 #include <string.h>
 
-// S->C Status Response (server list ping)
+/* Status ping advertises the pinned protocol and configured MOTD without
+ * reserving a player slot or entering login. */
 int sc_statusResponse (int client_fd) {
 
   char header[] = "{"
@@ -40,7 +41,8 @@ int sc_statusResponse (int client_fd) {
   return 0;
 }
 
-// C->S Handshake
+/* Only status/login intents are accepted. Status may query another protocol
+ * version, but login must match ours; rejection also marks recv_count invalid. */
 int cs_handshake (int client_fd) {
   printf("Received Handshake:\n");
 
@@ -62,7 +64,9 @@ int cs_handshake (int client_fd) {
   return 0;
 }
 
-// C->S Login Start
+/* Offline login parser: fill caller-owned 16-byte UUID/name buffers and validate
+ * name syntax. A full-length name has no NUL; this does not verify ownership of
+ * the supplied UUID. Experimental authenticated login uses auth_login_packet. */
 int cs_loginStart (int client_fd, uint8_t *uuid, char *name) {
   printf("Received Login Start:\n");
 
@@ -74,7 +78,8 @@ int cs_loginStart (int client_fd, uint8_t *uuid, char *name) {
   return 0;
 }
 
-// S->C Login Success
+/* Announce the accepted identity with no profile properties. The client's
+ * later acknowledgement, not this write, advances configuration state. */
 int sc_loginSuccess (int client_fd, uint8_t *uuid, char *name) {
   printf("Sending Login Success...\n\n");
 
@@ -89,6 +94,8 @@ int sc_loginSuccess (int client_fd, uint8_t *uuid, char *name) {
   return 0;
 }
 
+/* Consume/log client preferences; server simulation and view distance remain
+ * server-configured. Returns 1 on a detected read failure. */
 int cs_clientInformation (int client_fd) {
   int tmp;
   printf("Received Client Information:\n");
@@ -126,7 +133,7 @@ int cs_clientInformation (int client_fd) {
   return 0;
 }
 
-// S->C Clientbound Known Packs
+/* Offer only the pinned built-in core pack used by the compact registry dump. */
 int sc_knownPacks (int client_fd) {
   printf("Sending Server's Known Packs\n\n");
   static const char *const parts[] = {"minecraft", "core", LAPIS_MINECRAFT_VERSION};
@@ -143,7 +150,8 @@ int sc_knownPacks (int client_fd) {
   return 0;
 }
 
-// C->S Serverbound Known Packs
+/* Require the exact single-pack response before sending abbreviated registries;
+ * returns 1 if the client cannot supply the omitted built-in data. */
 int cs_knownPacks (int client_fd) {
   /* The compact snapshot omits NBT only for this exact built-in pack. */
   if (readVarInt(client_fd) != 1) return 1;
@@ -159,7 +167,8 @@ int cs_knownPacks (int client_fd) {
   return 0;
 }
 
-// C->S Serverbound Plugin Message
+/* Log the channel and optional brand string. Unknown channel payload is left
+ * for dispatch to drain within the current frame. */
 int cs_pluginMessage (int client_fd) {
   printf("Received Plugin Message:\n");
   readString(client_fd);
@@ -174,7 +183,8 @@ int cs_pluginMessage (int client_fd) {
   return 0;
 }
 
-// S->C Clientbound Plugin Message
+/* Encode data as a length-prefixed payload, as used by minecraft:brand. This
+ * helper does not accept an arbitrary already-encoded plugin payload verbatim. */
 int sc_sendPluginMessage (int client_fd, const char *channel, const uint8_t *data, size_t data_len) {
   printf("Sending Plugin Message\n\n");
   int channel_len = (int)strlen(channel);
@@ -191,14 +201,16 @@ int sc_sendPluginMessage (int client_fd, const char *channel, const uint8_t *dat
   return 0;
 }
 
-// S->C Finish Configuration
+/* Ask the client to finish configuration; dispatch waits for its acknowledgement
+ * before entering play and sending the spawn sequence. */
 int sc_finishConfiguration (int client_fd) {
   writeVarInt(client_fd, 1);
   writeVarInt(client_fd, 0x03);
   return 0;
 }
 
-// S->C Registry Data (multiple packets) and Update Tags (configuration, multiple packets)
+/* Emit preframed registry/tag snapshots after known-pack agreement. The blobs
+ * already contain packet lengths and IDs and must not be framed a second time. */
 int sc_registries (int client_fd) {
 
   printf("Sending Registries\n\n");

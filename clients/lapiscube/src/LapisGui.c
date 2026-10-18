@@ -17,17 +17,23 @@
 
 static struct Screen inventoryScreen, signScreen;
 static int touchClickMode;
+/* Touch modes mirror mouse modifiers: 0 stack, 1 single item, 2 quick transfer. */
 void LapisGui_TouchClickMode(int mode) { touchClickMode=mode>=0 && mode<=2?mode:0; }
 static char signLines[4][97];
 static int signLine,signDirty[4];
 static int hover=-1, cell=44, left, top, header, footer, lineHeight, signWidth;
 static int slotX[64],slotY[64];
+/* Vtable lifecycle hooks: these immediate-mode screens own no update timers
+ * or meshes; shared text resources belong to LapisGuiDraw. */
 static void Empty(void* s) { (void)s; }
 static void Update(void* s,float dt) { (void)s;(void)dt; }
+/* Include both container and player slots in the protocol window's numbering. */
 static int Slots(void) {
     int window=LapisBackend_Gameplay()->window;
     return window==2?63:window==14?39:46;
 }
+/* Build render/hit-test coordinates from the same window-slot mapping. Resizing
+ * invalidates hover so a stale selection cannot target a newly positioned slot. */
 static void Layout(void* s) {
     int i,w=LapisBackend_Gameplay()->window,row,col;(void)s;
     lineHeight=Window_Main.Height<420 || Window_Main.Width<480?15:21;
@@ -57,6 +63,8 @@ static void Layout(void* s) {
         slotX[i]=left+col*cell;slotY[i]=top+row*cell;
     }
 }
+/* Draw authoritative stacks; mask crafting slots while a refresh is pending
+ * instead of displaying stale crafting results as usable inventory. */
 static void Render(void* s,float dt) {
     struct LapisGameplay* g=LapisBackend_Gameplay();char buffer[192];int i,n=Slots();
     (void)s;(void)dt;
@@ -77,20 +85,26 @@ static void Render(void* s,float dt) {
     if(g->refreshMask && !g->window)LapisGui_Text(98,"Updating crafting slots...",left,top+cell*7+2);
     if(g->cursor.count)LapisGui_Slot(67,g->cursor,Pointers[0].x+12,Pointers[0].y+12,cell,1);
 }
+/* Hit-test the current layout; all pointers share the single hovered slot. */
 static int PointerMove(void* s,int id,int x,int y) {
     int i;(void)s;(void)id;hover=-1;
     for(i=0;i<Slots();i++)if(x>=slotX[i] && x<slotX[i]+cell && y>=slotY[i] && y<slotY[i]+cell)hover=i;
     return true;
 }
+/* Send an eligible slot action through gameplay's protocol handler.
+ * Pending crafting refresh blocks clicks until the server resynchronizes it. */
 static void Click(int right) {
     struct LapisGameplay* g=LapisBackend_Gameplay();
     if(!g->window && g->refreshMask && hover>=0 && hover<=4)return;
     if(hover>=0 && hover<Slots())
         LapisGameplay_Click(LapisBackend_Gameplay(),LapisBackend_Protocol(),hover,right,Input_IsShiftPressed() || touchClickMode==2);
 }
+/* Refresh hover at press time so touch does not require an earlier move event. */
 static int PointerDown(void* s,int id,int x,int y) {
     PointerMove(s,id,x,y);Click(touchClickMode==1);return true;
 }
+/* Inventory consumes every key to prevent movement behind the modal screen;
+ * slot shortcuts use the same pending-refresh guard as pointer clicks. */
 static int KeyDown(void* s,int key,struct InputDevice* device) {
     struct LapisGameplay* g=LapisBackend_Gameplay();struct LapisProtocol* p=LapisBackend_Protocol();(void)s;
     if(hover>=0 && hover<Slots() && !(g->window==0 && g->refreshMask && hover<=4)) {
@@ -101,9 +115,12 @@ static int KeyDown(void* s,int key,struct InputDevice* device) {
     if(InputBind_Claims(BIND_INVENTORY,key,device) || key==CCKEY_ESCAPE) { LapisGui_Close();return true; }
     return true;
 }
+/* Consume unsupported text/scroll input while inventory owns keyboard focus. */
 static int KeyChar(void* s,char key) { (void)s;(void)key;return true; }
 static int KeyText(void* s,const cc_string* text) { (void)s;(void)text;return true; }
 static int Scroll(void* s,float amount) { (void)s;(void)amount;return true; }
+/* Every removal path requests window closure so the server can reconcile
+ * carried/crafting stacks, including replacement by another modal screen. */
 static void Free(void* s) {
     (void)s;LapisGameplay_Close(LapisBackend_Gameplay(),LapisBackend_Protocol());
 }
@@ -111,6 +128,8 @@ static const struct ScreenVTABLE table={
     Empty,Update,Free,Render,Empty,KeyDown,Screen_InputUp,KeyChar,KeyText,
     PointerDown,Screen_PointerUp,PointerMove,Scroll,Layout,Empty,Empty,NULL
 };
+/* Re-layout an already open inventory. Opening the player window requests its
+ * crafting slots; server-opened containers already supply their contents. */
 void LapisGui_ShowInventory(void) {
     if(!LapisBackend_Protocol() || !LapisBackend_Protocol()->loaded)return;
     if(Gui_GetScreen(GUI_PRIORITY_INVENTORY)==&inventoryScreen) { Layout(&inventoryScreen);return; }
@@ -118,14 +137,17 @@ void LapisGui_ShowInventory(void) {
     inventoryScreen.VTABLE=&table;inventoryScreen.grabsInput=true;inventoryScreen.closable=true;
     hover=-1;Gui_Add(&inventoryScreen,GUI_PRIORITY_INVENTORY);
 }
+/* Remove only this module's active modal; Gui_Remove invokes its cleanup hook. */
 void LapisGui_Close(void) {
     if(Gui_GetScreen(GUI_PRIORITY_INVENTORY)==&inventoryScreen)Gui_Remove(&inventoryScreen);
     if(Gui_GetScreen(GUI_PRIORITY_INVENTORY)==&signScreen)Gui_Remove(&signScreen);
 }
+/* Share modal placement state with inventory, which cannot be open concurrently. */
 static void SignLayout(void* screen) {
     (void)screen;signWidth=Window_Main.Width-32;if(signWidth>420)signWidth=420;
     left=(Window_Main.Width-signWidth)/2;top=(Window_Main.Height-210)/2;
 }
+/* Render the local four-line edit buffer; no server text changes until submit. */
 static void SignRender(void* screen,float dt) {
     int i;(void)screen;(void)dt;
     Gfx_Draw2DFlat(left-12,top-10,signWidth+24,220,PackedCol_Make(15,26,37,245));
@@ -137,6 +159,8 @@ static void SignRender(void* screen,float dt) {
     LapisGui_Text(85,"Tab: next line   Enter: save   Escape: cancel",left,top+164);
     LapisGui_Text(86,"Up/Down: choose line   Backspace: erase",left,top+188);
 }
+/* Escape discards edits. Enter encodes changed lines and submits only when all
+ * fit the 96-byte wire limit; unchanged lines retain their original UTF-8. */
 static int SignDown(void* screen,int key,struct InputDevice* device) {
     struct LapisSigns* signs=LapisBackend_Signs();char lines[4][97];int i,n,side=signs->front?0:1;
     cc_uint8 utf8[291];cc_string value;(void)screen;(void)device;
@@ -156,6 +180,8 @@ static int SignDown(void* screen,int key,struct InputDevice* device) {
     }
     return true;
 }
+/* Input characters use the engine's single-byte encoding. Check their encoded
+ * UTF-8 length too, since the wire byte limit can be reached before 96 glyphs. */
 static int SignChar(void* screen,char key) {
     int n,bytes;cc_uint8 utf8[291];cc_string value;(void)screen;
     if((unsigned char)key<32 || key==127)return true;
@@ -166,6 +192,8 @@ static int SignChar(void* screen,char key) {
     else signDirty[signLine]=1;
     return true;
 }
+/* Browser keyboard text replaces the line; native text events append through
+ * the same per-character byte-limit checks. */
 static int SignText(void* screen,const cc_string* value) {
     int i;
 #ifdef CC_BUILD_WEB
@@ -173,6 +201,7 @@ static int SignText(void* screen,const cc_string* value) {
 #endif
     for(i=0;i<value->length;i++)SignChar(screen,value->buffer[i]);return true;
 }
+/* Select a line by row; web builds also seed the onscreen keyboard with its text. */
 static int SignPointer(void* screen,int id,int x,int y) {
     (void)screen;(void)id;
     if(x>=left && x<left+signWidth && y>=top+28 && y<top+148) {
@@ -187,17 +216,21 @@ static int SignPointer(void* screen,int id,int x,int y) {
     }
     return true;
 }
+/* Closing ends local editing without implicit submission and releases web input. */
 static void SignFree(void* screen) {
     (void)screen;LapisBackend_Signs()->editing=0;
 #ifdef CC_BUILD_WEB
     OnscreenKeyboard_Close();
 #endif
 }
+/* Moving over another row must not change the active edit line without a press. */
 static int SignMove(void* screen,int id,int x,int y) { (void)screen;(void)id;(void)x;(void)y;return true; }
 static const struct ScreenVTABLE signTable={
     Empty,Update,SignFree,SignRender,Empty,SignDown,Screen_InputUp,SignChar,SignText,
     SignPointer,Screen_PointerUp,SignMove,Scroll,SignLayout,Empty,Empty,NULL
 };
+/* Replace any owned modal and copy the selected sign face into display encoding.
+ * Keep original wire text in backend state for lines the user does not edit. */
 void LapisGui_ShowSign(void) {
     struct LapisSigns* signs=LapisBackend_Signs();cc_string value;int i,side=signs->front?0:1;
     if(!signs->editing)return;
@@ -211,6 +244,7 @@ void LapisGui_ShowSign(void) {
     Gui_Add(&signScreen,GUI_PRIORITY_INVENTORY);
 }
 
+/* HUD suppression applies to inventory specifically, not the sign editor. */
 int LapisGui_InventoryOpen(void) {
     return Gui_GetScreen(GUI_PRIORITY_INVENTORY)==&inventoryScreen;
 }

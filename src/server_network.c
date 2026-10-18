@@ -15,6 +15,8 @@
 #include <netinet/in.h>
 #endif
 
+/* Start the configured transports before polling clients. TCP setup failures
+ * terminate startup; optional web-host failure is reported as -1 to main. */
 int server_listen(void) {
   int server_fd = 0;
   #ifndef LAPIS_SINGLEPLAYER
@@ -81,6 +83,8 @@ int server_listen(void) {
   return server_fd;
 }
 
+/* Prefer an immediately available TCP connection, then poll the optional
+ * browser/local transport. No pending connection is represented by -1. */
 int server_accept(int server_fd) {
   int client_fd = -1;
 #ifndef LAPIS_SINGLEPLAYER
@@ -105,6 +109,8 @@ int server_accept(int server_fd) {
   return client_fd;
 }
 
+/* Release the process listener/Windows socket runtime after clients are gone.
+ * The main loop separately stops the optional web/local host. */
 void server_close(int server_fd) {
 #ifdef LAPIS_SINGLEPLAYER
   (void)server_fd;

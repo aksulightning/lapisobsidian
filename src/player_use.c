@@ -17,6 +17,8 @@
 #include "musicbox.h"
 #include "signs.h"
 
+/* face == 255 is untargeted use. Otherwise block interaction takes precedence
+ * over held-item use unless sneaking, allowing placement against containers. */
 void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t face) {
   if (commands_gamemode(player) == 3) return;
 
@@ -75,19 +77,16 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
         break;
       }
       if (storage_ptr == NULL || !inventory_open(player,2)) return;
-      // Terrible memory hack!!
-      // Copy the pointer into the player's crafting table item array.
-      // This allows us to save some memory by repurposing a feature that
-      // is mutually exclusive with chests, though it is otherwise a
-      // terrible idea for obvious reasons.
+      /* Chest and crafting windows are mutually exclusive, so chest mode reuses
+       * craft_items for a storage pointer. Copy bytes to avoid unaligned access;
+       * flag 0x80 prevents treating those bytes as crafting item IDs. */
       memcpy(player->craft_items, &storage_ptr, sizeof(storage_ptr));
       // Flag craft_items as locked due to holding a pointer
       player->flags |= 0x80;
       // Show the player the chest UI
       sc_openScreen(player->client_fd, 2, "Chest", 5);
-      // Load the slots of the chest from the block_changes array.
-      // This is a similarly dubious memcpy hack, but at least we're not
-      // mixing data types? Kind of?
+      /* Chest slots occupy three packed bytes (uint16_t item, uint8_t count),
+       * so reading the item through a uint16_t pointer could be unaligned. */
       for (int i = 0; i < 27; i ++) {
         uint16_t item;
         uint8_t count;
@@ -126,8 +125,7 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
     player->flagval_16 = 0;
     player->flags |= 0x10;
   } else if (getItemDefensePoints(player->inventory_items[player->hotbar]) != 0) {
-    // For some reason, this action is sent twice when looking at a block
-    // Ignore the variant that has coordinates
+    // Accept only untargeted use so paired block/use packets cannot swap twice.
     if (face != 255) return;
     // Swap to held piece of armor
     uint8_t slot = getArmorItemSlot(player->inventory_items[player->hotbar]);
@@ -207,7 +205,7 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
     isReplaceableBlock(getBlockAt(x, y, z)) &&
     (!isColumnBlock(block) || getBlockAt(x, y - 1, z) != B_air)
   ) {
-    // Apply server-side block change
+    // Consume the held block only after the terrain overlay accepts placement.
     if (makeBlockChange(x, y, z, block)) return;
     // Decrease item amount in selected slot
     if (commands_gamemode(player) != 1) *count -= 1;

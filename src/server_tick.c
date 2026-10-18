@@ -9,8 +9,9 @@
 #include "worldgen.h"
 #include "serialize.h"
 
-// Simulates events scheduled for regular intervals
-// Takes the time since the last tick in microseconds as the only arguemnt
+/* Tick the selected world; the caller owns Plate selection and persistence
+ * transactions. Elapsed time is in microseconds, while player cooldowns count
+ * calls, so this must run at TICKS_PER_SECOND rather than once per packet. */
 void handleServerTick (int64_t time_since_last_tick) {
 
   // Update world time

@@ -1,3 +1,4 @@
+/* Shared arithmetic, transport, wire codecs and process timing helpers. */
 #ifndef H_TOOLS
 #define H_TOOLS
 
@@ -5,9 +6,13 @@
 
 #include "globals.h"
 
+/* For positive b, keep wrapped coordinates in [0,b), including negative a.
+ * The intermediate (a % b) + b must fit in int. */
 static inline int mod_abs (int a, int b) {
   return ((a % b) + b) % b;
 }
+/* For positive b, use floor division so negative world coordinates select the
+ * correct chunk. Callers must keep the intermediate a-b within int range. */
 static inline int div_floor (int a, int b) {
   return a % b < 0 ? (a - b) / b : a / b;
 }
@@ -17,6 +22,8 @@ ssize_t recv_all (int client_fd, void *buf, size_t n, uint8_t require_first);
 ssize_t send_all (int client_fd, const void *buf, ssize_t len);
 void discard_all (int client_fd, size_t remaining, uint8_t require_first);
 
+/* Fixed-width writers emit big-endian wire values and return send_all's result.
+ * Floating-point codecs preserve the value's bit representation via memcpy. */
 ssize_t writeByte (int client_fd, uint8_t byte);
 ssize_t writeUint16 (int client_fd, uint16_t num);
 ssize_t writeUint32 (int client_fd, uint32_t num);
@@ -24,6 +31,8 @@ ssize_t writeUint64 (int client_fd, uint64_t num);
 ssize_t writeFloat (int client_fd, float num);
 ssize_t writeDouble (int client_fd, double num);
 
+/* Primitive reads reuse recv_buffer and leave the latest read size in recv_count.
+ * Returned numeric values alone cannot distinguish valid data from a short read. */
 uint8_t readByte (int client_fd);
 uint16_t readUint16 (int client_fd);
 int16_t readInt16 (int client_fd);

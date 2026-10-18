@@ -10,7 +10,9 @@
 #include "commands.h"
 #include <stdlib.h>
 
-// Sends the full sequence for spawning the player to the client
+/* Rebuild the client's world view after login/respawn. Fresh players derive Y
+ * from terrain; returning players use saved coordinates. Position is sent both
+ * before and after chunk streaming. Readiness is completed by handlePlayerJoin. */
 void spawnPlayer (PlayerData *player) {
 
   world_border_reset(player);
@@ -87,7 +89,8 @@ void spawnPlayer (PlayerData *player) {
 
 }
 
-// Broadcasts a player's entity metadata (sneak/sprint state) to other players
+/* Translate compact player flags into wire flags/pose for ready peers in the
+ * selected Plate. The originating client already owns its local pose. */
 void broadcastPlayerMetadata (PlayerData *player) {
   uint8_t sneaking = (player->flags & 0x04) != 0;
   uint8_t sprinting = (player->flags & 0x08) != 0;
@@ -124,8 +127,8 @@ void broadcastPlayerMetadata (PlayerData *player) {
   }
 }
 
-// Sends a mob's entity metadata to the given player.
-// If client_fd is -1, broadcasts to all player
+/* Send supported non-default mob metadata (currently sheared sheep). client_fd
+ * -1 broadcasts to ready players in this Plate; otherwise send to one viewer. */
 void broadcastMobMetadata (int client_fd, int entity_id) {
 
   if (entity_id > -2 || entity_id < -1-MAX_MOBS) return;
@@ -171,6 +174,9 @@ void broadcastMobMetadata (int client_fd, int entity_id) {
   free(metadata);
 }
 
+/* Encode one entry, without the list terminator. Only byte/pose types exist in
+ * this compact model; callers must size/validate before writing the packet.
+ * Returns the byte write result, 0 for pose, or -1 for an unsupported type. */
 ssize_t writeEntityData (int client_fd, EntityData *data) {
   writeByte(client_fd, data->index);
   writeVarInt(client_fd, data->type);
@@ -186,7 +192,7 @@ ssize_t writeEntityData (int client_fd, EntityData *data) {
   }
 }
 
-// Returns the networked size of an EntityData entry
+/* Encoded entry size, including index/type; -1 rejects unsupported value types. */
 int sizeEntityData (EntityData *data) {
   int value_size;
 
@@ -204,7 +210,8 @@ int sizeEntityData (EntityData *data) {
   return 1 + sizeVarInt(data->type) + value_size;
 }
 
-// Returns the networked size of an array of EntityData entries
+/* Sum entry sizes, excluding the final 0xFF. Reject the whole list with -1
+ * before sc_setEntityMetadata emits any bytes for an unsupported type. */
 int sizeEntityMetadata (EntityData *metadata, size_t length) {
   int total_size = 0;
   for (size_t i = 0; i < length; i ++) {
