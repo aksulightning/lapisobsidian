@@ -1,19 +1,19 @@
 # Lapis Obsidian
 
 A small, experimental block-building game project inspired by the feel of
-Minecraft Beta 1.7.3. Explore, gather materials, craft tools, build a home and
+"Minecraft" Beta 1.7.3. Explore, gather materials, craft tools, build a home and
 grow food.
 
 Lapis Obsidian runs the world. **LapisCube** is the companion game you use to
 play, with options for playing alone in your browser or joining a server.
 
 **This is a playable prototype.** Some features are unfinished, bugs are
-expected, and it does not include everything in Minecraft.
+expected, and it does not include everything in "Minecraft".
 
 ## Try it on your own
 
 The simplest way to try LapisCube is the singleplayer browser version. You do
-not need Minecraft, a Microsoft account or a separate game server.
+not need "Minecraft", a Microsoft account or a separate game server.
 
 1. Open the [singleplayer downloads page](https://github.com/aksulightning/lapisobsidian/actions/workflows/lapiscube-singleplayer.yml).
 2. Choose a successful build of the version you want to try. Scroll to
@@ -58,11 +58,11 @@ Multiplayer needs someone to run a Lapis Obsidian server. Ask the host which
 version to use and how to join.
 
 - **LapisCube:** play through the host's browser link or use the desktop client.
-- **Minecraft Java Edition:** the supported version is **1.21.8**.
+- **"Minecraft" Java Edition:** the supported version is **1.21.8**.
 
 The normal server setup does not verify player accounts or encrypt game
 connections by default. Browser connections can be protected with HTTPS.
-An experimental option verifies Minecraft accounts and encrypts Java gameplay;
+An experimental option verifies "Minecraft" accounts and encrypts Java gameplay;
 LapisCube cannot join servers using that option yet.
 
 If you want to host a game, start with the
