@@ -68,7 +68,7 @@ for source in src/*.c; do
   sources+=(".tests/integration/$name.o")
 done
 chunk_sources=()
-for name in plate_state block_changes block_rules fluids farming circuits notes doors signs sign_packets world_packets varnum worldgen globals registries registry; do
+for name in plate_state block_changes block_rules fluids farming circuits notes doors signs sign_packets world_packets login_packets varnum worldgen globals registries registry; do
   chunk_sources+=(".tests/integration/$name.o")
 done
 chunk_sources+=(.tests/integration/beta173_*.o)
