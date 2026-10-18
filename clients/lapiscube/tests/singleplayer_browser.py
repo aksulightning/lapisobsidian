@@ -101,7 +101,11 @@ def main(mode):
                 page.wait_for_function('(Module._LapisWeb_State() & 2) !== 0')
                 page.screenshot(path=str(evidence/'inventory.png'))
                 page.keyboard.press('b')
-                page.wait_for_function('(Module._LapisWeb_State() & 2) === 0')
+                # The shell observes menu changes on its 150 ms update and
+                # clears held keys. Do not press movement before that reset.
+                page.wait_for_function('''(Module._LapisWeb_State() & 2) === 0 &&
+                    document.getElementById('inventory-tools').hidden &&
+                    !document.getElementById('touch').classList.contains('menu')''')
                 initial=wire().positions()[-1]
                 page.keyboard.down('w');page.keyboard.down('Space');page.wait_for_timeout(900)
                 page.keyboard.up('w');page.keyboard.up('Space');page.wait_for_timeout(1800)
