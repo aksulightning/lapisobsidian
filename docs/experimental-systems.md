@@ -118,7 +118,7 @@ AES-128-CFB8 encryption, and checks the connecting session through Mojang's
 HTTPS `session/minecraft/hasJoined` service. Only the verified profile UUID and
 name can be used to reserve player data and send Login Success. A username
 lookup, client-supplied UUID, or claim to own the game cannot bypass this check.
-The server does not ask for or store a player's Microsoft password/access token.
+The server does not ask for or store a player's "Microsoft" password/access token.
 
 Certificate and hostname validation remain enabled; redirects are disabled.
 Session requests use libcurl's nonblocking multi API, a 5-second connection
@@ -137,7 +137,7 @@ work without changing the packed player save layout.
 
 LapisCube currently supports the offline protocol profile only. It cannot join
 an authentication-enabled server, on native TCP or browser WebSocket. The web
-transport has no authentication bypass. Adding Microsoft sign-in and online
+transport has no authentication bypass. Adding "Microsoft" sign-in and online
 session support to LapisCube is separate work.
 
 ## Standalone browser singleplayer

@@ -15,7 +15,7 @@ column updates, eight distinct original mob shapes, server-driven hit/swing/bow
 effects, smaller-window layouts and an extracted-package native acceptance run.
 
 The client uses an independent CC0 atlas, geometric models/UI and recorded CC0
-gameplay sounds (with pitched note-block synthesis). It requires no Java, game JAR, Microsoft account or proprietary assets.
+gameplay sounds (with pitched note-block synthesis). It requires no Java, game JAR, "Microsoft" account or proprietary assets.
 Original Classic/CPE packet code remains intact; `--lapis` selects the separate
 Java protocol-772 backend. Compatibility is with the pinned Lapis profile, not
 arbitrary vanilla servers.
