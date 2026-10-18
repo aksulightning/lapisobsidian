@@ -20,5 +20,5 @@ and uses a shared climate lattice, separate population streams and bounded
 feature replay for chunk boundaries. Ground-cover placement is simplified. No Lua is included
 or executed by Lapis Obsidian.
 
-"Minecraft" is a trademark of Mojang Studios. This project is independent of
+Minecraft is a trademark of Mojang Studios. This project is independent of
 Mojang Studios and Microsoft.

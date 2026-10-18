@@ -1,5 +1,10 @@
 # Lapis Obsidian
 
+This is an independent project, unaffiliated with Mojang Studios or Microsoft.
+
+**This is a playable prototype.** Some features are unfinished, bugs are
+expected, and it does not include everything in "Minecraft".
+
 A small, experimental block-building game project inspired by the feel of
 "Minecraft" Beta 1.7.3. Explore, gather materials, craft tools, build a home and
 grow food.
@@ -7,13 +12,10 @@ grow food.
 Lapis Obsidian runs the world. **LapisCube** is the companion game you use to
 play, with options for playing alone in your browser or joining a server.
 
-**This is a playable prototype.** Some features are unfinished, bugs are
-expected, and it does not include everything in "Minecraft".
-
 ## Try it on your own
 
 The simplest way to try LapisCube is the singleplayer browser version. You do
-not need "Minecraft", a Microsoft account or a separate game server.
+not need "Minecraft", a "Microsoft" account or a separate game server.
 
 1. Open the [singleplayer downloads page](https://github.com/aksulightning/lapisobsidian/actions/workflows/lapiscube-singleplayer.yml).
 2. Choose a successful build of the version you want to try. Scroll to
@@ -84,4 +86,3 @@ it behaves, and being honest about its limitations. There is still work to do.
 - [Credits](docs/credits.md), [notices](NOTICE.md) and [license](LICENSE): the people, projects and materials this work builds on.
 
 Lapis Obsidian builds on **bareiron**, and LapisCube uses **ClassiCube**.
-This is an independent project, unaffiliated with Mojang Studios or Microsoft.
