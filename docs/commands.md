@@ -157,7 +157,7 @@ A live TCP smoke test also covers login/configuration/play, all seven requested
 commands, administrator authentication, creative movement, teleport destinations,
 spawn, malformed-command disconnection and permission reset after reconnect.
 ASan/UBSan pass on the tested paths; LeakSanitizer is disabled in this sandbox.
-A graphical Minecraft client session remains untested. This work does not claim
+A graphical "Minecraft" client session remains untested. This work does not claim
 a complete adversarial audit of inherited inventory, networking or gameplay code.
 
 See [musicbox controls and limits](redstone-and-music.md) for `/music` setup.

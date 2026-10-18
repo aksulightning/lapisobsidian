@@ -112,7 +112,7 @@ and drops-only static Alpine builds remain available. Native Windows builds
 need corresponding MinGW OpenSSL/libcurl development libraries and CA setup;
 live Windows authentication acceptance remains a separate check.
 
-The supported client is Minecraft Java 1.21.8, protocol 772. The server sends a
+The supported client is "Minecraft" Java 1.21.8, protocol 772. The server sends a
 fresh cryptographic challenge, validates the RSA response, enables continuous
 AES-128-CFB8 encryption, and checks the connecting session through Mojang's
 HTTPS `session/minecraft/hasJoined` service. Only the verified profile UUID and

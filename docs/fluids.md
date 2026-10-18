@@ -66,4 +66,4 @@ node build_registries.js --check  # optional maintenance check only
 source handling, lava timing, restart recovery, chunk palette use, bucket
 inventory and recipe handling, packet validation, queue overflow and coordinate
 limits. New fluid code compiles with the strict warning set. A live graphical
-Minecraft client is still needed to assess aiming feel and visual animation.
+"Minecraft" client is still needed to assess aiming feel and visual animation.

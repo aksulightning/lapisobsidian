@@ -21,7 +21,7 @@ in C, and separate from the low-level networking and world generator.
 6. **MIDI musicbox — implemented.** Server-owned `.mid` files in `songs/`,
    a numbered chat menu and `/music` play/stop controls. Two concurrent boxes,
    a bounded C format-0/1 reader and nearby note sounds; no player uploads or
-   bundled Minecraft music.
+   bundled "Minecraft" music.
 
 7. **Farming — implemented.** Hoes, irrigated farmland, wheat growth, harvest
    drops and bread recipes. See [farming and controls](farming-and-controls.md).

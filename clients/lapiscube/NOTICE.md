@@ -60,7 +60,7 @@ program communicating over TCP; its build does not link server source.
 
 `src/LapisFacts.h` is generated numeric interoperability data: state/item IDs and
 identifier names from the pinned server registry snapshot, paired with original
-CC0 atlas mappings. No registry implementation, NBT pack, Minecraft textures or
+CC0 atlas mappings. No registry implementation, NBT pack, "Minecraft" textures or
 models are copied. Regeneration reads `generated/registry_snapshot.json`,
 `src/registries.c` and `include/registries.h`; see the server registry provenance
 document for upstream factual data sources. The client does not link server code.

@@ -92,7 +92,7 @@ LeakSanitizer remains disabled in this sandbox.
 
 A live TCP test exercises creative inventory, two-block placement, upper/lower
 interaction, process restart, open-state transmission with chunks and paired
-removal. A graphical Minecraft client play session remains untested.
+removal. A graphical "Minecraft" client play session remains untested.
 
 Changed files: new `include/doors.h`, `src/doors.c`, `tests/doors.c` and this guide;
 updated `src/crafting.c`, `src/main.c`, `src/packets.c`, `src/procedures.c`,

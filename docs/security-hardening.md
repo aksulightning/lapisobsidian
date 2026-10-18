@@ -59,7 +59,7 @@ cleanup, furnace capacity, full-width hotbar bounds, malformed frame lengths,
 frame isolation, progress for a second peer and absolute receive deadlines.
 The existing item, recipe, command, sign, circuit, mob and world tests also run.
 Tests use local socket pairs and deterministic clocks; no external server,
-Minecraft JAR or Java runtime is required. A live TCP smoke check also confirmed
+"Minecraft" JAR or Java runtime is required. A live TCP smoke check also confirmed
 that three status clients receive replies while another connection withholds its
 packet header. ASan and UBSan are enabled in sanitizer tests; LeakSanitizer is
 disabled by the existing sandbox test configuration.
