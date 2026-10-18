@@ -12,7 +12,7 @@ cc tools/make_demo_song.c -o make-demo-song
 ```
 
 This creates `songs/lapis-demo.mid` and refuses to overwrite an existing file.
-The generated melody is dedicated to CC0. No Minecraft disc audio is included.
+The generated melody is dedicated to CC0. No "Minecraft" disc audio is included.
 Only distribute other songs when you have the rights to do so.
 
 Names must end in lowercase `.mid`. Use ASCII letters, numbers, spaces, `-` or

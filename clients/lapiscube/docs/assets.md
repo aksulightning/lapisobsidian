@@ -2,7 +2,7 @@
 
 The committed bundle contains CC0 Kenney/AFCMS textures, original CC0 models and
 icons, recorded CC0 gameplay audio, and a public-domain bitmap fallback font.
-No official Minecraft files are bundled or fetched by the Lapis path. The
+No official "Minecraft" files are bundled or fetched by the Lapis path. The
 launcher asset downloader is not an entrypoint; Lapis skin downloads are disabled.
 Host/browser font files are not bundled. See the repository
 [asset credits and license audit](../../../docs/credits.md) for per-file evidence

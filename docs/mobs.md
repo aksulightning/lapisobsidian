@@ -135,7 +135,7 @@ sunlight/shade, neutral retaliation/expiry, fuse cancellation, harmless bursts,
 packet framing, invalid attacks, natural spawn selection and admin spawning.
 Command tests cover names, permissions, missing/excessive arguments, numeric
 bounds and the expanded client command tree. Tests use local sockets and decode
-protocol packets; a graphical Minecraft client play session remains a manual
+protocol packets; a graphical "Minecraft" client play session remains a manual
 compatibility check.
 
 The normal build, full C regression suite, source-only no-JAR build, strict

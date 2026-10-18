@@ -98,7 +98,7 @@ roll back; growth failures retain the previous age and report the failure.
 New files: `include/farming.h`, `src/farming.c`, and `tests/farming_circuits.c`.
 Circuit, mob, item and packet modules have small integration changes; crafting,
 main tick/loading, registry snapshot and documentation are updated. No new
-runtime, library, Java dependency, Minecraft assets or registry extraction.
+runtime, library, Java dependency, "Minecraft" assets or registry extraction.
 
 ```sh
 ./build.sh

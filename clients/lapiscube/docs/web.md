@@ -4,7 +4,7 @@ LapisCube compiles its C engine to WebAssembly with WebGL 1. Desktop uses the
 native keyboard/mouse controls. Touch devices use multi-pointer controls around
 the same C game, require landscape fullscreen, and release all held inputs when
 rotated, hidden, interrupted, or leaving fullscreen. Inventory stays authoritative
-on the server. No Minecraft runtime, textures, audio or external CDN is required.
+on the server. No "Minecraft" runtime, textures, audio or external CDN is required.
 
 ## Build
 

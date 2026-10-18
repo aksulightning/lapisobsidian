@@ -1,10 +1,10 @@
 # Lapis Obsidian
 
-A lightweight C Minecraft Java server, based on bareiron, targeting a Beta
+A lightweight C "Minecraft" Java server, based on bareiron, targeting a Beta
 1.7.3-style world with selected modern conveniences. Not affiliated with Mojang
 Studios or Microsoft.
 
-Supported client: **Minecraft Java 1.21.8, protocol 772**, with the built-in
+Supported client: **"Minecraft" Java 1.21.8, protocol 772**, with the built-in
 `minecraft:core` pack. Other protocol versions are rejected for login.
 
 ## Build and run
@@ -16,7 +16,7 @@ Supported client: **Minecraft Java 1.21.8, protocol 772**, with the built-in
 
 Requires a C compiler (GCC by default), a shell, and the system C/math libraries.
 The build finishes without launching the server. It downloads nothing and needs
-no Java, Minecraft installation, game assets, or data extraction. The checked-in
+no Java, "Minecraft" installation, game assets, or data extraction. The checked-in
 `src/registries.c` and `include/registries.h` are the compatibility snapshot.
 Set `CC` to select a compiler. `DEBUG=1 ./build.sh` enables ASan/UBSan and additional
 conversion/shadow diagnostics. The existing MinGW `--9x` build option is retained.
@@ -129,7 +129,7 @@ Permissions and game modes reset on reconnect; no world-file migration is needed
 
 Default builds use unencrypted, unverified offline login.
 `LAPIS_ENABLE_EXPERIMENTAL_AUTH=1 ./build.sh` enables encrypted Java online-mode
-login with verified Minecraft sessions (OpenSSL/libcurl required). LapisCube
+login with verified "Minecraft" sessions (OpenSSL/libcurl required). LapisCube
 multiplayer cannot join that mode; standalone singleplayer stays offline. See
 [experimental systems and compatibility](../docs/experimental-systems.md). Use
 administrator commands on a trusted network or protected tunnel with offline builds. See

@@ -120,6 +120,6 @@ without changing the on-disk player layout. The empty crafting-grid index was
 also bounded while adding the recipe. LeakSanitizer remains disabled in this
 sandbox. A live TCP test covers sign placement/editor, Unicode text, process
 restart, chunk retransmission, re-edit, removal/save cleanup and malformed-packet
-disconnection. A graphical Minecraft client play session remains untested.
+disconnection. A graphical "Minecraft" client play session remains untested.
 Windows replacement-rename behavior, ESP-IDF and Cosmopolitan are untested.
 This milestone does not claim a complete audit of inherited packet/save handling.
