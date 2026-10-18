@@ -23,17 +23,23 @@ _Static_assert(MAX_PLAYERS <= 32, "Item visibility mask holds at most 32 players
 _Static_assert(MAX_MOBS < 1022, "Mob and item entity IDs must not overlap");
 
 static ItemsContext legacy_context, *ctx = &legacy_context;
+/* Plate contexts are caller-owned; NULL selects the static legacy world.
+ * Selection neither allocates nor initializes storage. Size supports allocation. */
 ItemsContext *items_context(void) { return ctx; }
 size_t items_context_size (void) { return sizeof(*ctx); }
 void items_context_select (void *memory) { ctx = memory ? memory : &legacy_context; }
 
 
+/* Borrow a slot, including empty slots (count == 0); NULL means out of range. */
 const DroppedItem *items_at (size_t i) { return i < ITEM_ENTITY_LIMIT ? &ctx->items[i] : NULL; }
+/* Runtime entity IDs encode slots; persistent IDs survive file compaction. */
 static int entity_id (size_t i) { return ITEM_ENTITY_BASE-(int)i; }
+/* Visibility bits use global player slots, but only players in this Plate qualify. */
 static int player_index (const PlayerData *p) {
   for (int i = 0; i < MAX_PLAYERS; i++) if (plates_player_active(&player_data[i])) if (p == &player_data[i]) return i;
   return -1;
 }
+/* Shared creation/load gate for item IDs, stack limits and compact coordinates. */
 bool items_valid (uint16_t item, uint8_t count, int x, int y, int z) {
   return item && registry_item_id_valid(item) && count && count <= getItemStackSize(item) &&
     x >= -32768 && x <= 32767 && z >= -32768 && z <= 32767 && y >= 0 && y <= 255;
@@ -48,18 +54,24 @@ static void metadata (int fd, size_t i) {
   writeByte(fd,8); writeByte(fd,7); writeVarInt(fd,d->count);
   writeVarInt(fd,d->item); writeByte(fd,0); writeByte(fd,0); writeByte(fd,255);
 }
+/* Existing viewers need updated stack metadata, not another spawn packet. */
 static void changed (size_t i) {
   for (int p = 0; p < MAX_PLAYERS; p++) if (plates_player_active(&player_data[p])) if (ctx->items[i].viewers & (UINT32_C(1)<<p)) metadata(player_data[p].client_fd,i);
 }
+/* Notify recorded viewers before clearing the slot and its visibility mask. */
 static void remove_item (size_t i) {
   for (int p = 0; p < MAX_PLAYERS; p++) if (plates_player_active(&player_data[p])) if (ctx->items[i].viewers & (UINT32_C(1)<<p)) sc_removeEntity(player_data[p].client_fd,entity_id(i));
   memset(&ctx->items[i],0,sizeof(ctx->items[i]));
 }
+/* Clear live entities without rewinding the persistent-ID sequence. */
 void items_clear (void) { for (size_t i = 0; i < ITEM_ENTITY_LIMIT; i++) if (ctx->items[i].count) remove_item(i); }
+/* Forget visibility without sending removals to a departing/reset client. */
 void items_forget_player (PlayerData *p) {
   int index = player_index(p); if (index < 0) return;
   for (size_t i = 0; i < ITEM_ENTITY_LIMIT; i++) ctx->items[i].viewers &= ~(UINT32_C(1)<<index);
 }
+/* Reconcile chunk-range visibility; loading/fresh-spawn players see no drops.
+ * Viewer bits prevent duplicate spawns and identify recipients for later updates. */
 void items_sync_player (PlayerData *p) {
   int index = player_index(p); if (index < 0) return;
   uint32_t mask = UINT32_C(1)<<index;
@@ -79,6 +91,8 @@ void items_sync_player (PlayerData *p) {
     }
   }
 }
+/* Prefer a nearby compatible stack that fits the entire count, then an empty
+ * slot. This read-only probe returns -1 for invalid/full/exhausted storage. */
 static int destination (uint16_t item, uint8_t count, int x, int y, int z) {
   if (!items_valid(item,count,x,y,z)) return -1;
   int unused = -1;
@@ -90,7 +104,9 @@ static int destination (uint16_t item, uint8_t count, int x, int y, int z) {
   }
   return ctx->next_id==UINT64_MAX ? -1 : unused;
 }
+/* Capacity probes do not reserve slots or IDs; spawning still reports failure. */
 bool items_can_spawn (uint16_t item, uint8_t count, int x, int y, int z) { return destination(item,count,x,y,z) >= 0; }
+/* Check two harvest outputs without double-counting the same empty slot. */
 bool items_can_spawn_pair (uint16_t a, uint8_t ac, uint16_t b, uint8_t bc, int x, int y, int z) {
   if (a == b) return (unsigned)ac+bc <= 255 && items_can_spawn(a,(uint8_t)(ac+bc),x,y,z);
   int first = destination(a,ac,x,y,z), second = destination(b,bc,x,y,z);
@@ -100,6 +116,8 @@ bool items_can_spawn_pair (uint16_t a, uint8_t ac, uint16_t b, uint8_t bc, int x
   for (unsigned i = 0; i < ITEM_ENTITY_LIMIT; i++) if ((int)i != first && !ctx->items[i].count) return true;
   return false;
 }
+/* Merge or create a stack with pickup delay in milliseconds. False leaves item
+ * state unchanged; persistence is committed by the enclosing action/tick. */
 bool items_spawn (uint16_t item, uint8_t count, int x, int y, int z, uint32_t delay) {
   int index = destination(item,count,x,y,z); if (index < 0 || delay > ITEM_LIFETIME_MS) return false;
   size_t i = (size_t)index; DroppedItem *d = &ctx->items[i];
@@ -115,11 +133,14 @@ bool items_spawn (uint16_t item, uint8_t count, int x, int y, int z, uint32_t de
   }
   return true;
 }
+/* Spawn at an eligible player's feet; this helper does not debit inventory. */
 bool items_drop_stack (PlayerData *p, uint16_t item, uint8_t count) {
   if (!p || p->client_fd < 0 || !p->health || (p->flags&0x22) || commands_gamemode(p) == 3) return false;
   /* No speculative throw into ungenerated space: drop at the player's feet. */
   return items_spawn(item,count,p->x,p->y,p->z,1500);
 }
+/* Debit one item or the whole slot only after spawning succeeds. Resend the
+ * authoritative slot even on failure to undo client-side drop prediction. */
 bool items_drop_slot (PlayerData *p, uint8_t slot, bool whole) {
   if (!p || slot >= 41) return false;
   uint8_t count = whole ? p->inventory_count[slot] : (p->inventory_count[slot] ? 1 : 0);
@@ -131,6 +152,8 @@ bool items_drop_slot (PlayerData *p, uint8_t slot, bool whole) {
   sc_setContainerSlot(p->client_fd,0,serverSlotToClientSlot(0,slot),p->inventory_count[slot],p->inventory_items[slot]);
   return ok;
 }
+/* Fill across main/hotbar slots and return the accepted count, not the remainder.
+ * Partial insertion is allowed; callers retain unaccepted items in their source. */
 uint8_t items_insert (PlayerData *p, uint16_t item, uint8_t count) {
   if (!p || !item || !registry_item_id_valid(item) || !count) return 0;
   unsigned left = count, limit = getItemStackSize(item);
@@ -145,6 +168,7 @@ uint8_t items_insert (PlayerData *p, uint16_t item, uint8_t count) {
   }
   return (uint8_t)(count-left);
 }
+/* Drop collision includes open door/trapdoor state and a solid floor below Y=0. */
 static bool solid (int x, int y, int z) {
   if (y < 0) return true;
   if (y > 255) return false;
@@ -153,6 +177,9 @@ static bool solid (int x, int y, int z) {
   if (block == B_oak_trapdoor || block == B_iron_trapdoor) return !circuits_trapdoor_open(x,y,z);
   return !isPassableBlock(block);
 }
+/* Age, fall, collect and merge this Plate's drops. Aging uses elapsed time
+ * in milliseconds; physics catch-up is bounded after stalls. Pickup debits only
+ * what inventory accepted, and merging preserves older age/longer pickup delay. */
 void items_tick (int64_t elapsed_us) {
   if (elapsed_us <= 0) return;
   uint32_t elapsed = elapsed_us/1000 > ITEM_LIFETIME_MS ? ITEM_LIFETIME_MS : (uint32_t)(elapsed_us/1000);

@@ -15,7 +15,11 @@ _Static_assert(sizeof(float)==4 && FLT_MANT_DIG==24 && FLT_MAX_EXP==128,"Drop st
 #define DROP_HEADER 32u
 #define DROP_RECORD 32u
 #define DROP_MAX (DROP_HEADER + ITEM_ENTITY_LIMIT*DROP_RECORD + 4u)
+/* Borrow the selected context's path; empty means no persistent registry. */
 const char *items_path(void) { return items_context()->path; }
+/* Startup/Plate-load only: resets the selected context before reading. NULL
+ * selects memory-only storage; false must abort loading, not resume simulation
+ * with a partially read registry. Persistent IDs are validated before use. */
 bool items_load(const char *path) {
   ItemsContext *ctx = items_context();
   memset(ctx,0,sizeof(*ctx)); ctx->next_id=1;
@@ -57,6 +61,8 @@ bool items_load(const char *path) {
   ctx->next_id=next; return true;
 #endif
 }
+/* Replace this world's registry durably. Cross-file consistency with inventory
+ * and terrain belongs to drop_store; saving this file alone is not a transaction. */
 bool items_save(void) {
 #if LAPIS_ENABLE_EXPERIMENTAL_DROPSYSTEM
   ItemsContext *ctx = items_context();

@@ -6,6 +6,7 @@
 #include "registries.h"
 #include "commands.h"
 
+/* Shared stack limit for inventory and drops; this does not validate item IDs. */
 uint8_t getItemStackSize (uint16_t item) {
   if (item == I_water_bucket || item == I_lava_bucket) return 1;
   if (item == I_bucket) return 16;
@@ -137,9 +138,9 @@ uint8_t getArmorItemSlot (uint16_t item) {
   return 255;
 }
 
-// Handles the player eating their currently held item
-// Returns whether the operation was succesful (item was consumed)
-// If `just_check` is set to true, the item doesn't get consumed
+/* Item use probes with just_check before starting the eating timer. The tick
+ * handler later completes consumption from the currently held stack; no stack
+ * is reserved here. Returns eligibility for a probe, consumption otherwise. */
 uint8_t handlePlayerEating (PlayerData *player, uint8_t just_check) {
 
   // Exit early if player is unable to eat

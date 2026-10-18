@@ -13,11 +13,14 @@
 
 int main(int argc, char **argv);
 
+/* Adapt the shared process entry to a FreeRTOS task; delete it if main returns. */
 void lapis_obsidian_main (void *pvParameters) {
   main(0, NULL);
   vTaskDelete(NULL);
 }
 
+/* Retry Wi-Fi after a disconnect and launch a server task on each GOT_IP event.
+ * This adapter currently has no guard against duplicate server tasks. */
 static void wifi_event_handler (void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
   if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
     esp_wifi_connect();
@@ -29,6 +32,8 @@ static void wifi_event_handler (void *arg, esp_event_base_t event_base, int32_t 
   }
 }
 
+/* Configure station mode from build-time credentials. Starting Wi-Fi is
+ * asynchronous; the IP event launches the server after address assignment. */
 void wifi_init () {
   nvs_flash_init();
   esp_netif_init();
@@ -55,6 +60,7 @@ void wifi_init () {
   esp_wifi_start();
 }
 
+/* ESP-IDF entry: establish timing before asynchronous network startup. */
 void app_main () {
   esp_timer_early_init();
   wifi_init();

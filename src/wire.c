@@ -13,6 +13,7 @@
 
 #ifndef htonll
 
+/* Compose a 64-bit host-to-network conversion where the platform lacks one. */
 static uint64_t htonll (uint64_t value) {
   #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     return ((uint64_t)htonl((uint32_t)(value >> 32))) |
@@ -86,6 +87,7 @@ uint64_t readUint64 (int client_fd) {
          ((uint64_t)recv_buffer[6] << 8) |
          ((uint64_t)recv_buffer[7]);
 }
+/* Interpret two's-complement bits without an out-of-range unsigned-to-signed cast. */
 int64_t readInt64 (int client_fd) {
   uint64_t value = readUint64(client_fd);
   return value <= INT64_MAX ? (int64_t)value : -1 - (int64_t)(UINT64_MAX - value);
@@ -103,7 +105,8 @@ double readDouble (int client_fd) {
   return output;
 }
 
-// Receive length prefixed data with bounds checking
+/* Read into shared recv_buffer, reserving room for a string terminator.
+ * Returns the byte count or -1; subsequent codec reads overwrite the buffer. */
 ssize_t readLengthPrefixedData (int client_fd) {
   int32_t length = readVarInt(client_fd);
   if (length < 0 || length >= MAX_RECV_BUF_LEN) {
@@ -119,7 +122,8 @@ ssize_t readLengthPrefixedData (int client_fd) {
   return received;
 }
 
-// Reads a networked string into recv_buffer
+/* NUL-terminate a successfully read byte string; failure empties recv_buffer
+ * and sets recv_count to -1. Encoding validation belongs to the packet handler. */
 void readString (int client_fd) {
   recv_count = readLengthPrefixedData(client_fd);
   if (recv_count < 0 || (size_t)recv_count >= sizeof(recv_buffer)) {
@@ -129,7 +133,8 @@ void readString (int client_fd) {
   }
   recv_buffer[recv_count] = '\0';
 }
-// Reads a networked string of up to N bytes into recv_buffer
+/* Consume the entire encoded string before truncating the visible result.
+ * max_length limits bytes, not characters; recv_count keeps the wire length. */
 void readStringN (int client_fd, uint32_t max_length) {
   readString(client_fd);
   if (recv_count < 0) return;

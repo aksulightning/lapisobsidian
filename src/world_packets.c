@@ -14,7 +14,8 @@
 #include "commands.h"
 #include <string.h>
 
-// S->C Login (play)
+/* Advertise all configured Plate dimension keys and enter the selected one.
+ * Keys share the pinned overworld dimension type; no chunks are sent here. */
 int sc_loginPlay (int client_fd) {
   const char *dimension = plates_dimension(plate_current);
   uint32_t n = (uint32_t)strlen(dimension), count = plates_dimension_count(), list_bytes = 0;
@@ -68,7 +69,7 @@ int sc_loginPlay (int client_fd) {
 
 }
 
-// S->C Game Event 13 (Start waiting for level chunks)
+/* Enter client terrain-loading mode before the spawn sequence streams chunks. */
 int sc_startWaitingForChunks (int client_fd) {
   writeVarInt(client_fd, 6);
   writeByte(client_fd, 0x22);
@@ -77,7 +78,7 @@ int sc_startWaitingForChunks (int client_fd) {
   return 0;
 }
 
-// S->C Set Center Chunk
+/* Set the chunk-cache center in chunk units; the legacy y parameter is Z. */
 int sc_setCenterChunk (int client_fd, int x, int y) {
   writeVarInt(client_fd, 1 + sizeVarInt(x) + sizeVarInt(y));
   writeByte(client_fd, 0x57);
@@ -86,7 +87,9 @@ int sc_setCenterChunk (int client_fd, int x, int y) {
   return 0;
 }
 
-// S->C Chunk Data and Update Light
+/* Stream one selected-world chunk, reusing shared chunk_section scratch space.
+ * Reject coordinates outside compact world storage before sending; follow the
+ * base chunk with stateful block/sign overlays so clients see current state. */
 int sc_chunkDataAndUpdateLight (int client_fd, int _x, int _z) {
   if (_x < -2048 || _x > 2047 || _z < -2048 || _z > 2047) return 1;
 
@@ -105,7 +108,7 @@ int sc_chunkDataAndUpdateLight (int client_fd, int _x, int _z) {
 
   int x = _x * 16, z = _z * 16, y;
 
-  // send 4 chunk sections (up to Y=0) with no blocks
+  // Fill the four sections below Y=0 with bedrock to seal the compact world.
   for (int i = 0; i < 4; i ++) {
     writeUint16(client_fd, 4096); // block count
     writeByte(client_fd, 0); // block bits
@@ -162,7 +165,7 @@ int sc_chunkDataAndUpdateLight (int client_fd, int _x, int _z) {
   // don't send block light
   writeVarInt(client_fd, 0);
 
-  // Sending block updates changes light prediciton on the client.
+  // Sending block updates changes light prediction on the client.
   // Light-emitting blocks are omitted from chunk data so that they can
   // be overlayed here. This seems to be cheaper than sending actual
   // block light data.
@@ -185,7 +188,8 @@ int sc_chunkDataAndUpdateLight (int client_fd, int _x, int _z) {
 
 }
 
-// S->C Block Update
+/* Translate a compact block ID to its protocol state, consulting door/circuit/
+ * crop sidecars in this Plate. Returns 1 before writing for an unmapped block. */
 int sc_blockUpdate (int client_fd, int64_t x, int64_t y, int64_t z, uint8_t block) {
   uint16_t state;
   if (!registry_block_state(block, &state)) return 1;
@@ -201,7 +205,8 @@ int sc_blockUpdate (int client_fd, int64_t x, int64_t y, int64_t z, uint8_t bloc
   return 0;
 }
 
-// S->C Acknowledge Block Change
+/* Echo the action sequence so the client can retire prediction; this is not a
+ * success flag. Corrections and durable output ordering are handled by callers. */
 int sc_acknowledgeBlockChange (int client_fd, int sequence) {
   writeVarInt(client_fd, 1 + sizeVarInt(sequence));
   writeByte(client_fd, 0x04);
@@ -209,7 +214,8 @@ int sc_acknowledgeBlockChange (int client_fd, int sequence) {
   return 0;
 }
 
-// S->C Respawn
+/* Re-enter the selected dimension with no retained client data. Callers must
+ * reset/restore server state and send the subsequent spawn/chunk sequence. */
 int sc_respawn (int client_fd) {
 
   const char *dimension = plates_dimension(plate_current);

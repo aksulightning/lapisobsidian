@@ -2,7 +2,9 @@
 #ifndef H_PACKETS
 #define H_PACKETS
 
-// Serverbound packets
+/* Serverbound codecs read the active frame. Some also apply gameplay actions;
+ * dispatch owns state/length routing and must inspect recv_count as well as any
+ * handler-specific return code. A zero return alone does not validate a frame. */
 int cs_handshake (int client_fd);
 int cs_loginStart (int client_fd, uint8_t *uuid, char *name);
 int cs_clientInformation (int client_fd);
@@ -25,7 +27,10 @@ int cs_playerInput (int client_fd);
 int cs_playerCommand (int client_fd);
 int cs_playerLoaded (int client_fd);
 
-// Clientbound packets
+/* Clientbound codecs construct packets through send_all. Their legacy integer
+ * return values report local validation where implemented, not delivery: most
+ * do not propagate individual write failures. Arguments use protocol IDs unless
+ * the implementation explicitly translates compact server IDs (e.g. blocks). */
 int sc_statusResponse (int client_fd);
 int sc_loginSuccess (int client_fd, uint8_t *uuid, char *name);
 int sc_knownPacks (int client_fd);

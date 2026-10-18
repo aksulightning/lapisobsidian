@@ -14,6 +14,8 @@
 #include "serialize.h"
 #include <string.h>
 
+/* 0xFF means no saved override: callers must use generated terrain, not air.
+ * Chest payload entries share this array but are not coordinate records. */
 uint8_t getBlockChange (short x, uint8_t y, short z) {
   for (int i = 0; i < block_changes_count; i ++) {
     if (block_changes[i].block == 0xFF) continue;
@@ -30,7 +32,8 @@ uint8_t getBlockChange (short x, uint8_t y, short z) {
   return 0xFF;
 }
 
-// Handle running out of memory for new block changes
+/* Repair client prediction after capacity failure using current world state,
+ * not the requested block argument; notify ready players of the storage limit. */
 void failBlockChange (short x, uint8_t y, short z, uint8_t block) {
   (void)block;
 
@@ -49,6 +52,9 @@ void failBlockChange (short x, uint8_t y, short z, uint8_t block) {
 
 }
 
+/* Update the selected world's terrain overlay and notify dependent systems.
+ * Returns 0 on success, 1 on capacity failure; callers must check before
+ * consuming items. Capacity failures send a corrective block update. */
 uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
 
   // Transmit block update to all in-game clients
@@ -189,6 +195,3 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
 
   signs_block_changed(x,y,z,block); doors_block_changed(x,y,z); circuits_block_changed(x,y,z,block); musicbox_block_changed(x,y,z); farming_block_changed(x,y,z); fluids_block_changed(x,y,z); return 0;
 }
-
-// Returns the result of mining a block, taking into account the block type and tools
-// Probability numbers obtained with this formula: N = floor(P * (2 ^ 32))

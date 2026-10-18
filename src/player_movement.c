@@ -11,6 +11,9 @@
 #include "commands.h"
 #include <math.h>
 
+/* Validate packet shape and numeric ranges before applying movement. Guards
+ * may correct/transfer the player and end this update; flags-only and rotation-
+ * only packets must never enter position, hunger or chunk-transition logic. */
 void handlePlayerMovement(int client_fd, int length, int packet_id) {
   int expected = packet_id == 0x1D ? 25 : packet_id == 0x1E ? 33 : packet_id == 0x1F ? 9 : 1;
   if (length != expected) { recv_count = 0; return; }

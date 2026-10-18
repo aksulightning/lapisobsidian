@@ -5,11 +5,13 @@
 #include "plates.h"
 #include "registries.h"
 
+/* Shared small-plant category for instant breaking, support and collision. */
 static uint8_t isSmallPlant (uint8_t block) {
   return (block >= B_dandelion && block <= B_red_mushroom) || block == B_fern;
 }
 
-// Checks whether the given block would be mined instantly with the held tool
+/* Whether the start-digging action can complete immediately with the held tool;
+ * loot eligibility is a separate decision in getMiningResult. */
 uint8_t isInstantlyMined (PlayerData *player, uint8_t block) {
 
   uint16_t held_item = player->inventory_items[player->hotbar];
@@ -41,7 +43,8 @@ uint8_t isInstantlyMined (PlayerData *player, uint8_t block) {
 
 }
 
-// Checks whether the given block has to have something beneath it
+/* Blocks that require support for placement and collapse after support removal.
+ * This compact rule includes sand but does not simulate falling-block entities. */
 uint8_t isColumnBlock (uint8_t block) {
   return (
     isSmallPlant(block) ||
@@ -74,7 +77,7 @@ uint8_t isPassableBlock (uint8_t block) {
     block == B_stone_pressure_plate || block == B_oak_pressure_plate || block == B_wheat
   );
 }
-// Checks whether the given block is non-solid and spawnable
+/* Spawn clearance excludes liquids even though entities can pass through them. */
 uint8_t isPassableSpawnBlock (uint8_t block) {
     if ((block >= B_water && block < B_water + 8) ||
         (block >= B_lava && block < B_lava + 4))
@@ -84,7 +87,8 @@ uint8_t isPassableSpawnBlock (uint8_t block) {
     return isPassableBlock(block);
 }
 
-// Checks whether the given block can be replaced by another block
+/* Placement replacement is narrower than collision passability: signs and
+ * torches, for example, must be broken rather than overwritten. */
 uint8_t isReplaceableBlock (uint8_t block) {
   return (
     block == B_air ||
@@ -95,8 +99,8 @@ uint8_t isReplaceableBlock (uint8_t block) {
   );
 }
 
-// Checks whether the given item can be used in a composter
-// Returns the probability (out of 2^32) to return bone meal
+/* Approximate seven composting levels with one bone-meal roll, avoiding stored
+ * fill state. Returns a threshold out of 2^32, or zero for unsupported items. */
 uint32_t isCompostItem (uint16_t item) {
 
   // Output values calculated using the following formula:
@@ -122,5 +126,3 @@ uint32_t isCompostItem (uint16_t item) {
 
   return 0;
 }
-
-// Returns the maximum stack size of an item

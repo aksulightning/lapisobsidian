@@ -8,6 +8,10 @@
 
 extern int client_states[MAX_PLAYERS * 2];
 
+/* Gameplay functions use the world selected by plates_select/plates_select_for_fd.
+ * The process loop supplies persistence transactions around play packets and
+ * simulation updates; individual mutations do not commit a whole world. */
+
 void setClientState (int client_fd, int new_state);
 int getClientState (int client_fd);
 int getClientIndex (int client_fd);

@@ -7,7 +7,8 @@
 #include "varnum.h"
 #include "commands.h"
 
-// S->C Synchronize Player Position
+/* Correct the local player using absolute coordinates/degree angles, zero
+ * velocity and the fixed teleport ID -1. This does not mutate saved position. */
 int sc_synchronizePlayerPosition (int client_fd, double x, double y, double z, float yaw, float pitch) {
 
   writeVarInt(client_fd, 61 + sizeVarInt(-1));
@@ -37,7 +38,8 @@ int sc_synchronizePlayerPosition (int client_fd, double x, double y, double z, f
 
 }
 
-// S->C Set Default Spawn Position
+/* Set the client's spawn marker, not the player's current position. Coordinates
+ * are packed as 26-bit X/Z and 12-bit Y; callers provide representable values. */
 int sc_setDefaultSpawnPosition (int client_fd, int64_t x, int64_t y, int64_t z) {
 
   writeVarInt(client_fd, sizeVarInt(0x5A) + 12);
@@ -49,7 +51,7 @@ int sc_setDefaultSpawnPosition (int client_fd, int64_t x, int64_t y, int64_t z) 
   return 0;
 }
 
-// S->C Player Abilities (clientbound)
+/* flags is the protocol ability mask; walking/flying speeds stay fixed here. */
 int sc_playerAbilities (int client_fd, uint8_t flags) {
 
   writeVarInt(client_fd, 10);
@@ -62,7 +64,9 @@ int sc_playerAbilities (int client_fd, uint8_t flags) {
   return 0;
 }
 
-// C->S Set Player Position And Rotation
+/* These movement codecs decode wire fields only; handlePlayerMovement owns
+ * packet-length, finite-number and world-boundary validation. */
+/* Decode position and degree angles; retain only bit 0 of movement flags. */
 int cs_setPlayerPositionAndRotation (int client_fd, double *x, double *y, double *z, float *yaw, float *pitch, uint8_t *on_ground) {
 
   *x = readDouble(client_fd);
@@ -77,7 +81,7 @@ int cs_setPlayerPositionAndRotation (int client_fd, double *x, double *y, double
   return 0;
 }
 
-// C->S Set Player Position
+/* Position-only form; rotation remains the movement handler's saved value. */
 int cs_setPlayerPosition (int client_fd, double *x, double *y, double *z, uint8_t *on_ground) {
 
   *x = readDouble(client_fd);
@@ -89,7 +93,7 @@ int cs_setPlayerPosition (int client_fd, double *x, double *y, double *z, uint8_
   return 0;
 }
 
-// C->S Set Player Rotation
+/* Rotation-only form; decoding must not trigger position/chunk updates. */
 int cs_setPlayerRotation (int client_fd, float *yaw, float *pitch, uint8_t *on_ground) {
 
   *yaw = readFloat(client_fd);
@@ -100,6 +104,8 @@ int cs_setPlayerRotation (int client_fd, float *yaw, float *pitch, uint8_t *on_g
   return 0;
 }
 
+/* Decode ground state and refresh peer metadata from existing player flags;
+ * sneak/sprint state itself arrives through the input/command handlers. */
 int cs_setPlayerMovementFlags (int client_fd, uint8_t *on_ground) {
 
   *on_ground = readByte(client_fd) & 0x01;
@@ -111,7 +117,8 @@ int cs_setPlayerMovementFlags (int client_fd, uint8_t *on_ground) {
   return 0;
 }
 
-// C->S Swing Arm (serverbound)
+/* Translate main/off-hand input to animation IDs and relay to ready peers.
+ * Unsupported hands return 1; swinging alone does not apply combat damage. */
 int cs_swingArm (int client_fd) {
 
   PlayerData *player;
@@ -148,7 +155,8 @@ int cs_swingArm (int client_fd) {
   return 0;
 }
 
-// C->S Player Input
+/* Map only the sneaking bit into compact player flags, then publish pose.
+ * Position and other input bits are handled elsewhere or ignored. */
 int cs_playerInput (int client_fd) {
 
   uint8_t flags = readByte(client_fd);
@@ -165,7 +173,8 @@ int cs_playerInput (int client_fd) {
   return 0;
 }
 
-// C->S Player Command
+/* Trust the connection's player identity, not the packet entity ID; actions
+ * 1/2 toggle sprinting and all other actions leave it unchanged. */
 int cs_playerCommand (int client_fd) {
 
   readVarInt(client_fd); // Ignore entity ID

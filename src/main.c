@@ -21,6 +21,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/* Own the process lifecycle and serialize world access: every tick/packet runs
+ * with its Plate selected, and durable play changes are committed before their
+ * queued output is released. A persistence failure terminates the server. */
 int main (int argc, char **argv) {
   int clients[MAX_PLAYERS], client_index = 0;
   if (server_initialize(argc, argv, clients)) return EXIT_FAILURE;
@@ -127,6 +130,8 @@ int main (int argc, char **argv) {
     bool persistent_action = state == STATE_PLAY;
     if (persistent_action && !drop_store_begin()) return EXIT_FAILURE;
     handlePacket(client_fd,(int)packet_input_remaining(),packet_id,state);
+    /* Release the frame even on rejection. Disconnect cleanup may return held
+     * window stacks, so it remains inside the same persistence transaction. */
     bool complete = packet_input_end();
     if (!complete || recv_count <= 0) disconnectClient(&clients[client_index],4);
     if (persistent_action && !drop_store_commit()) return EXIT_FAILURE;

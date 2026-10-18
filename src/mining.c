@@ -13,6 +13,8 @@
 #include "farming.h"
 #include "inventory.h"
 
+/* Resolve one loot roll for the held tool; zero means no drop, not an unbreakable
+ * block. Leaf thresholds are cumulative cutoffs: floor(P * 2^32). */
 uint16_t getMiningResult (uint16_t held_item, uint8_t block) {
 
   switch (block) {
@@ -28,8 +30,8 @@ uint16_t getMiningResult (uint16_t held_item, uint8_t block) {
       if (held_item == I_shears) return I_oak_leaves;
       uint32_t r = fast_rand();
       if (r < 21474836) return I_apple; // 0.5%
-      if (r < 85899345) return I_stick; // 2%
-      if (r < 214748364) return I_oak_sapling; // 5%
+      if (r < 85899345) return I_stick; // 2% cumulative
+      if (r < 214748364) return I_oak_sapling; // 5% cumulative
       return 0;
       break;
 
@@ -114,7 +116,8 @@ void bumpToolDurability (PlayerData *player) {
 
 }
 
-/* Single-block flowers and mushrooms share the modern client's instant break. */
+/* Route digging, dropping and use cancellation. Mining checks reach and loot
+ * capacity before removing terrain, then applies tool wear and spawns the loot. */
 void handlePlayerAction (PlayerData *player, int action, short x, short y, short z) {
 
   if (!player || player->hotbar >= 41) return;
@@ -123,7 +126,7 @@ void handlePlayerAction (PlayerData *player, int action, short x, short y, short
     return;
   }
 
-  // "Finish eating" action, called any time eating stops
+  // Releasing item use cancels the timer; the server tick completes consumption.
   if (action == 5) {
     // Reset eating timer and clear eating flag
     player->flagval_16 = 0;
@@ -140,8 +143,7 @@ void handlePlayerAction (PlayerData *player, int action, short x, short y, short
 
   if (farming_harvest(player,x,y,z)) return;
 
-  // In creative, only the "start mining" action is sent
-  // No additional verification is performed, the block is simply removed
+  // Creative completes on start-digging after reach checks, without loot/tool wear.
   if (action == 0 && commands_gamemode(player) == 1) {
     makeBlockChange(x, y, z, 0);
     return;

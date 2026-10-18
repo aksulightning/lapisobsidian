@@ -6,7 +6,8 @@
 #include "registries.h"
 #include "varnum.h"
 
-// S->C Player Info Update, "Add Player" action
+/* Register identity and current game mode before spawning the player entity.
+ * No skin/profile properties are supplied by this compact packet. */
 int sc_playerInfoUpdateAddPlayer (int client_fd, PlayerData player) {
 
   writeVarInt(client_fd, 22 + player_name_length(player.name)); // Packet length
@@ -27,7 +28,8 @@ int sc_playerInfoUpdateAddPlayer (int client_fd, PlayerData player) {
   return 0;
 }
 
-// S->C Spawn Entity
+/* Spawn a caller-owned protocol entity ID/UUID with zero velocity and data.
+ * yaw/pitch are protocol angle bytes, unlike sc_teleportEntity's degrees. */
 int sc_spawnEntity (
   int client_fd,
   int id, uint8_t *uuid, int type,
@@ -63,7 +65,8 @@ int sc_spawnEntity (
   return 0;
 }
 
-// S->C Set Entity Metadata
+/* Validate/size the entire metadata list before emitting its frame; unsupported
+ * types return 1 without a partial packet. Append the required 0xFF terminator. */
 int sc_setEntityMetadata (int client_fd, int id, EntityData *metadata, size_t length) {
   int entity_metadata_size = sizeEntityMetadata(metadata, length);
   if (entity_metadata_size == -1) return 1;
@@ -83,7 +86,8 @@ int sc_setEntityMetadata (int client_fd, int id, EntityData *metadata, size_t le
   return 0;
 }
 
-// S->C Spawn Entity (from PlayerData)
+/* Adapt compact saved player coordinates and angles to a player spawn packet.
+ * The connection descriptor is also this player's protocol entity ID. */
 int sc_spawnEntityPlayer (int client_fd, PlayerData player) {
   return sc_spawnEntity(
     client_fd,
@@ -95,7 +99,7 @@ int sc_spawnEntityPlayer (int client_fd, PlayerData player) {
   );
 }
 
-// S->C Entity Animation
+/* Relay a protocol animation ID; visual feedback does not mutate game state. */
 int sc_entityAnimation (int client_fd, int id, uint8_t animation) {
   writeVarInt(client_fd, 2 + sizeVarInt(id));
   writeByte(client_fd, 0x02);
@@ -106,7 +110,8 @@ int sc_entityAnimation (int client_fd, int id, uint8_t animation) {
   return 0;
 }
 
-// S->C Teleport Entity
+/* Absolute update for other entities: angles are degrees, velocity is zero and
+ * the wire on-ground flag is always set. Local-player correction uses 0x41. */
 int sc_teleportEntity (
   int client_fd, int id,
   double x, double y, double z,
@@ -136,7 +141,7 @@ int sc_teleportEntity (
   return 0;
 }
 
-// S->C Set Head Rotation
+/* Head direction is separate from body rotation; yaw is a protocol angle byte. */
 int sc_setHeadRotation (int client_fd, int id, uint8_t yaw) {
 
   // Packet length and ID
@@ -150,7 +155,8 @@ int sc_setHeadRotation (int client_fd, int id, uint8_t yaw) {
   return 0;
 }
 
-// S->C Set Head Rotation
+/* Body-only rotation in protocol angle bytes; position is unchanged and the
+ * wire on-ground flag is always set. Send head rotation separately if needed. */
 int sc_updateEntityRotation (int client_fd, int id, uint8_t yaw, uint8_t pitch) {
 
   // Packet length and ID
@@ -167,7 +173,8 @@ int sc_updateEntityRotation (int client_fd, int id, uint8_t yaw, uint8_t pitch) 
   return 0;
 }
 
-// S->C Damage Event
+/* type is a damage-registry ID. Omit source entity/position; health changes are
+ * authoritative gameplay work and are not performed by this visual event. */
 int sc_damageEvent (int client_fd, int entity_id, int type) {
 
   writeVarInt(client_fd, 4 + sizeVarInt(entity_id) + sizeVarInt(type));
@@ -182,7 +189,8 @@ int sc_damageEvent (int client_fd, int entity_id, int type) {
   return 0;
 }
 
-// S->C Entity Event
+/* Entity status events use a fixed-width entity ID, unlike most entity packets.
+ * status is the protocol event code (for example death or item-break feedback). */
 int sc_entityEvent (int client_fd, int entity_id, uint8_t status) {
 
   writeVarInt(client_fd, 6);
@@ -194,7 +202,7 @@ int sc_entityEvent (int client_fd, int entity_id, uint8_t status) {
   return 0;
 }
 
-// S->C Remove Entities, but for only one entity per packet
+/* Remove one entity from this viewer only; lifetime/storage belongs to gameplay. */
 int sc_removeEntity (int client_fd, int entity_id) {
 
   writeVarInt(client_fd, 2 + sizeVarInt(entity_id));
@@ -206,7 +214,8 @@ int sc_removeEntity (int client_fd, int entity_id) {
   return 0;
 }
 
-// S->C Pickup Item (take_item_entity)
+/* Animate count items moving from collected to collector; this neither removes
+ * the entity nor inserts inventory, so callers must synchronize remaining state. */
 int sc_pickupItem (int client_fd, int collected, int collector, uint8_t count) {
 
   writeVarInt(client_fd, 1 + sizeVarInt(collected) + sizeVarInt(collector) + sizeVarInt(count));

@@ -15,11 +15,14 @@
 static int sockets[2];
 static PlayerData *player = &player_data[0];
 
+/* These fixture IDs fit in one byte; length describes payload without that ID. */
 static void begin(int id, int length) {
   writeVarInt(sockets[0], (uint32_t)(length + 1));
   assert(writeByte(sockets[0], (uint8_t)id) > 0);
 }
 
+/* Acceptance and full consumption are independent: invalid values may consume
+ * a whole frame, while invalid lengths must reject before reading its payload. */
 static void dispatch(int id, int accepted, int consumed) {
   PacketInput input;
   packet_input_reset(&input, sockets[1]);

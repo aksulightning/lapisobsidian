@@ -7,7 +7,8 @@
 #include "varnum.h"
 #include "inventory.h"
 
-// S->C Set Container Slot
+/* slot is already in client-window coordinates. Empty stacks omit item and
+ * components; this legacy codec always emits state ID zero. */
 int sc_setContainerSlot (int client_fd, int window_id, uint16_t slot, uint8_t count, uint16_t item) {
 
   writeVarInt(client_fd,
@@ -34,7 +35,8 @@ int sc_setContainerSlot (int client_fd, int window_id, uint16_t slot, uint8_t co
 
 }
 
-// S->C Open Screen
+/* Use the supported menu type as both window ID and type. title is an NBT
+ * string payload with an explicit byte length, not a NUL-terminated wire string. */
 int sc_openScreen (int client_fd, uint8_t window, const char *title, uint16_t length) {
 
   writeVarInt(client_fd, 1 + 2 * sizeVarInt(window) + 1 + 2 + length);
@@ -50,7 +52,8 @@ int sc_openScreen (int client_fd, uint8_t window, const char *title, uint16_t le
   return 0;
 }
 
-// S->C Set Cursor Item
+/* Synchronize the carried stack independently of container slots. count zero
+ * clears the cursor and omits item/component fields. */
 int sc_setCursorItem (int client_fd, uint16_t item, uint8_t count) {
 
   writeVarInt(client_fd, 1 + sizeVarInt(count) + (count != 0 ? sizeVarInt(item) + 2 : 0));
@@ -68,7 +71,8 @@ int sc_setCursorItem (int client_fd, uint16_t item, uint8_t count) {
   return 0;
 }
 
-// C->S Set Held Item (serverbound)
+/* Accept only a complete two-byte hotbar index 0..8; invalid input returns 1
+ * before changing selection. Full frame length is checked by dispatch. */
 int cs_setHeldItem (int client_fd) {
 
   PlayerData *player;
@@ -82,7 +86,7 @@ int cs_setHeldItem (int client_fd) {
   return 0;
 }
 
-// S->C Set Held Item (clientbound)
+/* Select a client hotbar index (0..8); this codec does not change server state. */
 int sc_setHeldItem (int client_fd, uint8_t slot) {
 
   writeVarInt(client_fd, sizeVarInt(0x62) + 1);
@@ -93,7 +97,8 @@ int sc_setHeldItem (int client_fd, uint8_t slot) {
   return 0;
 }
 
-// C->S Close Container (serverbound)
+/* Require the currently open window before returning transient stacks through
+ * inventory_close. A malformed or stale window ID returns 1 without cleanup. */
 int cs_closeContainer (int client_fd) {
 
   int32_t window_id = readVarInt(client_fd);
@@ -103,7 +108,8 @@ int cs_closeContainer (int client_fd) {
   return 0;
 }
 
-// S->C Set Health
+/* Convert the server's movement-budget saturation to the client's float scale.
+ * The 200-unit offset is part of that approximation, not stored food points. */
 int sc_setHealth (int client_fd, uint8_t health, uint8_t food, uint16_t saturation) {
 
   writeVarInt(client_fd, 9 + sizeVarInt(food));
@@ -116,7 +122,8 @@ int sc_setHealth (int client_fd, uint8_t health, uint8_t food, uint16_t saturati
   return 0;
 }
 
-// C->S Client Status
+/* Action zero runs the respawn/reset sequence; other actions are ignored.
+ * This handler does not itself require the saved health value to be zero. */
 int cs_clientStatus (int client_fd) {
 
   uint8_t id = readByte(client_fd);
@@ -133,7 +140,7 @@ int cs_clientStatus (int client_fd) {
   return 0;
 }
 
-// C->S Player Loaded
+/* Hand readiness to the session lifecycle; the tick timeout uses the same path. */
 int cs_playerLoaded (int client_fd) {
 
   PlayerData *player;
@@ -145,7 +152,7 @@ int cs_playerLoaded (int client_fd) {
   return 0;
 }
 
-// S->C Clientbound Keep Alive (play)
+/* Emit a fixed keep-alive token; dispatch consumes replies without RTT tracking. */
 int sc_keepAlive (int client_fd) {
 
   writeVarInt(client_fd, 9);
@@ -156,7 +163,8 @@ int sc_keepAlive (int client_fd) {
   return 0;
 }
 
-// S->C Update Time
+/* ticks is the world's day clock. World age derives from process timing and is
+ * not a persisted count; the final flag enables client day-clock progression. */
 int sc_updateTime (int client_fd, uint64_t ticks) {
 
   writeVarInt(client_fd, 18);
@@ -170,7 +178,9 @@ int sc_updateTime (int client_fd, uint64_t ticks) {
   return 0;
 }
 
-// S->C System Chat
+/* Send non-overlay system text. len counts input UTF-8 bytes (maximum 512).
+ * Returns 1 for rejected length/four-byte sequences before emitting a packet;
+ * shorter byte sequences are copied, so this is not a full UTF-8 validator. */
 int sc_systemChat (int client_fd, char* message, uint16_t len) {
   /* NBT TAG_String uses Java modified UTF-8. Supplementary characters use
    * two encoded UTF-16 surrogates, unlike the incoming chat string's UTF-8. */

@@ -22,6 +22,8 @@ void LapisGui_Text(int index,const char* value,int x,int y) {
     struct DrawTextArgs args;cc_string text;
     static int lastWidth,lastHeight;
     int desired=Window_Main.Height<420 || Window_Main.Width<480?10:13;
+    /* Cached textures include viewport-dependent clipping, so resize invalidates
+     * unchanged labels too, even when the font size remains the same. */
     if(fontReady && (fontSize!=desired || lastWidth!=Window_Main.Width || lastHeight!=Window_Main.Height))LapisGui_ContextLost();
     lastWidth=Window_Main.Width;lastHeight=Window_Main.Height;
     if(!fontReady) { Font_Make(&font,desired,0);fontReady=1;fontSize=desired; }
@@ -40,21 +42,26 @@ void LapisGui_ContextLost(void) {
     for(i=0;i<99;i++)Gfx_DeleteTexture(&labels[i].tex.ID);
     if(fontReady)Font_Free(&font);fontReady=0;
 }
+/* Unknown items or an unavailable atlas draw no icon; count/slot UI still works. */
 static void Icon(int item,int x,int y,int size) {
     struct Texture tex;int atlas,icon=LapisBlocks_ItemIcon(item);
     if(!item || icon<0 || !Atlas1D.Count)return;
     tex.uv=Atlas1D_TexRec((TextureLoc)icon,1,&atlas);tex.ID=Atlas1D.TexIds[atlas];
     tex.x=x;tex.y=y;tex.width=size;tex.height=size;Texture_Render(&tex);
 }
+/* slot selects a text-cache entry, not an inventory lookup; stack is supplied
+ * by the caller so HUD and container rendering share the same primitive. */
 static void SlotContents(int slot,struct LapisStack stack,int x,int y,int size) {
     char count[24];
     Icon(stack.item,x+3,y+3,size-10);
     if(stack.count) { sprintf(count,"%d",stack.count);LapisGui_Text(slot,count,x+(size>24?size-20:1),y+(size>24?size-20:0)); }
 }
+/* Draw a fallback slot background plus contents; active controls emphasis only. */
 void LapisGui_Slot(int slot,struct LapisStack stack,int x,int y,int size,int active) {
     Gfx_Draw2DFlat(x,y,size-2,size-2,active?PackedCol_Make(118,101,64,235):PackedCol_Make(31,49,62,235));
     SlotContents(slot,stack,x,y,size);
 }
+/* Return false when GUI textures are unavailable so HUD can draw flat slots. */
 static int HotbarBackground(int x,int y,int size) {
     struct Texture tex;int border=(size+19)/20;
     tex.ID=Gui.ClassicTexture?Gui.GuiClassicTex:Gui.GuiTex;
@@ -92,6 +99,8 @@ static void Vitals(float value,int food,int x,int y,int step) {
         }
     }
 }
+/* Read backend state without predicting inventory/vitals. Cache IDs 68..78 and
+ * 87..95 separate HUD labels from inventory and sign-editor text. */
 void LapisGui_RenderHUD(void) {
     struct LapisGameplay* g=LapisBackend_Gameplay();char buffer[160];int i,x,y,textured,size=40;
     if(!g || !LapisBackend_Protocol()->loaded || Game_HideGui)return;

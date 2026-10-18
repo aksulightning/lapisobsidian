@@ -19,8 +19,10 @@
 #include <winsock2.h>
 #endif
 
+/* Interleaved (descriptor, protocol state) pairs; descriptor -1 marks a vacancy. */
 int client_states[MAX_PLAYERS * 2];
 
+/* Update a known descriptor or claim a vacancy; a full table is left unchanged. */
 void setClientState (int client_fd, int new_state) {
   // Look for a client state with a matching file descriptor
   for (int i = 0; i < MAX_PLAYERS * 2; i += 2) {
@@ -37,6 +39,7 @@ void setClientState (int client_fd, int new_state) {
   }
 }
 
+/* Unknown descriptors share STATE_NONE with clients awaiting a handshake. */
 int getClientState (int client_fd) {
   for (int i = 0; i < MAX_PLAYERS * 2; i += 2) {
     if (client_states[i] != client_fd) continue;
@@ -45,6 +48,7 @@ int getClientState (int client_fd) {
   return STATE_NONE;
 }
 
+/* Returns the even array offset, not a player_data index; -1 means absent. */
 int getClientIndex (int client_fd) {
   for (int i = 0; i < MAX_PLAYERS * 2; i += 2) {
     if (client_states[i] != client_fd) continue;
@@ -53,7 +57,8 @@ int getClientIndex (int client_fd) {
   return -1;
 }
 
-// Restores player data to initial state (fresh spawn)
+/* Reset survival/inventory state and request terrain-based spawning (flag 0x02).
+ * Identity and connection ownership remain attached to this player slot. */
 void resetPlayerData (PlayerData *player) {
   inventory_reset(player);
   items_forget_player(player);
@@ -77,7 +82,9 @@ void resetPlayerData (PlayerData *player) {
   player->flags &= ~0x80;
 }
 
-// Assigns the given data to a player_data entry
+/* Bind the login identity to a saved/new slot and mark it loading. Existing
+ * inventory and health survive reconnects. Identity validation belongs to the
+ * login path; returns 0 on reservation, 1 when player capacity is exhausted. */
 int reservePlayerData (int client_fd, uint8_t *uuid, char *name) {
 
   for (int i = 0; i < MAX_PLAYERS; i ++) {
@@ -132,6 +139,7 @@ int reservePlayerData (int client_fd, uint8_t *uuid, char *name) {
 
 }
 
+/* Lookup is scoped to the selected Plate; failure leaves output untouched. */
 int getPlayerData (int client_fd, PlayerData **output) {
   for (int i = 0; i < MAX_PLAYERS; i ++) {
     if (player_data[i].client_fd == client_fd && plates_player_active(&player_data[i])) {
@@ -142,7 +150,9 @@ int getPlayerData (int client_fd, PlayerData **output) {
   return 1;
 }
 
-// Returns the player with the given name, or NULL if not found
+/* Match a command-buffer token against connected names in this Plate, or NULL.
+ * Callers supply valid bounds and at most 16 name bytes. This legacy lookup
+ * compares only the supplied token, not the saved name length. */
 PlayerData *getPlayerByName (int start_offset, int end_offset, uint8_t *buffer) {
   for (int i = 0; i < MAX_PLAYERS; i ++) {
     if (!plates_player_active(&player_data[i]) || player_data[i].client_fd == -1) continue;
@@ -157,8 +167,7 @@ PlayerData *getPlayerByName (int start_offset, int end_offset, uint8_t *buffer) 
   return NULL;
 }
 
-
-// Marks a client as disconnected and cleans up player data
+/* Release connection/window state but retain the UUID-backed save slot. */
 void handlePlayerDisconnect (int client_fd) {
   // Search for a corresponding player in the player data array
   for (int i = 0; i < MAX_PLAYERS; i ++) {
@@ -194,7 +203,8 @@ void handlePlayerDisconnect (int client_fd) {
   }
 }
 
-// Marks a client as connected and broadcasts their data to other players
+/* Publish the player's entity, clear loading state and synchronize mobs/drops.
+ * Called by the loaded packet or the tick handler's fallback loading timeout. */
 void handlePlayerJoin (PlayerData* player) {
 
   // Prepare join message for broadcast
@@ -219,6 +229,8 @@ void handlePlayerJoin (PlayerData* player) {
 
 }
 
+/* Invalidate the caller's descriptor after cleanup. Virtual transports own
+ * their IDs, so only unclaimed descriptors may be passed to the OS close call. */
 void disconnectClient (int *client_fd, int cause) {
   if (*client_fd == -1) return;
   client_count --;
