@@ -68,7 +68,7 @@ for source in src/*.c; do
   sources+=(".tests/integration/$name.o")
 done
 chunk_sources=()
-for name in plate_state procedures fluids farming circuits notes doors signs sign_packets packets varnum worldgen globals registries registry; do
+for name in plate_state block_changes block_rules fluids farming circuits notes doors signs sign_packets world_packets varnum worldgen globals registries registry; do
   chunk_sources+=(".tests/integration/$name.o")
 done
 chunk_sources+=(.tests/integration/beta173_*.o)
@@ -82,6 +82,8 @@ chunk_sources+=(.tests/integration/beta173_*.o)
 .tests/config-packets
 "${CC:-gcc}" "${integration_flags[@]}" tests/packet_input.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/packet_input
 if ! .tests/packet_input 2>.tests/packet-rejections.log; then cat .tests/packet-rejections.log; exit 1; fi
+"${CC:-gcc}" "${integration_flags[@]}" tests/packet_dispatch.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/packet-dispatch
+.tests/packet-dispatch
 "${CC:-gcc}" "${integration_flags[@]}" tests/command_packets.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/command_packets
 .tests/command_packets
 "${CC:-gcc}" "${integration_flags[@]}" tests/signs.c tests/sanitizer.c "${sources[@]}" -Wl,--gc-sections -lm "${libs[@]}" -o .tests/signs

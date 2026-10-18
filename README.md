@@ -86,3 +86,5 @@ it behaves, and being honest about its limitations. There is still work to do.
 - [Credits](docs/credits.md), [notices](NOTICE.md) and [license](LICENSE): the people, projects and materials this work builds on.
 
 Lapis Obsidian builds on **bareiron**, and LapisCube uses **ClassiCube**.
+
+For implementation ownership and build boundaries, see the [source map](docs/architecture.md).

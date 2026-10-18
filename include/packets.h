@@ -1,3 +1,4 @@
+/* Protocol codec interface; implementation ownership is listed in docs/architecture.md. */
 #ifndef H_PACKETS
 #define H_PACKETS
 
