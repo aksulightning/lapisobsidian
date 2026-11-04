@@ -186,12 +186,15 @@ def main():
                             page.locator('#inventory-tools [data-action="13"]').tap()
                         else:
                             page.keyboard.press('t');page.keyboard.type('/admin '+token);page.keyboard.press('Enter');page.wait_for_timeout(200)
+                            # Keep this transport check independent of lethal survival fall damage.
+                            page.keyboard.press('t');page.keyboard.type('/gamemode creative');page.keyboard.press('Enter');page.wait_for_timeout(200)
                             teleport(-17,150,33)
                             page.screenshot(path=str(EVIDENCE/'desktop-teleport.png'))
                             # The server centers integer destinations in each block and
                             # enforces a two-second cooldown between teleport commands.
                             page.wait_for_timeout(2500)
                             teleport(8,70,8)
+                            page.keyboard.press('t');page.keyboard.type('/gamemode survival');page.keyboard.press('Enter');page.wait_for_timeout(200)
                         assert not errors,errors
                         assert all(url.startswith(f'http://127.0.0.1:{web}/') for url in requests),requests
                         outcomes.append({'mode':label,'sent_packets':len(outbound.packets),'received_packets':len(inbound.packets),
