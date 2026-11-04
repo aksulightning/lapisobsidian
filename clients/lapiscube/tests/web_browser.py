@@ -86,6 +86,13 @@ def main():
                         before=outbound.positions()
                         if mobile:
                             cdp=context.new_cdp_session(page)
+                            def rotate_viewport(width,height):
+                                """Rotate the emulated display without resizing a fullscreen window."""
+                                landscape=width>height
+                                cdp.send('Emulation.setDeviceMetricsOverride',{
+                                    'width':width,'height':height,'deviceScaleFactor':1,'mobile':True,
+                                    'screenOrientation':{'type':'landscapePrimary' if landscape else 'portraitPrimary',
+                                                         'angle':90 if landscape else 0}})
                             def point(selector):
                                 box=page.locator(selector).bounding_box();return {'x':box['x']+box['width']/2,'y':box['y']+box['height']/2}
                             start=point('#walk [data-action="0"]');jump=point('#actions [data-action="4"]')
@@ -151,11 +158,12 @@ def main():
                             assert outbound.count(0x34)>0,'Hotbar selection must reach server'
                             start=point('#walk [data-action="0"]')
                             cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{**start,'id':3}]})
-                            page.wait_for_timeout(200);page.set_viewport_size({'width':390,'height':844});page.wait_for_timeout(200)
+                            page.wait_for_timeout(200);rotate_viewport(390,844);page.wait_for_timeout(200)
+                            assert page.evaluate('!!document.fullscreenElement'),'Rotation must retain fullscreen'
                             assert page.locator('#gate').is_visible()
                             assert page.evaluate('held.size')==0,'Rotation must release held controls'
                             page.screenshot(path=str(EVIDENCE/'touch-rotation-gate.png'))
-                            page.set_viewport_size({'width':844,'height':390});page.wait_for_timeout(200)
+                            rotate_viewport(844,390);page.wait_for_timeout(200)
                             await_exit=page.evaluate('document.exitFullscreen()');page.wait_for_timeout(200)
                             assert page.locator('#gate').is_visible()
                             page.click('#resume');page.wait_for_timeout(200)

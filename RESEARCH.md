@@ -15,3 +15,5 @@ Verified finding: `ubuntu-latest` follows GitHub's default stable Ubuntu runner 
 ## Research: Browser tests on Ubuntu 26.04
 
 Date: 2026-11-04. Reviewed [Playwright Python release notes](https://playwright.dev/python/docs/release-notes#version-161) (Ubuntu 26.04 support introduced in 1.61) and the [official Python 1.64.1 release](https://github.com/microsoft/playwright-python/releases/tag/v1.64.1) (current stable release), both accessed on this date. The old 1.51.0 pin failed Chromium installation on the new runner. Both browser workflows now pin 1.64.1 while retaining Chromium installation and all existing acceptance tests. No external implementation code was copied.
+
+Browser rotation acceptance uses [Chrome DevTools Protocol device metrics emulation](https://chromedevtools.github.io/devtools-protocol/tot/Emulation/#method-setDeviceMetricsOverride) (accessed 2026-11-04). Reviewed viewport dimensions, mobile emulation, scale factor and screen orientation. New Chromium refuses native window resizing while fullscreen; the test now rotates the emulated viewport and asserts fullscreen remains active, preserving the rotation gate and held-control checks.
