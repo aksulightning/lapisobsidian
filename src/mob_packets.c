@@ -1,3 +1,4 @@
+/* Encodes mob updates and validates incoming entity interactions. */
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
@@ -70,7 +71,8 @@ static bool integer (Reader *r, uint32_t *out) {
 int cs_interact (int fd, int length) {
   uint8_t data[24];
   if (length <= 0 || (size_t)length > sizeof(data) || recv_all(fd,data,(size_t)length,false) != length) return 1;
-  Reader r = {data,(size_t)length,0}; uint32_t raw,type,hand;
+  /* Attack packets omit the hand; other packet types must decode it below. */
+  Reader r = {data,(size_t)length,0}; uint32_t raw,type,hand = 0;
   if (!integer(&r,&raw) || !integer(&r,&type) || type > 2) return 1;
   if (type == 2) for (unsigned i = 0; i < 3; i++) {
     if (r.size-r.at < 4) return 1;
