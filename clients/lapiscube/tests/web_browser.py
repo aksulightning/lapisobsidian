@@ -64,6 +64,19 @@ def main():
                     def socket(ws):
                         ws.on('framesent',outbound.feed);ws.on('framereceived',inbound.feed)
                     page.on('websocket',socket)
+                    def teleport(x,y,z):
+                        """Wait for both the server teleport packet and the client's new position."""
+                        count=inbound.count(0x41)
+                        page.keyboard.press('t');page.keyboard.type(f'/tp {x} {y} {z}');page.keyboard.press('Enter')
+                        deadline=time.monotonic()+15
+                        while time.monotonic()<deadline:
+                            positions=outbound.positions()
+                            if (inbound.count(0x41)>count and positions and
+                                    abs(positions[-1][0]-x)<.1 and abs(positions[-1][2]-z)<.1):
+                                return
+                            page.wait_for_timeout(100)
+                        raise AssertionError(('Teleport position synchronization',
+                                              inbound.count(0x41)-count,outbound.positions()[-1:]))
                     def await_turn(yaw):
                         deadline=time.monotonic()+5
                         while abs(outbound.positions()[-1][3]-yaw)<=1 and time.monotonic()<deadline:
@@ -173,11 +186,10 @@ def main():
                             page.locator('#inventory-tools [data-action="13"]').tap()
                         else:
                             page.keyboard.press('t');page.keyboard.type('/admin '+token);page.keyboard.press('Enter');page.wait_for_timeout(200)
-                            page.keyboard.press('t');page.keyboard.type('/tp -17 150 33');page.keyboard.press('Enter');page.wait_for_timeout(1800)
-                            assert inbound.count(0x41)>=3,'Teleport position synchronization'
+                            teleport(-17,150,33)
                             page.screenshot(path=str(EVIDENCE/'desktop-teleport.png'))
                             # Restore grounded fixture position before the mobile reconnect.
-                            page.keyboard.press('t');page.keyboard.type('/tp 8 70 8');page.keyboard.press('Enter');page.wait_for_timeout(1800)
+                            teleport(8,70,8)
                         assert not errors,errors
                         assert all(url.startswith(f'http://127.0.0.1:{web}/') for url in requests),requests
                         outcomes.append({'mode':label,'sent_packets':len(outbound.packets),'received_packets':len(inbound.packets),
