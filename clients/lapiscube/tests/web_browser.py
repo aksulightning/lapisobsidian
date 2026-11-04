@@ -72,7 +72,7 @@ def main():
                         while time.monotonic()<deadline:
                             positions=outbound.positions()
                             if (inbound.count(0x41)>count and positions and
-                                    abs(positions[-1][0]-x)<.1 and abs(positions[-1][2]-z)<.1):
+                                    abs(positions[-1][0]-(x+.5))<.1 and abs(positions[-1][2]-(z+.5))<.1):
                                 return
                             page.wait_for_timeout(100)
                         raise AssertionError(('Teleport position synchronization',
@@ -188,7 +188,9 @@ def main():
                             page.keyboard.press('t');page.keyboard.type('/admin '+token);page.keyboard.press('Enter');page.wait_for_timeout(200)
                             teleport(-17,150,33)
                             page.screenshot(path=str(EVIDENCE/'desktop-teleport.png'))
-                            # Restore grounded fixture position before the mobile reconnect.
+                            # The server centers integer destinations in each block and
+                            # enforces a two-second cooldown between teleport commands.
+                            page.wait_for_timeout(2500)
                             teleport(8,70,8)
                         assert not errors,errors
                         assert all(url.startswith(f'http://127.0.0.1:{web}/') for url in requests),requests
