@@ -1,3 +1,4 @@
+/* Loads MIDI songs and manages jukebox menus and playback. */
 #ifndef _WIN32
 #define _POSIX_C_SOURCE 200809L
 #endif
@@ -98,7 +99,8 @@ void musicbox_menu (PlayerData *p, int x, int y, int z) {
   *s = (Selection){(int16_t)x,(int16_t)z,(uint8_t)y,1,ctx->clock_us+60000000,ctx->clock_us+1000000,s->next_play};
   reply(p,COMMAND_OK,"Musicbox: /music <number> to play, /music stop to stop. Selection lasts 60 seconds.");
   if (!song_count) reply(p,COMMAND_OK,"No songs. Add .mid files to songs/ and ask an admin to run /music reload.");
-  for (unsigned i = 0; i < song_count; i++) { char line[96]; snprintf(line,sizeof(line),"/music %u - %s",i+1,songs[i]); reply(p,COMMAND_OK,line); }
+  /* Bound each title to one song row, even when the compiler sees the whole table. */
+  for (unsigned i = 0; i < song_count; i++) { char line[96]; snprintf(line,sizeof(line),"/music %u - %.*s",i+1,(int)sizeof(songs[i])-1,songs[i]); reply(p,COMMAND_OK,line); }
 }
 static MidiSong *load_song (unsigned index) {
   if (index >= song_count) return NULL;

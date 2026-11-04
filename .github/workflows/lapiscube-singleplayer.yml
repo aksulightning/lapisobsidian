@@ -10,7 +10,7 @@ permissions:
   contents: read
 jobs:
   singleplayer:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       matrix:
@@ -27,7 +27,7 @@ jobs:
           git clone --depth 1 --branch 4.0.23 https://github.com/emscripten-core/emsdk.git clients/lapiscube/build/emsdk
           clients/lapiscube/build/emsdk/emsdk install 4.0.23
           clients/lapiscube/build/emsdk/emsdk activate 4.0.23
-          python3 -m pip install playwright==1.51.0
+          python3 -m pip install playwright==1.64.1
           python3 -m playwright install --with-deps chromium
       - name: Build standalone client and embedded server
         run: |

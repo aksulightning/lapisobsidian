@@ -29,13 +29,13 @@ jobs:
         include:
           - arch: x86_64
             platform: linux/amd64
-            runner: ubuntu-24.04
+            runner: ubuntu-latest
           - arch: aarch64
             platform: linux/arm64
             runner: ubuntu-24.04-arm
           - arch: riscv64
             platform: linux/riscv64
-            runner: ubuntu-24.04
+            runner: ubuntu-latest
     env:
       ALPINE_IMAGE: alpine:3.23.6
       TARGET_ARCH: ${{ matrix.arch }}

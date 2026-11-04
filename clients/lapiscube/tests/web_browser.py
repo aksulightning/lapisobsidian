@@ -64,6 +64,19 @@ def main():
                     def socket(ws):
                         ws.on('framesent',outbound.feed);ws.on('framereceived',inbound.feed)
                     page.on('websocket',socket)
+                    def teleport(x,y,z):
+                        """Wait for both the server teleport packet and the client's new position."""
+                        count=inbound.count(0x41)
+                        page.keyboard.press('t');page.keyboard.type(f'/tp {x} {y} {z}');page.keyboard.press('Enter')
+                        deadline=time.monotonic()+15
+                        while time.monotonic()<deadline:
+                            positions=outbound.positions()
+                            if (inbound.count(0x41)>count and positions and
+                                    abs(positions[-1][0]-(x+.5))<.1 and abs(positions[-1][2]-(z+.5))<.1):
+                                return
+                            page.wait_for_timeout(100)
+                        raise AssertionError(('Teleport position synchronization',
+                                              inbound.count(0x41)-count,outbound.positions()[-1:]))
                     def await_turn(yaw):
                         deadline=time.monotonic()+5
                         while abs(outbound.positions()[-1][3]-yaw)<=1 and time.monotonic()<deadline:
@@ -86,6 +99,13 @@ def main():
                         before=outbound.positions()
                         if mobile:
                             cdp=context.new_cdp_session(page)
+                            def rotate_viewport(width,height):
+                                """Rotate the emulated display without resizing a fullscreen window."""
+                                landscape=width>height
+                                cdp.send('Emulation.setDeviceMetricsOverride',{
+                                    'width':width,'height':height,'deviceScaleFactor':1,'mobile':True,
+                                    'screenOrientation':{'type':'landscapePrimary' if landscape else 'portraitPrimary',
+                                                         'angle':90 if landscape else 0}})
                             def point(selector):
                                 box=page.locator(selector).bounding_box();return {'x':box['x']+box['width']/2,'y':box['y']+box['height']/2}
                             start=point('#walk [data-action="0"]');jump=point('#actions [data-action="4"]')
@@ -151,11 +171,12 @@ def main():
                             assert outbound.count(0x34)>0,'Hotbar selection must reach server'
                             start=point('#walk [data-action="0"]')
                             cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{**start,'id':3}]})
-                            page.wait_for_timeout(200);page.set_viewport_size({'width':390,'height':844});page.wait_for_timeout(200)
+                            page.wait_for_timeout(200);rotate_viewport(390,844);page.wait_for_timeout(200)
+                            assert page.evaluate('!!document.fullscreenElement'),'Rotation must retain fullscreen'
                             assert page.locator('#gate').is_visible()
                             assert page.evaluate('held.size')==0,'Rotation must release held controls'
                             page.screenshot(path=str(EVIDENCE/'touch-rotation-gate.png'))
-                            page.set_viewport_size({'width':844,'height':390});page.wait_for_timeout(200)
+                            rotate_viewport(844,390);page.wait_for_timeout(200)
                             await_exit=page.evaluate('document.exitFullscreen()');page.wait_for_timeout(200)
                             assert page.locator('#gate').is_visible()
                             page.click('#resume');page.wait_for_timeout(200)
@@ -165,11 +186,15 @@ def main():
                             page.locator('#inventory-tools [data-action="13"]').tap()
                         else:
                             page.keyboard.press('t');page.keyboard.type('/admin '+token);page.keyboard.press('Enter');page.wait_for_timeout(200)
-                            page.keyboard.press('t');page.keyboard.type('/tp -17 150 33');page.keyboard.press('Enter');page.wait_for_timeout(1800)
-                            assert inbound.count(0x41)>=3,'Teleport position synchronization'
+                            # Keep this transport check independent of lethal survival fall damage.
+                            page.keyboard.press('t');page.keyboard.type('/gamemode creative');page.keyboard.press('Enter');page.wait_for_timeout(200)
+                            teleport(-17,150,33)
                             page.screenshot(path=str(EVIDENCE/'desktop-teleport.png'))
-                            # Restore grounded fixture position before the mobile reconnect.
-                            page.keyboard.press('t');page.keyboard.type('/tp 8 70 8');page.keyboard.press('Enter');page.wait_for_timeout(1800)
+                            # The server centers integer destinations in each block and
+                            # enforces a two-second cooldown between teleport commands.
+                            page.wait_for_timeout(2500)
+                            teleport(8,70,8)
+                            page.keyboard.press('t');page.keyboard.type('/gamemode survival');page.keyboard.press('Enter');page.wait_for_timeout(200)
                         assert not errors,errors
                         assert all(url.startswith(f'http://127.0.0.1:{web}/') for url in requests),requests
                         outcomes.append({'mode':label,'sent_packets':len(outbound.packets),'received_packets':len(inbound.packets),

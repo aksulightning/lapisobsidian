@@ -4,7 +4,7 @@ permissions:
   contents: read
 jobs:
   alpine-experimental-preset:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build authenticated and static browser-compatible Alpine presets
@@ -18,7 +18,7 @@ jobs:
             if ./build-experiments-alpine.sh --static; then exit 1; fi
           '
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         drops: [0, 1]
